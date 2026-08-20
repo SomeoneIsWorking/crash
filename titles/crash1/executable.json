@@ -1,0 +1,21 @@
+{
+  "title": "Crash Bandicoot",
+  "region": "North America (NTSC-U)",
+  "serial": "SCUS-94900",
+  "executable": "SCUS_949.00",
+  "file_size": 290816,
+  "sha1": "b2af088a162e046ad07f532d46b655cfcc42a05c",
+  "sha256": "aabf1464f90b2e0b81e712b77aebbdb88f303b16ce830535e2b0cd886ee280f2",
+  "header": {
+    "entry": "0x8003E018",
+    "gp": "0x00000000",
+    "text_address": "0x80010000",
+    "text_size": "0x00046800",
+    "stack_address": "0x801FFFF0",
+    "stack_offset": "0x00000000"
+  },
+  "region_markers": [
+    "Sony Computer Entertainment Inc. for North America area",
+    "BASCUS-94900"
+  ]
+}

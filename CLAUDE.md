@@ -17,3 +17,7 @@ is not the recorded pin. Framework edits happen in the shared clone (`$PSX/psxpo
 All picture work is RE-driven. Widescreen and interpolation require PC-native graphics producers
 reading game state; do not reconstruct pictures from GTE/OT/GP0 output. Each title must first reach a
 faithful, measurable base before enhancements.
+
+Crash 1 targets the North American NTSC-U release (`SCUS-94900`, executable `SCUS_949.00`). The exact
+identity/header evidence lives in `titles/crash1/executable.json` and is compared to the real bytes by
+`tools/verify_executable.py`. This does not imply a provisioned disc or runnable port.
