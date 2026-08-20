@@ -22,5 +22,10 @@ CC=clang CXX=clang++ cmake -S . -B scratch/build-clang \
 CCACHE_DIR=scratch/ccache cmake --build scratch/build-clang --target crash_scaffold
 ```
 
+Run `ctest --test-dir scratch/build-clang --output-on-failure -R crash_cpp_policy` for the normal
+first-party C++ gate. The shared framework checker applies this repository's tracked `clang-format`
+and `clang-tidy` policy and the 1,200-line ownership cap without linting `external/psxport` or
+generated code. The scaffold currently reports an explicit zero first-party translation units.
+
 Disc images and extracted executables are never committed. Provision them through a gitignored
 `.env` or a drop-in file in the repository root once each title's region and executable are measured.
