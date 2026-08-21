@@ -6,7 +6,7 @@ created: 2026-08-21
 tags:
 depends: CMakeLists.txt, psxport.pin, titles/crash1/executable.json, titles/crash1/recomp_seeds.json, tools/crash1_recomp.py, tests/crash1_recomp_boundary.cpp
 reconfirmed: 2026-08-21
-verified_at: 2026-08-21 11:17:18
+verified_at: 2026-08-21 11:20:20
 ---
 
 ## Claim
@@ -28,3 +28,7 @@ pin changes without re-verification.
 Pinned psxport `9f1bb927`: the canonical shared selftest passed 8/8; generated calls one and two
 matched 34/34 at steps 57,910 and 57,931; the short real window refused 1/2 with no boundary block;
 out-of-text emission refused; altered call-two `a0` produced one mismatch; Crash selftest passed 6/6.
+
+## Re-confirmed 2026-08-21
+
+Post-landing Crash selftest passed 6/6 and canonical oracle selftest 8/8; calls one and two remained 34/34 at steps 57910 and 57931.
