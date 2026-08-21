@@ -6,7 +6,7 @@ created: 2026-08-21
 tags:
 depends: CMakeLists.txt, psxport.pin, titles/crash1/executable.json, titles/crash1/recomp_seeds.json, tools/crash1_recomp.py, tests/crash1_recomp_boundary.cpp
 reconfirmed: 2026-08-21
-verified_at: 2026-08-21 14:14:06
+verified_at: 2026-08-21 14:16:30
 ---
 
 ## Claim
@@ -64,3 +64,7 @@ Post-landing ce2c83ad generated path retained 34/34 at steps 57910, 57931, 57935
 ## Re-confirmed 2026-08-21
 
 Pinned psxport 3418a79b: Crash selftest passed 9/9; calls one through four matched 34/34 at steps 57910, 57931, 57935, and 57962, including the call-three return. The real short trace refused 3/4, repeated-target ambiguity refused, out-of-text emission refused, and altered call-four a0 produced one named mismatch.
+
+## Re-confirmed 2026-08-21
+
+Post-landing four-call generated path remained 34/34 at steps 57910, 57931, 57935, and 57962 with short-trace, repeated-target, out-of-text, and altered-a0 opposites passing.
