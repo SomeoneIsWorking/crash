@@ -7,7 +7,7 @@ created: 2026-08-21
 
 ## Instrument
 
-Pinned psxport `ce2c83ad` `oracle_trace` plus `crossvalidate_crt0.py`, as wired by CMake
+Pinned psxport `3418a79b` `oracle_trace` plus `crossvalidate_crt0.py`, as wired by CMake
 `crash1_oracle_boot_check` for Crash 1's in-image libcInit shape.
 
 ## Validated by

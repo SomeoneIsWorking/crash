@@ -6,7 +6,7 @@ created: 2026-08-21
 tags: crash1,recompiler,oracle,crt0
 depends: CMakeLists.txt, psxport.pin, titles/crash1/executable.json, titles/crash1/recomp_seeds.json, tools/crash1_recomp.py, tests/crash1_recomp_boundary.cpp
 reconfirmed: 2026-08-21
-verified_at: 2026-08-21 13:09:32
+verified_at: 2026-08-21 14:14:06
 ---
 
 ## Claim
@@ -16,7 +16,7 @@ comparable CPU state at the first executed crt0 call in the verified North Ameri
 
 ## Evidence
 
-Pinned psxport `9f1bb927` emitter version `2026-08-12.1` discovered 115 static candidate seeds and emitted 653
+Pinned psxport `3418a79b` emitter version `2026-08-12.1` discovered 115 static candidate seeds and emitted 653
 resident candidates with zero configured overlays. The generated entry `0x8003E018` reached override
 target `0x80011A18`; against the independent oracle's first executed call, `pc`, all 31 nonzero GPRs,
 `lo`, and `hi` agreed 34/34. The same gate proved the emitter refuses an out-of-text seed and the
@@ -65,3 +65,7 @@ Pinned psxport ce2c83ad: 115 static candidate seeds emitted 653 candidates; gene
 ## Re-confirmed 2026-08-21
 
 Post-landing ce2c83ad four-call boundary gate passed 9/9 with 34/34 at calls one through four and all refusal controls intact.
+
+## Re-confirmed 2026-08-21
+
+Pinned psxport 3418a79b: 115 static candidate seeds emitted 653 candidates; generated call one matched the independent oracle 34/34 at step 57910, while out-of-text emission refused and the altered-register comparator produced one named mismatch.
