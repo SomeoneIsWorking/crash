@@ -2,7 +2,7 @@
 
 | Subsystem | Status | Where | Gap / next |
 |---|---|---|---|
-| Framework consumer | 🟡 scaffold | `CMakeLists.txt`, `external/psxport/`, `psxport.pin` | Oracle and recompiled-boundary gates verified against psxport `692b9b20`; no game seam |
+| Framework consumer | 🟡 scaffold | `CMakeLists.txt`, `external/psxport/`, `psxport.pin` | Oracle and recompiled-boundary gates verified against psxport `ce2c83ad`; no game seam |
 | C++ verification | ✅ enforced | `.clang-format`, `.clang-tidy`, `CMakeLists.txt`, `external/psxport/tools/check_cpp_style.py` | Normal CTest runs shared first-party-only format, 1,200-line ownership, and compile-database clang-tidy checks over the boundary runner; generated code remains excluded |
 | Executable identity gate | ✅ verified | `tools/verify_executable.py` | Manifest-vs-real-image check uses psxport's PS-X EXE loader; 4/4 positive/negative selftest |
 | Crash 1 disc provisioning | ✅ verified | `tools/provision_crash1.py`, `tests/test_provision_crash1.py` | CLI/env/`.env`/single-drop-in resolution; real USA disc boot target plus 11/11 executable facts pass, while wrong-title disc and nine synthetic cases prove refusal paths |

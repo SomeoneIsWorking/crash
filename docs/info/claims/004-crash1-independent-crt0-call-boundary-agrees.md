@@ -6,7 +6,7 @@ created: 2026-08-21
 tags: crash1,oracle,crt0
 depends: CMakeLists.txt, psxport.pin, titles/crash1/executable.json, tools/provision_crash1.py
 reconfirmed: 2026-08-21
-verified_at: 2026-08-21 12:02:56
+verified_at: 2026-08-21 13:08:08
 ---
 
 ## Claim
@@ -58,3 +58,7 @@ Pinned psxport 692b9b20: verified executable identity 11/11, independent CPU fix
 ## Re-confirmed 2026-08-21
 
 Post-landing executable identity passed 11/11, oracle_spike passed 39/39, and independent symbolic/oracle first-call comparison passed 6/6 at step 57910 on psxport 692b9b20.
+
+## Re-confirmed 2026-08-21
+
+Pinned psxport ce2c83ad: verified executable identity 11/11, independent CPU fixture 39/39, symbolic/oracle first-call state 6/6 at step 57910 target 0x80011A18, bounded crossvalidator controls 5/5, and canonical tracer CLI controls 8/8.
