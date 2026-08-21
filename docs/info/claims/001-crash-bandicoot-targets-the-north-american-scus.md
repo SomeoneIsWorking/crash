@@ -18,3 +18,9 @@ tools/verify_executable.py --check over the real image matched 11/11 manifest fa
 ## What would falsify it
 
 Falsified if a newly provisioned North American retail disc extracts different executable bytes, any tracked manifest fact differs from the executable, the entry falls outside its declared text, or the embedded North America/SCUS markers are absent.
+
+## Re-confirmed 2026-08-21
+
+`tools/provision_crash1.py` used psxport `discdump` on a real USA disc: `SYSTEM.CNF` selected
+`SCUS_949.00`, and the extracted image matched all 11 manifest facts including SHA-256
+`aabf1464f90b2e0b81e712b77aebbdb88f303b16ce830535e2b0cd886ee280f2`.

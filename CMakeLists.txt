@@ -40,3 +40,24 @@ add_test(
     --root "${CMAKE_CURRENT_SOURCE_DIR}" --compile-commands "${CMAKE_BINARY_DIR}"
     --allow-empty-scaffold
 )
+add_test(
+  NAME crash1_provision_tests
+  COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tests/test_provision_crash1.py"
+)
+set_tests_properties(crash1_provision_tests PROPERTIES ENVIRONMENT "PYTHONDONTWRITEBYTECODE=1")
+file(READ "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/executable.json" CRASH1_MANIFEST_JSON)
+string(JSON CRASH1_EXECUTABLE GET "${CRASH1_MANIFEST_JSON}" executable)
+add_custom_target(
+  crash1_oracle_boot_check
+  COMMAND
+    "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tools/provision_crash1.py"
+    --discdump "$<TARGET_FILE:discdump>"
+  COMMAND "$<TARGET_FILE:oracle_spike>"
+  COMMAND
+    "${Python3_EXECUTABLE}" "${PSXPORT_DIR}/tools/oracle/crossvalidate_crt0.py"
+    "${CMAKE_CURRENT_SOURCE_DIR}/scratch/bin/crash1/${CRASH1_EXECUTABLE}"
+    --build "${CMAKE_BINARY_DIR}/psxport_build" --steps 400000
+  DEPENDS crt0_extract discdump oracle_spike oracle_trace
+  USES_TERMINAL
+  VERBATIM
+)

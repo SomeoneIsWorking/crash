@@ -5,8 +5,8 @@ status: holds
 created: 2026-08-21
 tags:
 depends: CMakeLists.txt
-reconfirmed: 2026-08-21
-verified_at: 2026-08-21 02:21:55
+reconfirmed: 2026-08-21 03:05:54
+verified_at: 2026-08-21 03:05:54
 ---
 
 ## Claim
@@ -28,3 +28,19 @@ Reverified Crash from a fresh Clang 22 build against clean pinned psxport eb2465
 ## Re-confirmed 2026-08-21
 
 Reverified Crash after final framework landing be381503: CMake reconfigured with Clang 22, scaffold rebuilt and linked, psxport_smoke passed 8/8, normal CTest C++ policy passed, and psxport_sync.py --check confirmed build/ used the exact recorded be381503 pin.
+
+## Re-confirmed 2026-08-21
+
+Reverified after adding the Crash 1 provisioning CTest: Clang 22 configured the tree, crash_scaffold linked, psxport_smoke passed 8/8, crash_cpp_policy passed, and psxport_sync.py --check matched be381503.
+
+## Re-confirmed 2026-08-21
+
+Final reverify after registering the bytecode-clean provisioning CTest: Clang 22 configured, crash_scaffold linked, psxport_smoke passed 8/8, crash_cpp_policy and nine-case provisioning CTest passed 2/2, and psxport_sync.py --check matched be381503.
+
+## Re-confirmed 2026-08-21
+
+Reverified the final Crash tree against pinned psxport 2b5ef7b5: Clang 22 configured both build trees, crash_scaffold linked, psxport_smoke passed 8/8, normal CTests passed 2/2, the C++ policy printed explicit zero scaffold denominators, and psxport_sync.py --check matched the recorded pin.
+
+## Re-confirmed 2026-08-21 03:05:54
+
+2026-08-21 post-integration: clean Clang builds in build/ and scratch/build-clang passed crash_cpp_policy 1/1 with explicit 0/0 scaffold denominators; normal CTests passed 2/2 and psxport_smoke passed 8/8 at framework 2b5ef7b5.
