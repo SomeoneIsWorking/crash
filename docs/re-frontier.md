@@ -54,12 +54,12 @@ Statuses: ✅ `re-verified` · 🟡 `re-partial` · 🔬 `in-progress` · ⬜ `t
 ## Recompilation and ownership
 
 ### CRASH1-04 — recompile to the first real divergence
-- status: todo
+- status: re-partial
 - deps: CRASH1-03
-- evidence:
-- where: `titles/crash1/`, `generated/`
-- gap: No seeds or generated substrate exist. Grow seeds from executable control flow and observed misses; never copy another game's set.
-- notes: Generated code is sacrosanct.
+- evidence: The verified USA executable and deliberately empty title seed additions produced 115 binary-rooted seeds and 653 emitted candidates with zero configured overlays under psxport emitter version `2026-08-12.1`. A focused port runner executed the generated entry `0x8003E018` and intercepted its generated call to the symbolically decoded first target `0x80011A18`. Against the independent Mednafen CPU oracle's first executed call, `pc`, all 31 nonzero GPRs, `lo`, and `hi` agreed 34/34. The production emitter refused an out-of-text seed, and the production comparator reported exactly one named disagreement after its port-side `a0` input was changed.
+- where: `titles/crash1/recomp_seeds.json`, `tools/crash1_recomp.py`, `tests/crash1_recomp_boundary.cpp`, CMake `crash1_recomp_boundary_check`, gitignored `generated/crash1/` and traces
+- gap: Equality is proven only from the executable entry through its first call. Resume comparison at the next supported generated boundary and narrow the first real divergence; BIOS, hardware and the remaining 652 emitted candidates are not certified by this result. Static pointer/table discovery also emits data-like candidate fragments (issue #3), so a function-count denominator is not a correctness denominator.
+- notes: Generated code is sacrosanct. Keep explicit title seed additions empty until a real fail-fast indirect miss supplies an address and rationale; never copy another game's set.
 
 ### SHARED-01 — prove cross-title shared-engine ownership
 - status: todo

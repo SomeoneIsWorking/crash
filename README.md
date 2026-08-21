@@ -10,9 +10,9 @@ The repository is one engine lineage with title-specific integration under `titl
 - `titles/crash3/`
 
 Current status: framework scaffold plus a verified Crash 1 North American disc/executable identity
-and an independently executed, 6/6 cross-checked crt0 call boundary. There is still no generated
-code, game seam, runnable port, full oracle boot, native producer, widescreen path, or interpolation
-path.
+and a generated 653-fragment resident substrate. The generated entry path agrees with the
+independent oracle on all 34 CPU-state fields at the first crt0 call. There is still no runnable
+port, full oracle boot, game seam, native producer, widescreen path, or interpolation path.
 
 ## Configure the framework scaffold
 
@@ -26,7 +26,8 @@ CCACHE_DIR=scratch/ccache cmake --build scratch/build-clang --target crash_scaff
 Run `ctest --test-dir scratch/build-clang --output-on-failure -R crash_cpp_policy` for the normal
 first-party C++ gate. The shared framework checker applies this repository's tracked `clang-format`
 and `clang-tidy` policy and the 1,200-line ownership cap without linting `external/psxport` or
-generated code. The scaffold currently reports an explicit zero first-party translation units.
+generated code. The boundary runner is the repository's one compile-backed first-party translation
+unit.
 
 ## Provision Crash Bandicoot
 
@@ -57,3 +58,19 @@ PSXPORT_CRASH1_DISC=/path/to/Crash-Bandicoot-USA.chd \
 ```
 
 This verifies the crt0 call boundary only. It does not claim a full oracle boot or a runnable PC port.
+
+## Cross-check the first recompiled boundary
+
+Once the verified executable exists under `scratch/bin/crash1/`, one asset-gated target emits the
+resident substrate, builds its focused runner, compares the complete port-side register file against
+the independent oracle, and proves the comparator's opposite answer:
+
+```sh
+cmake --build scratch/build-clang --target crash1_recomp_boundary_check -j16
+```
+
+The positive path compares `pc`, all 31 nonzero general-purpose registers, `lo`, and `hi` at
+`0x80011A18` (34/34). The controls require the real emitter to refuse an out-of-text seed and the
+same comparator to name a deliberately altered `a0`. Generated code remains gitignored and is never
+edited. This establishes only the entry-to-first-call slice; later resident code, BIOS and hardware
+are still unverified.

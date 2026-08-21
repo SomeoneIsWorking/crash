@@ -1,0 +1,14 @@
+// Crash Bandicoot resident recompiler seeds.
+//
+// psxport's emitter independently roots discovery at the PS-X EXE entry point, scans binary
+// pointers/tables, and follows direct calls. These lists are therefore deliberately empty. Add an
+// address only after a real run reports an indirect-only `[recomp-MISS]`, with the observation that
+// proves it belongs here. Never copy another title's addresses or guess overlay load bases: either
+// can make a successful emission decode the wrong function boundaries.
+{
+  "main": [],
+  "main_reentry": [],
+  "overlay_bases": {},
+  "overlay_base_patterns": [],
+  "overlay_seeds": {}
+}
