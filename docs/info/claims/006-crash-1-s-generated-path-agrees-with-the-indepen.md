@@ -6,16 +6,25 @@ created: 2026-08-21
 tags:
 depends: CMakeLists.txt, psxport.pin, titles/crash1/executable.json, titles/crash1/recomp_seeds.json, tools/crash1_recomp.py, tests/crash1_recomp_boundary.cpp
 reconfirmed: 2026-08-21
-verified_at: 2026-08-21 11:20:20
+verified_at: 2026-08-21 11:58:58
 ---
 
 ## Claim
 
-Crash 1's generated path agrees with the independent reference CPU on the complete comparable CPU state at both the first and second executed calls.
+Crash 1's generated path agrees with the independent reference CPU on the complete comparable CPU
+state at the first four executed calls, including the third call's return path.
 
 ## Evidence
 
-CMake crash1_recomp_boundary_check on the verified USA executable consumed pinned psxport `9f1bb927`'s canonical ordinal captures; generated execution matched the independent oracle 34/34 at step 57910 target 0x80011A18 and 34/34 at step 57931 target 0x80011D88. The shared oracle fixture passed 8/8, including distinct ordinal targets, first-call alias equality, the complete 33-register block, and insufficient-ordinal refusal; a real trace capped immediately before call two refused with a 1/2 denominator and no boundary block. The emitter refused an out-of-text seed and a changed second-boundary a0 produced exactly one named mismatch. The executable denominator is 3 observed addresses (2 generated bodies executed, 1 next call target), not 653 emitted candidates.
+CMake `crash1_recomp_boundary_check` on the verified USA executable consumed pinned psxport
+`692b9b20`'s canonical ordinal captures. Generated execution matched the independent oracle 34/34 at
+step 57,910 target `0x80011A18`, step 57,931 target `0x80011D88`, step 57,935 target
+`0x8003E0C0`, and step 57,962 target `0x8001652C`. The fourth call occurs after the third target
+returns through `0x80011D98`, so it checks that leaf body and return path. The shared oracle fixture
+passed 8/8. A real trace capped immediately before call four refused with a 3/4 denominator and no
+boundary block. The emitter refused an out-of-text seed and a changed fourth-boundary `a0` produced
+exactly one named mismatch. The executable denominator is five observed addresses (four generated
+bodies executed, one next call target), not 653 emitted candidates.
 
 ## What would falsify it
 
@@ -32,3 +41,10 @@ out-of-text emission refused; altered call-two `a0` produced one mismatch; Crash
 ## Re-confirmed 2026-08-21
 
 Post-landing Crash selftest passed 6/6 and canonical oracle selftest 8/8; calls one and two remained 34/34 at steps 57910 and 57931.
+
+## Re-confirmed 2026-08-21
+
+Pinned psxport `692b9b20`: Crash selftest passed 9/9; calls one through four matched 34/34 at
+steps 57,910, 57,931, 57,935, and 57,962, with call four following the call-three return through
+`0x80011D98`. The real short trace refused 3/4, a repeated target refused as ordinal-ambiguous,
+out-of-text emission refused, and altered call-four `a0` produced one named mismatch.

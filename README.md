@@ -11,7 +11,8 @@ The repository is one engine lineage with title-specific integration under `titl
 
 Current status: framework scaffold plus a verified Crash 1 North American disc/executable identity
 and 653 emitted static candidates. The generated path agrees with the independent oracle on all 34
-CPU-state fields at both the first crt0 call and the next executed call. Only three addresses in that
+CPU-state fields at the first four executed calls. Reaching call four also proves that the third
+target executed and returned through its measured caller continuation. Five addresses in the
 candidate set have execution provenance so far. There is still no runnable port, full oracle boot,
 game seam, native producer, widescreen path, or interpolation path.
 
@@ -60,7 +61,7 @@ PSXPORT_CRASH1_DISC=/path/to/Crash-Bandicoot-USA.chd \
 
 This verifies the crt0 call boundary only. It does not claim a full oracle boot or a runnable PC port.
 
-## Cross-check the first two recompiled boundaries
+## Cross-check the first four recompiled boundaries
 
 Once the verified executable exists under `scratch/bin/crash1/`, one asset-gated target emits the
 resident substrate, builds its focused runner, compares the complete port-side register file against
@@ -70,12 +71,14 @@ the independent oracle, and proves the comparator's opposite answer:
 cmake --build scratch/build-clang --target crash1_recomp_boundary_check -j16
 ```
 
-The positive path compares `pc`, all 31 nonzero general-purpose registers, `lo`, and `hi` at the
-first call `0x80011A18` (34/34) and the independently discovered second call `0x80011D88` (34/34).
-Both reference states come from psxport's canonical ordinal call capture; Crash does not duplicate
-the oracle's MIPS call-tracking rules. The controls require the real emitter to refuse an out-of-text seed and the same comparator to name a
-deliberately altered second-boundary `a0`; a real oracle trace capped immediately before call two
-must report only `1/2` boundaries and refuse. Generated code remains gitignored and is never edited.
-This establishes only the entry through the second call; later resident code, BIOS and hardware are
-still unverified. The emitter's 115 static seeds and 653 emitted candidates are discovery
-denominators, not claims that every candidate is executable code.
+The positive path compares `pc`, all 31 nonzero general-purpose registers, `lo`, and `hi` at calls
+`0x80011A18`, `0x80011D88`, `0x8003E0C0`, and `0x8001652C` (34/34 each). The fourth boundary occurs
+only after `0x8003E0C0` returns to `0x80011D98`, so the slice includes that leaf's generated body and
+return path. All reference states come from psxport's canonical ordinal call capture; Crash does not
+duplicate the oracle's MIPS call-tracking rules. The controls require the real emitter to refuse an
+out-of-text seed and the same comparator to name a deliberately altered fourth-boundary `a0`; a real
+oracle trace capped immediately before call four must report only `3/4` boundaries and refuse.
+Generated code remains gitignored and is never edited. This establishes only the entry through call
+four; later resident code, BIOS and hardware are still unverified. The emitter's 115 static seeds and
+653 emitted candidates are discovery denominators, not claims that every candidate is executable
+code.

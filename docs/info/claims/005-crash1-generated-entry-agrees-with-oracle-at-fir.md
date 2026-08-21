@@ -6,7 +6,7 @@ created: 2026-08-21
 tags: crash1,recompiler,oracle,crt0
 depends: CMakeLists.txt, psxport.pin, titles/crash1/executable.json, titles/crash1/recomp_seeds.json, tools/crash1_recomp.py, tests/crash1_recomp_boundary.cpp
 reconfirmed: 2026-08-21
-verified_at: 2026-08-21 11:20:20
+verified_at: 2026-08-21 11:57:55
 ---
 
 ## Claim
@@ -49,3 +49,7 @@ mismatch controls refused/disagreed.
 ## Re-confirmed 2026-08-21
 
 Post-landing generated call one remained 34/34 at step 57910 with out-of-text and altered-register controls passing.
+
+## Re-confirmed 2026-08-21
+
+Pinned psxport 692b9b20: 115 static candidate seeds emitted 653 candidates; generated call one matched the independent oracle 34/34 at step 57910, while out-of-text emission refused and the altered-register comparator produced one named mismatch.

@@ -6,7 +6,7 @@ created: 2026-08-21
 tags: crash1,oracle,crt0
 depends: CMakeLists.txt, psxport.pin, titles/crash1/executable.json, tools/provision_crash1.py
 reconfirmed: 2026-08-21
-verified_at: 2026-08-21 11:20:20
+verified_at: 2026-08-21 11:57:55
 ---
 
 ## Claim
@@ -50,3 +50,7 @@ Pinned psxport 9f1bb927: crash1_oracle_boot_check reprovisioned the real USA exe
 ## Re-confirmed 2026-08-21
 
 Post-landing crash1_oracle_boot_check passed identity 11/11, oracle_spike 39/39, and symbolic/oracle first-call agreement 6/6 on psxport 9f1bb927.
+
+## Re-confirmed 2026-08-21
+
+Pinned psxport 692b9b20: verified executable identity 11/11, independent CPU fixture 39/39, symbolic/oracle first-call state 6/6 at step 57910 target 0x80011A18, bounded crossvalidator controls 5/5, and canonical tracer CLI controls 8/8.

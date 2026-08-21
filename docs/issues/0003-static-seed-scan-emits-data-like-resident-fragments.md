@@ -23,15 +23,15 @@ generated fragment locally.
 ## Impact
 
 The 653-candidate denominator proves what the current emitter produced, not that all 653 candidates
-are executable functions. It does not invalidate the execution-proven entry-through-second-call
+are executable functions. It does not invalidate the execution-proven entry-through-fourth-call
 slice: the generated path independently agrees with the oracle 34/34 at each boundary. It does
 prevent treating the whole substrate or static discovery count as verified. Current output now names
-115 static seeds and 653 emitted candidates separately from the executable denominator: three
-addresses observed, two generated bodies actually executed.
+115 static seeds and 653 emitted candidates separately from the executable denominator: five
+addresses observed, four generated bodies actually executed.
 
 ## Proper next investigation
 
-Continue boundary comparison inside `0x80011D88` and record the first real divergence or fail-fast
+Continue boundary comparison inside `0x8001652C` and record the first real divergence or fail-fast
 miss. Separately make the shared emitter distinguish each mixed-table entry's executable provenance
 instead of accepting every target because the run as a whole looks like code. This repository must
 not patch or delete generated fragments locally, and explicit title seeds remain empty until an

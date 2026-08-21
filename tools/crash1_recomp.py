@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
-"""Emit and compare Crash 1's resident recompile across its first two call boundaries.
+"""Emit and compare Crash 1's resident recompile across its first four call boundaries.
 
 The port side executes psxport's generated C from the retail USA executable. The reference side
 executes the same input bytes in the independent Mednafen CPU oracle. The symbolic crt0 decoder
 selects only the expected first-call target. Canonical ordinal capture in oracle_trace independently
-selects both actual call targets and supplies both reference register files.
+selects each actual call target and supplies every reference register file. The fourth boundary is
+reached only after the third target executes and returns, so it also checks that generated leaf's
+return path.
 """
 
 from __future__ import annotations
@@ -76,6 +78,7 @@ REGISTER_NAMES = (
     "lo",
     "hi",
 )
+CALL_ORDINALS = tuple(range(1, 5))
 
 
 class Refused(RuntimeError):
@@ -275,6 +278,15 @@ def parse_call_boundary(text: str, ordinal: int) -> CallBoundary:
     return CallBoundary(ordinal, int(headers[0].group("step")), state)
 
 
+def require_unique_call_target(observed_targets: set[int], call: CallBoundary) -> None:
+    if call.state.pc in observed_targets:
+        raise Refused(
+            f"oracle call {call.ordinal} repeats target 0x{call.state.pc:08X}; "
+            "the target-override runner cannot distinguish repeated call ordinals"
+        )
+    observed_targets.add(call.state.pc)
+
+
 def capture_port_state(
     executable: pathlib.Path,
     runner: pathlib.Path,
@@ -305,7 +317,8 @@ def capture_states(
         raise Refused(f"port boundary runner is absent: {runner}")
     RAW.mkdir(parents=True, exist_ok=True)
     comparisons = []
-    for ordinal in (1, 2):
+    observed_targets: set[int] = set()
+    for ordinal in CALL_ORDINALS:
         oracle_trace = RAW / f"oracle-call-{ordinal}.txt"
         result = run(
             [
@@ -326,6 +339,7 @@ def capture_states(
                 f"{result.stderr.rstrip()}"
             )
         call = parse_call_boundary(oracle_trace.read_text(encoding="utf-8"), ordinal)
+        require_unique_call_target(observed_targets, call)
         if ordinal == 1 and call.state.pc != first_symbolic_boundary:
             raise Refused(
                 f"independent oracle first call 0x{call.state.pc:08X} disagrees with symbolic "
@@ -355,10 +369,10 @@ def check_comparison(
             f"{total}/{total} state fields agree"
         )
     print(
-        "PASS execution denominator: 3 executable-proven addresses among the emitted "
-        "candidates (2 generated bodies executed, then 1 observed call target)"
+        "PASS execution denominator: 5 executable-proven addresses among the emitted "
+        "candidates (4 generated bodies executed, then 1 observed call target)"
     )
-    print(f"traces: {RAW / 'oracle-call-2.txt'} and {RAW / 'port-call-2.txt'}")
+    print(f"traces: {RAW / 'oracle-call-4.txt'} and {RAW / 'port-call-4.txt'}")
     return comparisons
 
 
@@ -385,43 +399,59 @@ def selftest(
     print("PASS negative emission: out-of-text seed refused before generation")
 
     comparisons = check_comparison(executable, build, runner, steps)
-    second_call, second_port = comparisons[1]
+    last_call, last_port = comparisons[-1]
 
-    before_second_trace = RAW / "oracle-before-second-call.txt"
-    before_second_result = run(
+    before_last_trace = RAW / "oracle-before-last-call.txt"
+    before_last_result = run(
         [
             str(tool_path(build, "tools/oracle/oracle_trace")),
             str(executable),
             "--steps",
-            str(second_call.step),
+            str(last_call.step),
             "--capture-call",
-            "2",
+            str(last_call.ordinal),
             "--summary-only",
             "--out",
-            str(before_second_trace),
+            str(before_last_trace),
         ]
     )
-    if before_second_result.returncode != 2:
+    if before_last_result.returncode != 2:
         raise Refused(
-            "short real-oracle control did not refuse at the missing second call: "
-            f"exit={before_second_result.returncode}, stderr={before_second_result.stderr.rstrip()}"
+            f"short real-oracle control did not refuse at missing call {last_call.ordinal}: "
+            f"exit={before_last_result.returncode}, stderr={before_last_result.stderr.rstrip()}"
         )
-    short_trace = before_second_trace.read_text(encoding="utf-8")
+    short_trace = before_last_trace.read_text(encoding="utf-8")
+    reached = last_call.ordinal - 1
     if (
-        "reached 1 of 2 requested executed jal call boundary/boundaries"
-        not in before_second_result.stderr
+        f"reached {reached} of {last_call.ordinal} requested executed jal call boundary/boundaries"
+        not in before_last_result.stderr
         or "CALL-BOUNDARY-REGS" in short_trace
     ):
         raise Refused(
-            "short oracle trace did not report a clean 1/2 denominator with no boundary block"
+            f"short oracle trace did not report a clean {reached}/{last_call.ordinal} denominator "
+            "with no boundary block"
         )
-    print("PASS negative call denominator: trace ending before call 2 refused 1/2")
-
-    altered_registers = dict(second_port.registers)
-    altered_registers["a0"] ^= 1
-    mismatches = compare_states(
-        second_call.state, State(second_port.pc, altered_registers)
+    print(
+        f"PASS negative call denominator: trace ending before call {last_call.ordinal} "
+        f"refused {reached}/{last_call.ordinal}"
     )
+
+    try:
+        require_unique_call_target({last_call.state.pc}, last_call)
+    except Refused as exc:
+        if "cannot distinguish repeated call ordinals" not in str(exc):
+            raise Refused("repeated-target refusal named the wrong cause") from exc
+    else:
+        raise Refused(
+            "target-override runner accepted an ambiguous repeated call target"
+        )
+    print(
+        "PASS negative runner boundary: repeated call target refused as ordinal-ambiguous"
+    )
+
+    altered_registers = dict(last_port.registers)
+    altered_registers["a0"] ^= 1
+    mismatches = compare_states(last_call.state, State(last_port.pc, altered_registers))
     if len(mismatches) != 1 or not mismatches[0].startswith("a0:"):
         raise Refused(
             "production comparator did not detect the opposite-answer a0 mutation"
@@ -429,7 +459,7 @@ def selftest(
     print(
         "PASS negative comparison: one altered port register produced one named mismatch"
     )
-    print("SELFTEST 6/6")
+    print("SELFTEST 9/9")
     return True
 
 
