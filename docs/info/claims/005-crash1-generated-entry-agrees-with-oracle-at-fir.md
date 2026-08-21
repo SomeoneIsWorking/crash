@@ -6,7 +6,7 @@ created: 2026-08-21
 tags: crash1,recompiler,oracle,crt0
 depends: CMakeLists.txt, psxport.pin, titles/crash1/executable.json, titles/crash1/recomp_seeds.json, tools/crash1_recomp.py, tests/crash1_recomp_boundary.cpp
 reconfirmed: 2026-08-21
-verified_at: 2026-08-21 03:32:04
+verified_at: 2026-08-21 03:36:57
 ---
 
 ## Claim
@@ -34,3 +34,7 @@ without re-verification.
 Post-format final gate: the real USA executable expanded 115 roots into 653 emitted candidates; the
 generated entry matched independent oracle state 34/34; out-of-text seed refusal and one-bit `a0`
 disagreement controls both passed.
+
+## Re-confirmed 2026-08-21
+
+Post-landing crash1_recomp_boundary_check passed 4/4: 115 roots -> 653 candidates, out-of-text refusal, 34/34 real oracle agreement, and named one-bit a0 mismatch.

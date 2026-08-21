@@ -6,7 +6,7 @@ created: 2026-08-21
 tags:
 depends: CMakeLists.txt
 reconfirmed: 2026-08-21
-verified_at: 2026-08-21 03:30:36
+verified_at: 2026-08-21 03:36:57
 ---
 
 ## Claim
@@ -31,3 +31,7 @@ checker/framework pin changes without re-verification.
 ## Re-confirmed 2026-08-21
 
 Clang 22 configured both build trees; shared policy format/size/tidy checked the one compile-backed first-party TU 1/1; normal CTests passed 2/2 and smoke passed 8/8 at psxport 2b5ef7b5.
+
+## Re-confirmed 2026-08-21
+
+Post-landing CTest 2/2 passed; crash_cpp_policy format/size/clang-tidy now covers the one compile-backed boundary runner.
