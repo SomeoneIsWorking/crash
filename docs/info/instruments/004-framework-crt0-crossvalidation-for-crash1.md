@@ -7,12 +7,12 @@ created: 2026-08-21
 
 ## Instrument
 
-Pinned psxport `2b5ef7b5` `oracle_trace` plus `crossvalidate_crt0.py`, as wired by CMake
+Pinned psxport `9f1bb927` `oracle_trace` plus `crossvalidate_crt0.py`, as wired by CMake
 `crash1_oracle_boot_check` for Crash 1's in-image libcInit shape.
 
 ## Validated by
 
-The independent CPU fixture passed 22/22. The real verified `SCUS_949.00` trace independently
+The independent CPU fixture passed 39/39. The real verified `SCUS_949.00` trace independently
 captured the first executed crt0 jal at step 57,910 and crossvalidation agreed on 6/6 fields. A
 50,000-step window reached no call and refused with exit 2 and zero comparisons. The framework also
 retains a 7/7 BIOS-thunk control for CTR.

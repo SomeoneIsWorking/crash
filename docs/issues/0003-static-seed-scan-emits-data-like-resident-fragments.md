@@ -10,20 +10,29 @@ updated: 2026-08-21
 
 ## Observation
 
-The real USA executable emission reports 115 binary-rooted seeds and 653 resident functions. Some
+The real USA executable emission reports 115 static candidate seeds and 653 emitted candidates. Some
 generated candidates, for example `0x80011168`, contain obvious embedded strings and unhandled opcode
 comments rather than coherent code. These files are gitignored evidence and are not hand-edited.
 
+The specific `0x80011168` false positive comes from `code_pointer_tables`: the 18-word run at
+`0x80054A24` mostly contains code addresses, but its first word is the data address `0x80011168`.
+That data happens to decode as a non-UNKNOWN instruction, so the current run-level test promotes it
+along with the real entries. This is a measured mixed-table failure, not a reason to delete one
+generated fragment locally.
+
 ## Impact
 
-The 653-function denominator proves what the current emitter produced, not that all 653 candidates
-are executable functions. It does not invalidate the measured entry-to-first-call slice: that
-generated path independently agrees with the oracle on 34/34 fields. It does prevent treating the
-whole substrate or static discovery count as verified.
+The 653-candidate denominator proves what the current emitter produced, not that all 653 candidates
+are executable functions. It does not invalidate the execution-proven entry-through-second-call
+slice: the generated path independently agrees with the oracle 34/34 at each boundary. It does
+prevent treating the whole substrate or static discovery count as verified. Current output now names
+115 static seeds and 653 emitted candidates separately from the executable denominator: three
+addresses observed, two generated bodies actually executed.
 
 ## Proper next investigation
 
-Continue boundary comparison from `0x80011A18` and record the first real divergence or fail-fast
-miss. Separately distinguish executable pointer/table roots from false-positive data candidates in
-the shared emitter before claiming complete resident discovery. This repository must not patch or
-delete generated fragments locally.
+Continue boundary comparison inside `0x80011D88` and record the first real divergence or fail-fast
+miss. Separately make the shared emitter distinguish each mixed-table entry's executable provenance
+instead of accepting every target because the run as a whole looks like code. This repository must
+not patch or delete generated fragments locally, and explicit title seeds remain empty until an
+actual indirect execution miss proves an address.

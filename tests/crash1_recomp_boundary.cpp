@@ -54,12 +54,12 @@ void capture_boundary(Core *core) {
 
 int main(int argc, char **argv) {
   if (argc != 4) {
-    std::fprintf(stderr, "usage: %s <PS-X EXE> <entry> <first-call-target>\n", argv[0]);
+    std::fprintf(stderr, "usage: %s <PS-X EXE> <entry> <call-target>\n", argv[0]);
     return 2;
   }
 
   const std::uint32_t entry = parse_address(argv[2], "entry");
-  const std::uint32_t boundary = parse_address(argv[3], "first-call-target");
+  const std::uint32_t boundary = parse_address(argv[3], "call-target");
   if (rec_func_index(entry) < 0 || rec_func_index(boundary) < 0) {
     std::fprintf(stderr, "REFUSED: generated substrate omits entry 0x%08X or boundary 0x%08X\n", entry, boundary);
     return 2;

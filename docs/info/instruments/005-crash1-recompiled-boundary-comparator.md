@@ -7,21 +7,27 @@ created: 2026-08-21
 
 ## Instrument
 
-`tools/crash1_recomp.py` plus `tests/crash1_recomp_boundary.cpp` — emits the Crash 1 resident
-substrate, captures its first selected generated-call state, and compares it with psxport's
-independent `oracle_trace` register block.
+`tools/crash1_recomp.py` plus `tests/crash1_recomp_boundary.cpp` — emits Crash 1's resident
+candidates, consumes psxport's canonical independent-oracle ordinal call captures, captures the same
+generated-call states, and compares complete register files.
 
 ## Validated by
 
-On the real verified USA executable the tool reported 34/34 agreement at `0x80011A18`. Its
-production emitter path refused an explicit seed outside the executable text. Its production state
-comparator also reported exactly one named mismatch when fed an otherwise-real port capture with
-`a0` changed by one bit, proving the disagreement answer rather than only the all-equal answer.
+The shared oracle selftest passes 8/8; it proves that calls one and two capture distinct targets,
+the first-call alias selects ordinal one, a capture contains all 33 canonical registers, and missing
+call three refuses without a boundary block. On the real verified USA executable the
+consumer reported port/oracle agreement 34/34 at call one `0x80011A18` and 34/34 at call two
+`0x80011D88`. Its production emitter refused an explicit seed outside executable
+text. A real oracle trace capped immediately before call two refused with only `1/2` boundaries. Its
+production state comparator reported exactly one named mismatch when fed the real second port
+capture with `a0` changed by one bit, proving both missing-boundary and disagreement answers rather
+than only the all-equal answer.
 
 ## Known failure modes
 
-The symbolic crt0 decoder selects the port interception target, while the oracle independently
-captures its first executed call; disagreement between those targets refuses before state comparison.
-The runner captures a function-call boundary, not every guest instruction, and this result covers
-only entry-to-first-call execution. It does not certify the remaining emitted functions, BIOS,
-devices, overlays, or gameplay.
+The symbolic crt0 decoder selects only the expected first target. The shared oracle recovers the
+second target from actual execution; the consumer does not reimplement `jal` or delay-slot tracking.
+The runner captures function-call boundaries, not every guest instruction, and
+this result covers only entry-through-second-call execution. It does not certify the remaining
+emitted candidates, BIOS, devices, overlays, or gameplay. The 115 static seeds and 653 emitted
+candidates are discovery denominators; only three addresses currently have execution provenance.

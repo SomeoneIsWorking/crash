@@ -6,7 +6,7 @@ created: 2026-08-21
 tags: crash1,oracle,crt0
 depends: CMakeLists.txt, psxport.pin, titles/crash1/executable.json, tools/provision_crash1.py
 reconfirmed: 2026-08-21
-verified_at: 2026-08-21 03:36:57
+verified_at: 2026-08-21 11:15:57
 ---
 
 ## Claim
@@ -17,7 +17,7 @@ first crt0 call boundary in the verified North American executable.
 ## Evidence
 
 CMake `crash1_oracle_boot_check` re-provisioned the 11/11-matching executable, ran the oracle fixture
-22/22, and reached the first executed jal at step 57,910, target `0x80011A18`. The independent state
+39/39, and reached the first executed jal at step 57,910, target `0x80011A18`. The independent state
 agreed on gp, target, a0, planned sp, planned a0, and planned a1. A 50,000-step run refused with no
 call and zero comparisons.
 
@@ -42,3 +42,7 @@ Reverified through the final crash1_oracle_boot_check target at pinned psxport 2
 ## Re-confirmed 2026-08-21
 
 Post-landing real USA oracle boot gate passed: identity 11/11, oracle fixture 22/22, first call step 57910, symbolic/oracle 6/6.
+
+## Re-confirmed 2026-08-21
+
+Pinned psxport 9f1bb927: crash1_oracle_boot_check reprovisioned the real USA executable at 11/11 identity facts, oracle_spike passed 39/39, first call remained step 57910 target 0x80011A18, and symbolic/oracle state agreed 6/6.

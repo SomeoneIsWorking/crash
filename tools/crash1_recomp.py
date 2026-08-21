@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Emit and compare Crash 1's resident recompile at its first executed call boundary.
+"""Emit and compare Crash 1's resident recompile across its first two call boundaries.
 
 The port side executes psxport's generated C from the retail USA executable. The reference side
 executes the same input bytes in the independent Mednafen CPU oracle. The symbolic crt0 decoder
-selects the expected first-call target, but it does not supply either side's register values.
+selects only the expected first-call target. Canonical ordinal capture in oracle_trace independently
+selects both actual call targets and supplies both reference register files.
 """
 
 from __future__ import annotations
@@ -35,7 +36,7 @@ COUNT_RE = re.compile(
 )
 LIBC_INIT_RE = re.compile(r"^\s+libcInit\s+(0x[0-9A-Fa-f]+)\s*$", re.MULTILINE)
 STATE_HEADER_RE = re.compile(
-    r"^# (?P<tag>[A-Z-]+)-REGS(?: step=\d+)? pc=0x(?P<pc>[0-9A-Fa-f]+)$"
+    r"^# (?P<tag>[A-Z-]+)-REGS(?: step=(?P<step>\d+))? pc=0x(?P<pc>[0-9A-Fa-f]+)$"
 )
 STATE_REG_RE = re.compile(
     r"^# (?P<tag>[A-Z-]+)-REG (?P<name>[a-z0-9]+)=0x(?P<value>[0-9A-Fa-f]+)$"
@@ -92,6 +93,13 @@ class Emission:
 class State:
     pc: int
     registers: dict[str, int]
+
+
+@dataclass(frozen=True)
+class CallBoundary:
+    ordinal: int
+    step: int
+    state: State
 
 
 def run(
@@ -252,61 +260,106 @@ def compare_states(reference: State, port: State) -> list[str]:
     return mismatches
 
 
+def parse_call_boundary(text: str, ordinal: int) -> CallBoundary:
+    state = parse_state(text, "CALL-BOUNDARY")
+    headers = [
+        match
+        for line in text.splitlines()
+        if (match := STATE_HEADER_RE.match(line))
+        and match.group("tag") == "CALL-BOUNDARY"
+    ]
+    if len(headers) != 1 or headers[0].group("step") is None:
+        raise Refused(
+            f"oracle call {ordinal} has no unique canonical step-bearing boundary block"
+        )
+    return CallBoundary(ordinal, int(headers[0].group("step")), state)
+
+
+def capture_port_state(
+    executable: pathlib.Path,
+    runner: pathlib.Path,
+    entry: int,
+    boundary: int,
+    ordinal: int,
+) -> State:
+    port_result = run(
+        [str(runner), str(executable), f"0x{entry:08X}", f"0x{boundary:08X}"]
+    )
+    port_trace = RAW / f"port-call-{ordinal}.txt"
+    port_trace.write_text(port_result.stdout, encoding="utf-8")
+    if port_result.returncode:
+        raise Refused(
+            f"port runner refused at call {ordinal} with exit {port_result.returncode}:\n"
+            f"{port_result.stderr.rstrip()}"
+        )
+    return parse_state(port_result.stdout, "PORT-CALL-BOUNDARY")
+
+
 def capture_states(
     executable: pathlib.Path, build: pathlib.Path, runner: pathlib.Path, steps: int
-) -> tuple[int, State, State]:
+) -> list[tuple[CallBoundary, State]]:
     identity = require_executable(executable)
-    boundary = symbolic_boundary(executable, build)
+    first_symbolic_boundary = symbolic_boundary(executable, build)
     oracle = tool_path(build, "tools/oracle/oracle_trace")
     if not runner.is_file():
         raise Refused(f"port boundary runner is absent: {runner}")
     RAW.mkdir(parents=True, exist_ok=True)
-    oracle_trace = RAW / "oracle-call.txt"
-    oracle_result = run(
-        [
-            str(oracle),
-            str(executable),
-            "--steps",
-            str(steps),
-            "--capture-first-call",
-            "--summary-only",
-            "--out",
-            str(oracle_trace),
-        ]
-    )
-    if oracle_result.returncode:
-        raise Refused(
-            f"oracle_trace refused with exit {oracle_result.returncode}:\n{oracle_result.stderr.rstrip()}"
+    comparisons = []
+    for ordinal in (1, 2):
+        oracle_trace = RAW / f"oracle-call-{ordinal}.txt"
+        result = run(
+            [
+                str(oracle),
+                str(executable),
+                "--steps",
+                str(steps),
+                "--capture-call",
+                str(ordinal),
+                "--summary-only",
+                "--out",
+                str(oracle_trace),
+            ]
         )
-    reference = parse_state(oracle_trace.read_text(encoding="utf-8"), "CALL-BOUNDARY")
-    if reference.pc != boundary:
-        raise Refused(
-            f"independent oracle first call 0x{reference.pc:08X} disagrees with symbolic boundary 0x{boundary:08X}"
+        if result.returncode:
+            raise Refused(
+                f"oracle_trace call {ordinal} refused with exit {result.returncode}:\n"
+                f"{result.stderr.rstrip()}"
+            )
+        call = parse_call_boundary(oracle_trace.read_text(encoding="utf-8"), ordinal)
+        if ordinal == 1 and call.state.pc != first_symbolic_boundary:
+            raise Refused(
+                f"independent oracle first call 0x{call.state.pc:08X} disagrees with symbolic "
+                f"boundary 0x{first_symbolic_boundary:08X}"
+            )
+        port = capture_port_state(
+            executable, runner, identity.entry, call.state.pc, call.ordinal
         )
-
-    port_result = run(
-        [str(runner), str(executable), f"0x{identity.entry:08X}", f"0x{boundary:08X}"]
-    )
-    (RAW / "port-call.txt").write_text(port_result.stdout, encoding="utf-8")
-    if port_result.returncode:
-        raise Refused(
-            f"port runner refused with exit {port_result.returncode}:\n{port_result.stderr.rstrip()}"
-        )
-    port = parse_state(port_result.stdout, "PORT-CALL-BOUNDARY")
-    return boundary, reference, port
+        comparisons.append((call, port))
+    return comparisons
 
 
 def check_comparison(
     executable: pathlib.Path, build: pathlib.Path, runner: pathlib.Path, steps: int
-) -> tuple[State, State]:
-    boundary, reference, port = capture_states(executable, build, runner, steps)
-    mismatches = compare_states(reference, port)
-    if mismatches:
-        raise Refused("port/oracle boundary disagreement:\n" + "\n".join(mismatches))
+) -> list[tuple[CallBoundary, State]]:
+    comparisons = capture_states(executable, build, runner, steps)
     total = 1 + len(REGISTER_NAMES)
-    print(f"PASS: {total}/{total} state fields agree at first call 0x{boundary:08X}")
-    print(f"traces: {RAW / 'oracle-call.txt'} and {RAW / 'port-call.txt'}")
-    return reference, port
+    for call, port in comparisons:
+        mismatches = compare_states(call.state, port)
+        if mismatches:
+            raise Refused(
+                f"port/oracle disagreement at call {call.ordinal} step {call.step}:\n"
+                + "\n".join(mismatches)
+            )
+        print(
+            f"PASS: call {call.ordinal} at step {call.step}, target 0x{call.state.pc:08X}: "
+            f"{total}/{total} state fields agree"
+        )
+    print(
+        "PASS execution denominator: 3 executable-proven addresses among the emitted "
+        "candidates (2 generated bodies executed, then 1 observed call target)"
+    )
+    print(f"traces: {RAW / 'oracle-call-2.txt'} and {RAW / 'port-call-2.txt'}")
+    return comparisons
 
 
 def selftest(
@@ -317,7 +370,7 @@ def selftest(
         measurement = emit(executable, SEEDS, pathlib.Path(temporary))
     print(
         "PASS positive emission: "
-        f"{measurement.seeds} binary-rooted seeds -> {measurement.functions} functions; "
+        f"{measurement.seeds} static candidate seeds -> {measurement.functions} emitted candidates; "
         f"0 overlays; version {measurement.version}"
     )
 
@@ -331,10 +384,44 @@ def selftest(
             raise Refused("out-of-text seed was not refused by the production emitter")
     print("PASS negative emission: out-of-text seed refused before generation")
 
-    reference, port = check_comparison(executable, build, runner, steps)
-    altered_registers = dict(port.registers)
+    comparisons = check_comparison(executable, build, runner, steps)
+    second_call, second_port = comparisons[1]
+
+    before_second_trace = RAW / "oracle-before-second-call.txt"
+    before_second_result = run(
+        [
+            str(tool_path(build, "tools/oracle/oracle_trace")),
+            str(executable),
+            "--steps",
+            str(second_call.step),
+            "--capture-call",
+            "2",
+            "--summary-only",
+            "--out",
+            str(before_second_trace),
+        ]
+    )
+    if before_second_result.returncode != 2:
+        raise Refused(
+            "short real-oracle control did not refuse at the missing second call: "
+            f"exit={before_second_result.returncode}, stderr={before_second_result.stderr.rstrip()}"
+        )
+    short_trace = before_second_trace.read_text(encoding="utf-8")
+    if (
+        "reached 1 of 2 requested executed jal call boundary/boundaries"
+        not in before_second_result.stderr
+        or "CALL-BOUNDARY-REGS" in short_trace
+    ):
+        raise Refused(
+            "short oracle trace did not report a clean 1/2 denominator with no boundary block"
+        )
+    print("PASS negative call denominator: trace ending before call 2 refused 1/2")
+
+    altered_registers = dict(second_port.registers)
     altered_registers["a0"] ^= 1
-    mismatches = compare_states(reference, State(port.pc, altered_registers))
+    mismatches = compare_states(
+        second_call.state, State(second_port.pc, altered_registers)
+    )
     if len(mismatches) != 1 or not mismatches[0].startswith("a0:"):
         raise Refused(
             "production comparator did not detect the opposite-answer a0 mutation"
@@ -342,7 +429,7 @@ def selftest(
     print(
         "PASS negative comparison: one altered port register produced one named mismatch"
     )
-    print("SELFTEST 4/4")
+    print("SELFTEST 6/6")
     return True
 
 
@@ -363,8 +450,8 @@ def main() -> int:
         if args.emit:
             measurement = emit(args.exe, SEEDS, args.output)
             print(
-                f"PASS: emitted {measurement.seeds} binary-rooted seeds -> "
-                f"{measurement.functions} functions; 0 overlays; version {measurement.version}"
+                f"PASS: emitted {measurement.seeds} static candidate seeds -> "
+                f"{measurement.functions} emitted candidates; 0 overlays; version {measurement.version}"
             )
         elif args.selftest:
             selftest(args.exe, args.build, runner, args.steps)
