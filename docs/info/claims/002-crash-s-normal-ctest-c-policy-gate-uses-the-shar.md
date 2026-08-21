@@ -5,8 +5,8 @@ status: holds
 created: 2026-08-21
 tags:
 depends: CMakeLists.txt
-reconfirmed: 2026-08-21 03:05:54
-verified_at: 2026-08-21 03:05:54
+reconfirmed: 2026-08-21 03:06:27
+verified_at: 2026-08-21 03:06:27
 ---
 
 ## Claim
@@ -44,3 +44,7 @@ Reverified the final Crash tree against pinned psxport 2b5ef7b5: Clang 22 config
 ## Re-confirmed 2026-08-21 03:05:54
 
 2026-08-21 post-integration: clean Clang builds in build/ and scratch/build-clang passed crash_cpp_policy 1/1 with explicit 0/0 scaffold denominators; normal CTests passed 2/2 and psxport_smoke passed 8/8 at framework 2b5ef7b5.
+
+## Re-confirmed 2026-08-21 03:06:27
+
+2026-08-21 landed integration recheck: crash_cpp_policy remained 1/1 with 0/0 scaffold denominators, CTests 2/2, smoke 8/8 at psxport 2b5ef7b5.

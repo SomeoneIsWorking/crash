@@ -5,8 +5,8 @@ status: holds
 created: 2026-08-21
 tags: crash1,oracle,crt0
 depends: CMakeLists.txt, psxport.pin, titles/crash1/executable.json, tools/provision_crash1.py
-reconfirmed: 2026-08-21 03:05:54
-verified_at: 2026-08-21 03:05:54
+reconfirmed: 2026-08-21 03:06:27
+verified_at: 2026-08-21 03:06:27
 ---
 
 ## Claim
@@ -34,3 +34,7 @@ Reverified through the final crash1_oracle_boot_check target at pinned psxport 2
 ## Re-confirmed 2026-08-21 03:05:54
 
 2026-08-21 post-integration: crash1_oracle_boot_check reprovisioned the 11/11 real USA executable, oracle_spike passed 22/22, first call at step 57910 targeted 0x80011A18, crossvalidation agreed 6/6, and the 50000-step control refused exit 2.
+
+## Re-confirmed 2026-08-21 03:06:27
+
+2026-08-21 landed integration recheck: the unchanged real oracle evidence remains 22/22 fixture, step 57910 target 0x80011A18, 6/6 agreement, and 50000-step refusal.
