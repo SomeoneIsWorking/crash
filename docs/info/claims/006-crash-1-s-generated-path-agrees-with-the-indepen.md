@@ -6,7 +6,7 @@ created: 2026-08-21
 tags:
 depends: CMakeLists.txt, psxport.pin, titles/crash1/executable.json, titles/crash1/recomp_seeds.json, tools/crash1_recomp.py, tests/crash1_recomp_boundary.cpp
 reconfirmed: 2026-08-21
-verified_at: 2026-08-21 11:58:58
+verified_at: 2026-08-21 12:02:56
 ---
 
 ## Claim
@@ -48,3 +48,7 @@ Pinned psxport `692b9b20`: Crash selftest passed 9/9; calls one through four mat
 steps 57,910, 57,931, 57,935, and 57,962, with call four following the call-three return through
 `0x80011D98`. The real short trace refused 3/4, a repeated target refused as ordinal-ambiguous,
 out-of-text emission refused, and altered call-four `a0` produced one named mismatch.
+
+## Re-confirmed 2026-08-21
+
+Post-landing crash1_recomp_boundary_check passed 9/9; calls one through four matched 34/34 at steps 57910, 57931, 57935, and 57962, with repeated-target ambiguity and altered-a0 controls producing the opposite answer.
