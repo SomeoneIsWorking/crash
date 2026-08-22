@@ -14,7 +14,8 @@ and 653 emitted static candidates. The generated path agrees with the independen
 CPU-state fields at the first eight executed calls. Nine addresses in the candidate set have
 execution provenance: eight generated bodies execute before the eighth observed target. Two oracle
 instructions later, execution leaves mapped executable text at the BIOS exception vector. There is
-still no runnable port, full oracle boot, game seam, native producer, widescreen path, or
+now a direct, title-owned `Crash1Runtime` seam with no legacy `GameConfig`/`GameHooks` views, but
+still no runnable port, full oracle boot, native producer, widescreen path, or
 interpolation path.
 
 ## Configure the framework scaffold
@@ -29,8 +30,8 @@ CCACHE_DIR=scratch/ccache cmake --build scratch/build-clang --target crash_scaff
 Run `ctest --test-dir scratch/build-clang --output-on-failure -R crash_cpp_policy` for the normal
 first-party C++ gate. The shared framework checker applies this repository's tracked `clang-format`
 and `clang-tidy` policy and the 1,200-line ownership cap without linting `external/psxport` or
-generated code. The boundary runner is the repository's one compile-backed first-party translation
-unit.
+generated code. The runtime owner, its focused test, and the boundary runner are the repository's
+compile-backed first-party translation units.
 
 ## Provision Crash Bandicoot
 

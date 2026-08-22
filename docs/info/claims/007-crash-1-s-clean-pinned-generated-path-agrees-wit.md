@@ -5,6 +5,8 @@ status: holds
 created: 2026-08-22
 tags:
 depends: CMakeLists.txt, psxport.pin, titles/crash1/executable.json, titles/crash1/recomp_seeds.json, tools/crash1_recomp.py, tests/crash1_recomp_boundary.cpp
+reconfirmed: 2026-08-22
+verified_at: 2026-08-22 14:15:25
 ---
 
 ## Claim
@@ -18,3 +20,7 @@ A clean Clang build against recorded psxport 3418a79b ran CMake crash1_recomp_bo
 ## What would falsify it
 
 Any target or state field disagrees/disappears; the clean runner no longer owns a Game; a negative control passes; executable bytes, emitter, oracle capture, runner, comparator, or framework pin changes without re-verification.
+
+## Re-confirmed 2026-08-22
+
+Pinned psxport 7f5d3f13 generated runner with the direct Crash1Runtime installed matched the independent oracle 34/34 at all eight resident calls before 0xBFC00180; execution denominator remained 9 proven addresses and all negative controls passed in SELFTEST 9/9.

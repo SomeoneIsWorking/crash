@@ -18,6 +18,12 @@ All picture work is RE-driven. Widescreen and interpolation require PC-native gr
 reading game state; do not reconstruct pictures from GTE/OT/GP0 output. Each title must first reach a
 faithful, measurable base before enhancements.
 
+Crash 1's framework seam lives in `titles/crash1/core/crash1_runtime.*`. It follows Dusklight's
+composition/owner boundary: the boundary entry point installs one process-lifetime derived runtime,
+then drives only the already-measured generated CPU path. The runtime stays title-owned until
+cross-title RE proves shared ownership; it does not invent a shared `game/` layer, legacy
+`GameConfig`/`GameHooks` views, runtime products, or a native-boot bypass.
+
 Crash 1 targets the North American NTSC-U release (`SCUS-94900`, executable `SCUS_949.00`). The exact
 identity/header evidence lives in `titles/crash1/executable.json` and is compared to the real bytes by
 `tools/verify_executable.py`. This does not imply a provisioned disc or runnable port.

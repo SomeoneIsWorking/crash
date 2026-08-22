@@ -1,4 +1,5 @@
 #include "core.h"
+#include "crash1_runtime.h"
 #include "game.h"
 
 #include <array>
@@ -66,6 +67,11 @@ int main(int argc, char **argv) {
     return 2;
   }
 
+  // Process-lifetime game owner. The boundary runner deliberately drives generated execution
+  // directly below; Crash1Runtime refuses the later native-boot path until the BIOS transition has
+  // been modeled instead of bypassing that frontier.
+  static crash1::Crash1Runtime runtime;
+  psxport_install_game(runtime);
   auto game = std::make_unique<Game>();
   Core *core = &game->core;
   load_exe(argv[1], core);

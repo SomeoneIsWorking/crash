@@ -5,8 +5,8 @@ status: holds
 created: 2026-08-21
 tags:
 depends: CMakeLists.txt
-reconfirmed: 2026-08-21
-verified_at: 2026-08-21 03:36:57
+reconfirmed: 2026-08-22
+verified_at: 2026-08-22 14:15:24
 ---
 
 ## Claim
@@ -35,3 +35,7 @@ Clang 22 configured both build trees; shared policy format/size/tidy checked the
 ## Re-confirmed 2026-08-21
 
 Post-landing CTest 2/2 passed; crash_cpp_policy format/size/clang-tidy now covers the one compile-backed boundary runner.
+
+## Re-confirmed 2026-08-22
+
+Pinned psxport 7f5d3f13 policy gate format-checked 4 first-party files, size-checked all 4 at the 1,200-line default, and ran clang-tidy over all 3 compile-backed C++ translation units; full CTest passed 3/3.

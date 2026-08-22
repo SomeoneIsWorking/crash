@@ -33,6 +33,17 @@ file(WRITE "${CMAKE_BINARY_DIR}/psxport_resolved.txt"
 set(PSXPORT_BUILD_SMOKE ON CACHE BOOL "Build the framework agnosticism smoke" FORCE)
 add_subdirectory("${PSXPORT_DIR}" psxport_build)
 add_custom_target(crash_scaffold DEPENDS psxport_smoke)
+
+add_library(crash1_runtime STATIC "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/core/crash1_runtime.cpp")
+target_include_directories(crash1_runtime PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/core")
+target_compile_features(crash1_runtime PUBLIC cxx_std_20)
+target_link_libraries(crash1_runtime PUBLIC psxport)
+
+add_executable(crash1_runtime_test "${CMAKE_CURRENT_SOURCE_DIR}/tests/crash1_runtime.cpp")
+target_compile_features(crash1_runtime_test PRIVATE cxx_std_20)
+target_link_libraries(crash1_runtime_test PRIVATE crash1_runtime)
+add_test(NAME crash1_runtime_inheritance COMMAND crash1_runtime_test)
+
 add_test(
   NAME crash_cpp_policy
   COMMAND
@@ -91,7 +102,7 @@ target_compile_features(crash1_recomp_boundary PRIVATE cxx_std_20)
 target_compile_options(
   crash1_recomp_boundary PRIVATE -O1 -foptimize-sibling-calls -fno-strict-aliasing -fwrapv
 )
-target_link_libraries(crash1_recomp_boundary PRIVATE psxport)
+target_link_libraries(crash1_recomp_boundary PRIVATE crash1_runtime)
 add_custom_target(
   crash1_recomp_boundary_check
   COMMAND
