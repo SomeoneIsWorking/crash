@@ -1,10 +1,5 @@
 #!/usr/bin/env python3
-"""Provision Crash Bandicoot's USA boot executable from a user-supplied CHD.
-
-Disc resolution is CLI > environment > .env > one repository-root CHD. Configured paths are
-authoritative: a missing path is refused instead of falling through to a different disc. Copyrighted
-inputs and extracted files remain under gitignored paths.
-"""
+"""Shared disc resolver and verified boot-executable publisher for Crash titles."""
 
 from __future__ import annotations
 
@@ -20,13 +15,37 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-ENV_KEYS = ("PSXPORT_CRASH1_DISC", "PSXPORT_DISC")
-MANIFEST = ROOT / "titles" / "crash1" / "executable.json"
-OUTPUT_DIR = ROOT / "scratch" / "bin" / "crash1"
 
 
 class Refused(Exception):
-    """The available input cannot support a Crash 1 provisioning claim."""
+    """The available input cannot support the requested title provisioning claim."""
+
+
+@dataclass(frozen=True)
+class ProvisionSpec:
+    title: str
+    slug: str
+    env_keys: tuple[str, ...]
+
+    @property
+    def manifest(self) -> pathlib.Path:
+        return ROOT / "titles" / self.slug / "executable.json"
+
+    @property
+    def output_dir(self) -> pathlib.Path:
+        return ROOT / "scratch" / "bin" / self.slug
+
+
+SPECS = {
+    "crash1": ProvisionSpec(
+        "Crash Bandicoot", "crash1", ("PSXPORT_CRASH1_DISC", "PSXPORT_DISC")
+    ),
+    "crash2": ProvisionSpec(
+        "Crash Bandicoot 2: Cortex Strikes Back",
+        "crash2",
+        ("PSXPORT_CRASH2_DISC", "PSXPORT_DISC"),
+    ),
+}
 
 
 @dataclass(frozen=True)
@@ -47,7 +66,7 @@ def _validate_disc(value: str, source: str, root: pathlib.Path) -> ResolvedDisc:
     return ResolvedDisc(path.resolve(), source)
 
 
-def _dotenv_values(path: pathlib.Path) -> dict[str, str]:
+def _dotenv_values(path: pathlib.Path, env_keys: tuple[str, ...]) -> dict[str, str]:
     if not path.is_file():
         return {}
     try:
@@ -62,7 +81,7 @@ def _dotenv_values(path: pathlib.Path) -> dict[str, str]:
             continue
         key, value = stripped.split("=", 1)
         key = key.strip()
-        if key not in ENV_KEYS:
+        if key not in env_keys:
             continue
         value = value.strip()
         if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
@@ -72,6 +91,7 @@ def _dotenv_values(path: pathlib.Path) -> dict[str, str]:
 
 
 def resolve_disc(
+    spec: ProvisionSpec,
     argument: str | None,
     *,
     root: pathlib.Path = ROOT,
@@ -81,12 +101,12 @@ def resolve_disc(
     if argument is not None:
         return _validate_disc(argument, "CLI argument", root)
 
-    for key in ENV_KEYS:
+    for key in spec.env_keys:
         if environ.get(key):
             return _validate_disc(environ[key], f"${key}", root)
 
-    dotenv = _dotenv_values(root / ".env")
-    for key in ENV_KEYS:
+    dotenv = _dotenv_values(root / ".env", spec.env_keys)
+    for key in spec.env_keys:
         if dotenv.get(key):
             return _validate_disc(dotenv[key], f".env ({key})", root)
 
@@ -96,9 +116,10 @@ def resolve_disc(
     if len(dropins) > 1:
         names = ", ".join(item.name for item in dropins)
         raise Refused(f"multiple repository-root CHDs are ambiguous: {names}")
+    keys = " or ".join(spec.env_keys)
     raise Refused(
-        "no disc image; pass one as an argument, set PSXPORT_CRASH1_DISC or PSXPORT_DISC, "
-        "put either key in .env, or place one *.chd in the repository root"
+        f"no disc image; pass one as an argument, set {keys}, put either key in .env, "
+        "or place one *.chd in the repository root"
     )
 
 
@@ -116,7 +137,9 @@ def find_discdump(
         return path.resolve()
 
     build_dirs = (root / "scratch" / "build-clang", root / "build")
-    build_dir = next((path for path in build_dirs if (path / "CMakeCache.txt").is_file()), None)
+    build_dir = next(
+        (path for path in build_dirs if (path / "CMakeCache.txt").is_file()), None
+    )
     if build_dir is None:
         raise Refused(
             "no configured Crash build; configure scratch/build-clang with the README's Clang "
@@ -145,7 +168,9 @@ def find_discdump(
     for candidate in (base, base.with_suffix(".exe")):
         if candidate.is_file() and os.access(candidate, os.X_OK):
             return candidate.resolve()
-    raise Refused(f"discdump target built but produced no executable below {base.parent}")
+    raise Refused(
+        f"discdump target built but produced no executable below {base.parent}"
+    )
 
 
 def parse_boot_target(system_cnf: pathlib.Path) -> str:
@@ -154,93 +179,118 @@ def parse_boot_target(system_cnf: pathlib.Path) -> str:
     except OSError as exc:
         raise Refused(f"cannot read extracted {system_cnf.name}: {exc}") from exc
     match = re.search(
-        r"^\s*BOOT\s*=\s*cdrom:\\+([^;\r\n]+)(?:;1)?\s*$", text, re.IGNORECASE | re.MULTILINE
+        r"^\s*BOOT\s*=\s*cdrom:\\+([^;\r\n]+)(?:;1)?\s*$",
+        text,
+        re.IGNORECASE | re.MULTILINE,
     )
     if not match:
         raise Refused("SYSTEM.CNF has no supported BOOT = cdrom:\\...;1 target")
     return pathlib.PureWindowsPath(match.group(1).strip()).name
 
 
-def extract_boot(discdump: pathlib.Path, disc: pathlib.Path, output: pathlib.Path) -> None:
+def extract_boot(
+    discdump: pathlib.Path, disc: pathlib.Path, output: pathlib.Path
+) -> None:
     result = subprocess.run(
-        [str(discdump), str(disc), str(output)], capture_output=True, text=True, check=False
+        [str(discdump), str(disc), str(output)],
+        capture_output=True,
+        text=True,
+        check=False,
     )
     if result.returncode != 0:
         detail = (result.stderr or result.stdout).strip()
         raise Refused(f"discdump failed with exit {result.returncode}: {detail}")
 
 
-def _identity_manifest() -> tuple[types.ModuleType, dict[str, object]]:
+def _identity_manifest(
+    spec: ProvisionSpec,
+) -> tuple[types.ModuleType, dict[str, object]]:
     sys.path.insert(0, str(ROOT / "tools"))
     import verify_executable
 
-    return verify_executable, verify_executable.load_manifest(MANIFEST)
+    return verify_executable, verify_executable.load_manifest(spec.manifest)
 
 
-def expected_executable() -> str:
-    _, manifest = _identity_manifest()
+def expected_executable(spec: ProvisionSpec) -> str:
+    _, manifest = _identity_manifest(spec)
     name = manifest.get("executable")
     if not isinstance(name, str) or not name:
         raise Refused("executable manifest has no usable executable name")
     return name
 
 
-def verify_identity(executable: pathlib.Path) -> list[str]:
-    verify_executable, manifest = _identity_manifest()
+def verify_identity(spec: ProvisionSpec, executable: pathlib.Path) -> list[str]:
+    verify_executable, manifest = _identity_manifest(spec)
     return verify_executable.check(manifest, executable)
 
 
 def provision(
+    spec: ProvisionSpec,
     disc: pathlib.Path,
     discdump: pathlib.Path,
     *,
-    output_dir: pathlib.Path = OUTPUT_DIR,
+    output_dir: pathlib.Path | None = None,
     extract: Callable[[pathlib.Path, pathlib.Path, pathlib.Path], None] = extract_boot,
-    identity_check: Callable[[pathlib.Path], list[str]] = verify_identity,
+    identity_check: Callable[[pathlib.Path], list[str]] | None = None,
 ) -> pathlib.Path:
-    """Extract, validate, then publish the boot executable and SYSTEM.CNF."""
-    output_dir.mkdir(parents=True, exist_ok=True)
-    staging_parent = output_dir.parent
-    with tempfile.TemporaryDirectory(prefix="crash1-provision-", dir=staging_parent) as temporary:
+    """Extract, validate, then publish the title boot executable and SYSTEM.CNF."""
+    publish_dir = output_dir or spec.output_dir
+    publish_dir.mkdir(parents=True, exist_ok=True)
+    check_identity = identity_check or (lambda path: verify_identity(spec, path))
+    with tempfile.TemporaryDirectory(
+        prefix=f"{spec.slug}-provision-", dir=publish_dir.parent
+    ) as temporary:
         staging = pathlib.Path(temporary)
         extract(discdump, disc, staging)
         system_cnf = staging / "SYSTEM.CNF"
         boot_target = parse_boot_target(system_cnf)
-        executable_name = expected_executable()
+        executable_name = expected_executable(spec)
         if boot_target.casefold() != executable_name.casefold():
-            raise Refused(f"SYSTEM.CNF boots {boot_target!r}, expected {executable_name!r}")
+            raise Refused(
+                f"SYSTEM.CNF boots {boot_target!r}, expected {executable_name!r}"
+            )
 
         executable = staging / executable_name
         if not executable.is_file():
             raise Refused(f"discdump did not extract {executable_name}")
-        failures = identity_check(executable)
+        failures = check_identity(executable)
         if failures:
-            raise Refused(f"executable identity disagrees on {len(failures)} tracked fact(s)")
+            raise Refused(
+                f"executable identity disagrees on {len(failures)} tracked fact(s)"
+            )
 
-        destination_exe = output_dir / executable.name
-        destination_cnf = output_dir / system_cnf.name
+        destination_exe = publish_dir / executable.name
+        destination_cnf = publish_dir / system_cnf.name
         os.replace(executable, destination_exe)
         os.replace(system_cnf, destination_cnf)
     return destination_exe
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("disc", nargs="?", help="Crash Bandicoot USA CHD")
+    parser = argparse.ArgumentParser(
+        description="Provision one serial-identified Crash title's verified boot executable from CHD."
+    )
+    parser.add_argument(
+        "--title", choices=sorted(SPECS), required=True, help="title integration"
+    )
+    parser.add_argument("disc", nargs="?", help="selected title's USA CHD")
     parser.add_argument("--discdump", help="executable psxport discdump override")
     parser.add_argument(
-        "--resolve-only", action="store_true", help="print the selected disc without extracting"
+        "--resolve-only",
+        action="store_true",
+        help="print the selected disc without extracting",
     )
     args = parser.parse_args()
+    spec = SPECS[args.title]
 
     try:
-        resolved = resolve_disc(args.disc)
+        resolved = resolve_disc(spec, args.disc)
         print(f"[disc] {resolved.source}: {resolved.path}", file=sys.stderr)
         if args.resolve_only:
             print(resolved.path)
             return 0
         discdump = find_discdump(args.discdump)
-        executable = provision(resolved.path, discdump)
+        executable = provision(spec, resolved.path, discdump)
         print("MATCH: SYSTEM.CNF boot target and executable identity agree")
         print(f"provisioned {executable.relative_to(ROOT)}")
         print(

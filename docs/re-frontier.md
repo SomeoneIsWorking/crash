@@ -18,12 +18,36 @@ Statuses: ✅ `re-verified` · 🟡 `re-partial` · 🔬 `in-progress` · ⬜ `t
 - notes: The executable remains outside git. The manifest contains only derived metadata and embedded text evidence.
 
 ### CRASH2-01 — select and measure the Crash Bandicoot 2 executable
-- status: todo
+- status: re-verified
 - deps:
+- evidence: The real USA disc's `SYSTEM.CNF` selects `SCUS_941.54`. The extracted 327,680-byte PS-X EXE has SHA-1 `aabdade44a4ca863f71224daef51c45f34fb1bf8`, SHA-256 `6e5b2449310b1ed87915f53c38f296f2152bfd0b42eaca5ef86f74a3d07b6043`, entry `0x80049B2C`, text `[0x80010000,0x8005F800)`, gp `0`, and stack `0x801FFFF0`. Embedded strings identify the North American area, `BASCUS-94154`, and `Crash Bandicoot 2`. `python3 tools/verify_executable.py --title crash2 --selftest --exe scratch/bin/crash2/SCUS_941.54` passes 4/4, including altered-hash, altered-image, and malformed-image controls.
+- where: `titles/crash2/executable.json`, `tools/verify_executable.py`
+- gap: This proves executable identity and header only; CRASH2-02 separately binds it to the supplied disc and validates the first executed boundary. It does not authenticate the whole disc or prove boot.
+- notes: The measured `SCUS-94154` title codeword and every address are independent of Crash 1's `SCUS-94900` integration.
+
+### CRASH2-02 — provision the selected disc and verify the first crt0 call
+- status: re-verified
+- deps: CRASH2-01
+- evidence: The shared serial-aware provisioning path publishes only after `SYSTEM.CNF` boots `SCUS_941.54` and the executable matches 11/11 facts. Its 9-case both-answer suite includes cross-title environment isolation and refusal when Crash 2 is presented with Crash 1's `SCUS_949.00` boot target. Against clean pinned psxport `ad5cf802`, `crt0_extract` and the independent Mednafen CPU oracle agree 6/6 at executed `jal` ordinal 1, step 81,725, target `0x8001144C`: gp `0x8005F17C`, a0 `0x8006F1F4`, sp `0x801FFFF8`, and heap size `0x0018FE08`. The oracle's 39-case fixture passes independently.
+- where: `tools/provision_title.py`, `tests/test_provision_titles.py`, CMake `crash2_oracle_boot_check`, gitignored `scratch/bin/crash2/SCUS_941.54`
+- gap: This proves only the first real crt0 call boundary. No Crash 2 generated execution, BIOS continuation, hardware, native boot, or gameplay is claimed.
+- notes: The 6/6 cross-check was reproduced with a clean build recording psxport `ad5cf802`; the asset remains outside git.
+
+### CRASH2-03 — own measured executable facts through the derived runtime
+- status: re-verified
+- deps: CRASH2-02
+- evidence: Against clean pinned psxport `ad5cf802`, `Crash2Runtime` directly inherits the title-agnostic `BoundaryRuntime`, which in turn inherits `GameRuntime`; both legacy views and all unmeasured runtime products remain null. Its `GuestProgramImage` matches 15/15 fields derived from the real executable and the framework's shipping crt0 decoder, and an altered global pointer produces one named disagreement. `gameMainEntry` remains explicitly zero because it has not been measured. The clean Clang build passed normal CTest 4/4, including both runtime inheritance tests, the 9-case provisioning contract, and the complete format/size/clang-tidy policy gate; `tools/psxport_sync.py --check` confirms the build and recorded pin both name `ad5cf802`.
+- where: `game/core/boundary_runtime.*`, `titles/crash2/core/crash2_runtime.*`, `tools/verify_runtime_image.py`, `tests/crash2_runtime*.cpp`
+- gap: No generated Crash 2 substrate or port/oracle execution comparison exists; CRASH2-04 begins there.
+- notes: `BoundaryRuntime` shares only the refusal/no-invented-products integration invariant. It contains no inferred Crash engine behavior and does not satisfy SHARED-01.
+
+### CRASH2-04 — recompile to the first real divergence
+- status: todo
+- deps: CRASH2-03
 - evidence:
 - where: `titles/crash2/`
-- gap: Region, serial, executable identity, hash, entry and load extent are unmeasured.
-- notes: Do not inherit Crash 1 addresses or assume the same executable layout from engine lineage.
+- gap: No Crash 2 generated substrate or port/oracle execution comparison exists.
+- notes: Begin at the measured entry and first-call boundary; do not copy Crash 1 seeds or addresses.
 
 ### CRASH3-01 — select and measure the Crash Bandicoot 3 executable
 - status: todo
@@ -38,8 +62,8 @@ Statuses: ✅ `re-verified` · 🟡 `re-partial` · 🔬 `in-progress` · ⬜ `t
 ### CRASH1-02 — provision the selected disc without tracking copyrighted data
 - status: re-verified
 - deps: CRASH1-01
-- evidence: `python3 tools/provision_crash1.py <real USA CHD>` extracted `SYSTEM.CNF` and its boot target through psxport `discdump`; `SYSTEM.CNF` selects `SCUS_949.00`, and the extracted 290,816-byte executable matched 11/11 manifest facts including SHA-256 `aabf1464f90b2e0b81e712b77aebbdb88f303b16ce830535e2b0cd886ee280f2`. The real Crash 2 USA disc refused because it boots `SCUS_941.54`. Nine production-seam tests cover every resolution source, precedence, invalid configured-path refusal, ambiguous drop-ins, successful publish, and identity disagreement without publish; the independent executable selftest remains 4/4.
-- where: `titles/crash1/executable.json`, `tools/provision_crash1.py`, `tools/verify_executable.py`, `tests/test_provision_crash1.py`
+- evidence: `python3 tools/provision_title.py --title crash1 <real USA CHD>` extracted `SYSTEM.CNF` and its boot target through psxport `discdump`; `SYSTEM.CNF` selects `SCUS_949.00`, and the extracted 290,816-byte executable matched 11/11 manifest facts including SHA-256 `aabf1464f90b2e0b81e712b77aebbdb88f303b16ce830535e2b0cd886ee280f2`. The real Crash 2 USA disc refused because it boots `SCUS_941.54`. Nine production-seam tests cover every resolution source, precedence, invalid configured-path refusal, ambiguous drop-ins, successful publish, and identity disagreement without publish; the independent executable selftest remains 4/4.
+- where: `titles/crash1/executable.json`, `tools/provision_title.py`, `tools/verify_executable.py`, `tests/test_provision_titles.py`
 - gap: Provisioning proves which executable the supplied disc boots and that executable's identity; it does not authenticate every disc sector or prove the game boots.
 - notes: Resolution is CLI argument, per-title/generic environment, per-title/generic `.env`, then exactly one repository-root CHD. Invalid configured paths and ambiguous drop-ins refuse rather than selecting another image. Extracted data remains gitignored under `scratch/bin/crash1/`.
 

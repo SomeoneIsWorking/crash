@@ -7,9 +7,9 @@ created: 2026-08-21
 
 ## Instrument
 
-`tools/provision_crash1.py` — resolves a user-supplied disc, delegates ISO/CHD reads to psxport
-`discdump`, verifies the boot target, and invokes the existing executable identity gate before
-publishing under `scratch/`.
+`tools/provision_title.py` — selects one serial-identified Crash title, resolves its user-supplied
+disc, delegates ISO/CHD reads to psxport `discdump`, verifies the title-specific boot target, and
+invokes the existing executable identity gate before publishing under `scratch/`.
 
 ## Validated by
 

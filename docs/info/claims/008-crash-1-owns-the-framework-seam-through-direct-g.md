@@ -6,7 +6,7 @@ created: 2026-08-22
 tags: runtime,inheritance
 depends: titles/crash1/core/crash1_runtime.cpp, titles/crash1/core/crash1_runtime.h, tests/crash1_runtime.cpp, tests/crash1_recomp_boundary.cpp, CMakeLists.txt
 reconfirmed: 2026-08-22
-verified_at: 2026-08-22 17:39:21
+verified_at: 2026-08-22 18:17:20
 ---
 
 ## Claim
@@ -28,3 +28,15 @@ Post-recording reconfirmation: CTest crash1_runtime_inheritance passed, the real
 ## Re-confirmed 2026-08-22
 
 Fresh pinned CTest passed crash1_runtime_inheritance and the installed direct Crash1Runtime remained in the real 12/12 generated boundary runner with null legacy views and no invented runtime products.
+
+## Re-confirmed 2026-08-22
+
+Crash1Runtime now derives through the title-agnostic BoundaryRuntime; crash1_runtime_inheritance passed and still reports null legacy views/products; the full boundary SELFTEST passed 12/12.
+
+## Re-confirmed 2026-08-22
+
+Against pinned ad5cf802, Crash1Runtime inherits through BoundaryRuntime without legacy views or unmeasured products; runtime CTest passed and the full boundary SELFTEST remained 12/12.
+
+## Re-confirmed 2026-08-22
+
+Post-change verification on clean psxport ad5cf802: Clang CTest 4/4, title provision tests 9/9, Crash 1 boundary SELFTEST 12/12 with all eight calls 34/34 and EnterCriticalSection IRQ 1->0, Crash 1 oracle 39/39 and crt0 6/6, Crash 2 identity 11/11/runtime facts 15/15/oracle 39/39/crt0 6/6.

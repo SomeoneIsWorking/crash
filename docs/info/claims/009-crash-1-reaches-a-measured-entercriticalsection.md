@@ -6,7 +6,7 @@ created: 2026-08-22
 tags: crash1,syscall,oracle
 depends: tools/crash1_recomp.py, tests/crash1_recomp_boundary.cpp, titles/crash1/core/crash1_runtime.cpp
 reconfirmed: 2026-08-22
-verified_at: 2026-08-22 17:39:50
+verified_at: 2026-08-22 18:17:21
 ---
 
 ## Claim
@@ -24,3 +24,15 @@ Any call state differs; the real wrapper words, selector, return value or IRQ tr
 ## Re-confirmed 2026-08-22
 
 Final pinned psxport 7f5d3f13 gate on real SCUS_949.00 passed SELFTEST 12/12: calls one through eight agreed 34/34, oracle syscall vector and port EnterCriticalSection behavior were distinguished, and the wrong-function discriminator refused.
+
+## Re-confirmed 2026-08-22
+
+After the inheritance-only Crash1Runtime refactor, crash1_recomp_boundary_check again passed all eight 34/34 call comparisons, port EnterCriticalSection IRQ 1->0, all negatives, and SELFTEST 12/12.
+
+## Re-confirmed 2026-08-22
+
+Pinned ad5cf802 Crash 1 boundary gate matched eight calls 34/34, then separately proved generated EnterCriticalSection IRQ 1->0 and all three refusal/disagreement controls; SELFTEST 12/12.
+
+## Re-confirmed 2026-08-22
+
+Post-change verification on clean psxport ad5cf802: Clang CTest 4/4, title provision tests 9/9, Crash 1 boundary SELFTEST 12/12 with all eight calls 34/34 and EnterCriticalSection IRQ 1->0, Crash 1 oracle 39/39 and crt0 6/6, Crash 2 identity 11/11/runtime facts 15/15/oracle 39/39/crt0 6/6.

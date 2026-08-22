@@ -4,7 +4,9 @@ kind: claim
 status: holds
 created: 2026-08-21
 tags: crash1,disc,provisioning
-depends: tools/provision_crash1.py, tools/verify_executable.py, titles/crash1/executable.json
+depends: tools/provision_title.py, tools/verify_executable.py, titles/crash1/executable.json
+reconfirmed: 2026-08-22
+verified_at: 2026-08-22 18:17:20
 ---
 
 ## Claim
@@ -23,3 +25,11 @@ source.
 
 Falsified if a non-Crash-1 disc or identity mismatch publishes output, a valid USA disc refuses, an
 invalid configured source falls through, or extracted copyrighted data appears in tracked files.
+
+## Re-confirmed 2026-08-22
+
+Pinned ad5cf802 real-disc gates provisioned Crash 1 and Crash 2 only after each SYSTEM.CNF target matched 11/11 executable facts; the shared serial-aware contract passed 9/9 including wrong-title refusal.
+
+## Re-confirmed 2026-08-22
+
+Post-change verification on clean psxport ad5cf802: Clang CTest 4/4, title provision tests 9/9, Crash 1 boundary SELFTEST 12/12 with all eight calls 34/34 and EnterCriticalSection IRQ 1->0, Crash 1 oracle 39/39 and crt0 6/6, Crash 2 identity 11/11/runtime facts 15/15/oracle 39/39/crt0 6/6.

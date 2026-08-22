@@ -29,6 +29,13 @@ then drives only the already-measured generated CPU path. The runtime stays titl
 cross-title RE proves shared ownership; it does not invent a shared `game/` layer, legacy
 `GameConfig`/`GameHooks` views, runtime products, or a native-boot bypass.
 
+Crash 2 targets the independently measured North American `SCUS-94154` executable `SCUS_941.54`.
+Its title runtime lives in `titles/crash2/core/` and owns the measured boot group through the typed
+`GuestProgramImage` seam, never through `GameConfig`. `game/core/boundary_runtime.*` shares only the
+framework refusal/no-invented-products invariant between title runtimes; it is not evidence of shared
+Crash engine behavior. Crash 2 currently ends at the first crt0 call and must not reuse Crash 1 seeds,
+addresses, or syscall conclusions.
+
 Crash 1 targets the North American NTSC-U release (`SCUS-94900`, executable `SCUS_949.00`). The exact
 identity/header evidence lives in `titles/crash1/executable.json` and is compared to the real bytes by
 `tools/verify_executable.py`. Current execution reaches the real `EnterCriticalSection` syscall wrapper:

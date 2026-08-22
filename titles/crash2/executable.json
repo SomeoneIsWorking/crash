@@ -1,0 +1,21 @@
+{
+  "title": "Crash Bandicoot 2: Cortex Strikes Back",
+  "region": "North America (NTSC-U)",
+  "serial": "SCUS-94154",
+  "executable": "SCUS_941.54",
+  "file_size": 327680,
+  "sha1": "aabdade44a4ca863f71224daef51c45f34fb1bf8",
+  "sha256": "6e5b2449310b1ed87915f53c38f296f2152bfd0b42eaca5ef86f74a3d07b6043",
+  "header": {
+    "entry": "0x80049B2C",
+    "gp": "0x00000000",
+    "text_address": "0x80010000",
+    "text_size": "0x0004F800",
+    "stack_address": "0x801FFFF0",
+    "stack_offset": "0x00000000"
+  },
+  "region_markers": [
+    "Sony Computer Entertainment Inc. for North America area",
+    "BASCUS-94154"
+  ]
+}

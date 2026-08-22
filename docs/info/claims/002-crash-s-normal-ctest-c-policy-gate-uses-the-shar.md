@@ -6,7 +6,7 @@ created: 2026-08-21
 tags:
 depends: CMakeLists.txt
 reconfirmed: 2026-08-22
-verified_at: 2026-08-22 17:39:21
+verified_at: 2026-08-22 18:17:20
 ---
 
 ## Claim
@@ -42,4 +42,12 @@ Pinned psxport 7f5d3f13 policy gate format-checked 4 first-party files, size-che
 
 ## Re-confirmed 2026-08-22
 
-Fresh pinned Clang build ran normal CTest: crash1_runtime_inheritance, crash_cpp_policy, and crash1_provision_tests passed 3/3; the C++ policy gate checked touched first-party sources.
+Fresh pinned Clang build ran normal CTest: crash1_runtime_inheritance, crash_cpp_policy, and the provisioning contract passed 3/3; the C++ policy gate checked touched first-party sources.
+
+## Re-confirmed 2026-08-22
+
+Clean Clang 22 build against recorded psxport ad5cf802 passed normal CTest 4/4; crash_cpp_policy passed complete format, 1,200-line ownership, and compile-database clang-tidy coverage.
+
+## Re-confirmed 2026-08-22
+
+Post-change verification on clean psxport ad5cf802: Clang CTest 4/4, title provision tests 9/9, Crash 1 boundary SELFTEST 12/12 with all eight calls 34/34 and EnterCriticalSection IRQ 1->0, Crash 1 oracle 39/39 and crt0 6/6, Crash 2 identity 11/11/runtime facts 15/15/oracle 39/39/crt0 6/6.

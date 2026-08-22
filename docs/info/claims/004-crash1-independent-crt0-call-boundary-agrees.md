@@ -4,9 +4,9 @@ kind: claim
 status: holds
 created: 2026-08-21
 tags: crash1,oracle,crt0
-depends: CMakeLists.txt, psxport.pin, titles/crash1/executable.json, tools/provision_crash1.py
+depends: CMakeLists.txt, psxport.pin, titles/crash1/executable.json, tools/provision_title.py
 reconfirmed: 2026-08-22
-verified_at: 2026-08-22 17:39:21
+verified_at: 2026-08-22 18:17:20
 ---
 
 ## Claim
@@ -82,3 +82,11 @@ Pinned psxport 7f5d3f13 crash1_oracle_boot_check reprovisioned the real USA disc
 ## Re-confirmed 2026-08-22
 
 Pinned psxport 7f5d3f13 oracle_spike passed 39/39 and the real SCUS_949.00 symbolic/oracle first crt0 boundary agreed 6/6 at step 57910.
+
+## Re-confirmed 2026-08-22
+
+Pinned ad5cf802 crash1_oracle_boot_check reprovisioned SCUS_949.00 at 11/11, passed oracle_spike 39/39, and symbolic/independent first-call state agreed 6/6 at step 57910 target 0x80011A18.
+
+## Re-confirmed 2026-08-22
+
+Post-change verification on clean psxport ad5cf802: Clang CTest 4/4, title provision tests 9/9, Crash 1 boundary SELFTEST 12/12 with all eight calls 34/34 and EnterCriticalSection IRQ 1->0, Crash 1 oracle 39/39 and crt0 6/6, Crash 2 identity 11/11/runtime facts 15/15/oracle 39/39/crt0 6/6.

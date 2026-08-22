@@ -6,7 +6,7 @@ created: 2026-08-21
 tags:
 depends: CMakeLists.txt, psxport.pin, titles/crash1/executable.json, titles/crash1/recomp_seeds.json, tools/crash1_recomp.py, tests/crash1_recomp_boundary.cpp
 reconfirmed: 2026-08-22
-verified_at: 2026-08-22 17:39:21
+verified_at: 2026-08-22 18:17:20
 ---
 
 ## Claim
@@ -80,3 +80,15 @@ Pinned psxport 7f5d3f13 generated runner with the direct Crash1Runtime installed
 ## Re-confirmed 2026-08-22
 
 Pinned psxport 7f5d3f13 boundary gate matched all 34 fields at calls one through four and retained all refusal controls within SELFTEST 12/12.
+
+## Re-confirmed 2026-08-22
+
+Re-ran crash1_recomp_boundary_check after the boundary-runtime inheritance refactor: complete comparable state agreed at all eight calls and SELFTEST passed 12/12.
+
+## Re-confirmed 2026-08-22
+
+Pinned ad5cf802 crash1_recomp_boundary_check matched calls one through eight 34/34, including the call-three return path; SELFTEST 12/12.
+
+## Re-confirmed 2026-08-22
+
+Post-change verification on clean psxport ad5cf802: Clang CTest 4/4, title provision tests 9/9, Crash 1 boundary SELFTEST 12/12 with all eight calls 34/34 and EnterCriticalSection IRQ 1->0, Crash 1 oracle 39/39 and crt0 6/6, Crash 2 identity 11/11/runtime facts 15/15/oracle 39/39/crt0 6/6.
