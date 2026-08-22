@@ -6,7 +6,7 @@ created: 2026-08-22
 tags: runtime,inheritance
 depends: titles/crash1/core/crash1_runtime.cpp, titles/crash1/core/crash1_runtime.h, tests/crash1_runtime.cpp, tests/crash1_recomp_boundary.cpp, CMakeLists.txt
 reconfirmed: 2026-08-22
-verified_at: 2026-08-22 18:32:26
+verified_at: 2026-08-22 18:39:57
 ---
 
 ## Claim
@@ -44,3 +44,7 @@ Post-change verification on clean psxport ad5cf802: Clang CTest 4/4, title provi
 ## Re-confirmed 2026-08-22
 
 Normal CTest passed Crash1Runtime inheritance after the shared boundary-title CMake extraction; full generated runner still installed and exercised Crash1Runtime.
+
+## Re-confirmed 2026-08-22
+
+Post-commit authoritative Clang verifier passed the direct Crash1Runtime inheritance contract within the current 5/5 CTest graph.

@@ -6,7 +6,7 @@ created: 2026-08-21
 tags: crash1,oracle,crt0
 depends: CMakeLists.txt, psxport.pin, titles/crash1/executable.json, tools/provision_title.py
 reconfirmed: 2026-08-22
-verified_at: 2026-08-22 18:32:26
+verified_at: 2026-08-22 18:39:57
 ---
 
 ## Claim
@@ -94,3 +94,7 @@ Post-change verification on clean psxport ad5cf802: Clang CTest 4/4, title provi
 ## Re-confirmed 2026-08-22
 
 Pinned ad5cf802 Crash 1 oracle target re-provisioned SCUS_949.00, passed oracle_spike 39/39, and retained 6/6 first-call agreement at step 57910 target 0x80011A18.
+
+## Re-confirmed 2026-08-22
+
+Post-commit default-tree real Crash 1 oracle fixture remained 39/39 and crt0 boundary comparison remained 6/6.

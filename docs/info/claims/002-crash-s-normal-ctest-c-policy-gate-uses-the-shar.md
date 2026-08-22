@@ -6,7 +6,7 @@ created: 2026-08-21
 tags:
 depends: CMakeLists.txt, tools/verify.py
 reconfirmed: 2026-08-22
-verified_at: 2026-08-22 18:38:59
+verified_at: 2026-08-22 18:39:57
 ---
 
 ## Claim
@@ -61,3 +61,7 @@ Clang 22 normal CTest passed 5/5 after the three-title CMake/runtime integration
 ## Re-confirmed 2026-08-22
 
 tools/verify.py reconfigured and built authoritative scratch/build-clang with Clang 22, then ran current CTest 5/5 including all three runtime owners, full cpp policy, and serial provisioning; psxport pin check matched ad5cf802. The immediately preceding raw CTest graph had exposed the opposite stale 2-test answer.
+
+## Re-confirmed 2026-08-22
+
+Post-commit authoritative tools/verify.py reconfigured and built scratch/build-clang with Clang, ran the current 5/5 CTest graph, and passed the exact ad5cf802 pin check.

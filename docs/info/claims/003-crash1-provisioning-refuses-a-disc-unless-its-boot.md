@@ -6,7 +6,7 @@ created: 2026-08-21
 tags: crash1,disc,provisioning
 depends: tools/provision_title.py, tools/verify_executable.py, titles/crash1/executable.json
 reconfirmed: 2026-08-22
-verified_at: 2026-08-22 18:32:26
+verified_at: 2026-08-22 18:39:57
 ---
 
 ## Claim
@@ -37,3 +37,7 @@ Post-change verification on clean psxport ad5cf802: Clang CTest 4/4, title provi
 ## Re-confirmed 2026-08-22
 
 The refactored three-title provisioner passed 10/10 tests and real Crash 1 provisioning still followed SYSTEM.CNF to SCUS_949.00 and matched 11/11 facts.
+
+## Re-confirmed 2026-08-22
+
+Post-commit default-tree provisioning regression passed all 10 three-title tests; real Crash 1 identity remained 11/11.

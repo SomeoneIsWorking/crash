@@ -6,7 +6,7 @@ created: 2026-08-22
 tags: crash2,runtime,inheritance,crt0
 depends: CMakeLists.txt, psxport.pin, titles/crash2/core/crash2_runtime.cpp, titles/crash2/executable.json, tools/verify_runtime_image.py
 reconfirmed: 2026-08-22
-verified_at: 2026-08-22 18:32:27
+verified_at: 2026-08-22 18:39:58
 ---
 
 ## Claim
@@ -24,3 +24,7 @@ Crash2Runtime exposes a legacy compatibility view, invents a runtime product, an
 ## Re-confirmed 2026-08-22
 
 Fresh Clang 22 CTest passed Crash2Runtime inheritance; real SCUS_941.54 retained 15/15 typed runtime agreement and the altered global pointer produced exactly one named disagreement against recorded psxport ad5cf802.
+
+## Re-confirmed 2026-08-22
+
+Post-commit default-tree Crash2Runtime passed its direct inheritance test and all 15 runtime image facts, including the altered-fact disagreement control.

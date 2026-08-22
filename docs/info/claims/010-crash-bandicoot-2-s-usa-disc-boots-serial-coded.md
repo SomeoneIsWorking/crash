@@ -6,7 +6,7 @@ created: 2026-08-22
 tags: crash2,identity,oracle
 depends: titles/crash2/executable.json, tools/provision_title.py
 reconfirmed: 2026-08-22
-verified_at: 2026-08-22 18:32:26
+verified_at: 2026-08-22 18:39:57
 ---
 
 ## Claim
@@ -32,3 +32,7 @@ Post-change verification on clean psxport ad5cf802: Clang CTest 4/4, title provi
 ## Re-confirmed 2026-08-22
 
 Refactored three-title provisioning passed 10/10; real Crash 2 still matched 11/11, runtime 15/15 plus altered-fact disagreement, oracle_spike 39/39, and first-call state 6/6 at step 81725 target 0x8001144C.
+
+## Re-confirmed 2026-08-22
+
+Post-commit default-tree real Crash 2 gate passed identity 11/11, executable selftest 4/4, oracle 39/39, and first call 6/6.
