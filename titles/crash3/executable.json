@@ -1,0 +1,20 @@
+{
+  "title": "Crash Bandicoot: Warped",
+  "region": "North America (NTSC-U)",
+  "serial": "SCUS-94244",
+  "executable": "SCUS_942.44",
+  "file_size": 333824,
+  "sha1": "ffa9252384eb16ce5ae14061bb87c86701ab4893",
+  "sha256": "1b93cc563c90966e1d79b750f7d19bc1662859cceeb991775e9e9a22656d71d1",
+  "header": {
+    "entry": "0x800489F8",
+    "gp": "0x00000000",
+    "text_address": "0x80010000",
+    "text_size": "0x00051000",
+    "stack_address": "0x801FFFF0",
+    "stack_offset": "0x00000000"
+  },
+  "region_markers": [
+    "Sony Computer Entertainment Inc. for North America area"
+  ]
+}

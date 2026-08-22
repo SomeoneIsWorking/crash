@@ -45,6 +45,11 @@ SPECS = {
         "crash2",
         ("PSXPORT_CRASH2_DISC", "PSXPORT_DISC"),
     ),
+    "crash3": ProvisionSpec(
+        "Crash Bandicoot: Warped",
+        "crash3",
+        ("PSXPORT_CRASH3_DISC", "PSXPORT_DISC"),
+    ),
 }
 
 

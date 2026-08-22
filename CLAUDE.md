@@ -13,6 +13,11 @@ Read `external/psxport/CLAUDE.md` and `external/psxport/docs/workspace/PROTOCOL.
 Generated code is sacrosanct. Never commit discs, extracted executables, `generated/`, `.env`, or
 machine-specific paths. Run artifacts go under `scratch/`, never `/tmp`.
 
+`python3 tools/verify.py` is the authoritative normal verifier. It always configures and builds the
+documented Clang tree at `scratch/build-clang/` before running its complete CTest graph and framework
+pin check. A raw `ctest --test-dir scratch/build-clang` is only a post-build focused rerun: CTest does
+not reconfigure CMake and can otherwise execute a stale test graph.
+
 **`external/psxport` is NOT a git submodule** (2026-08-16): it is a symlink to the workspace's shared
 framework clone when one exists, or a private clone at this repo's `psxport.pin` on a fresh machine.
 `tools/psxport_sync.py --auto` establishes whichever applies; `psxport_sync.py --bump` records the
@@ -35,6 +40,13 @@ Its title runtime lives in `titles/crash2/core/` and owns the measured boot grou
 framework refusal/no-invented-products invariant between title runtimes; it is not evidence of shared
 Crash engine behavior. Crash 2 currently ends at the first crt0 call and must not reuse Crash 1 seeds,
 addresses, or syscall conclusions.
+
+Crash 3 targets the independently measured North American `SCUS-94244` executable `SCUS_942.44`.
+`SYSTEM.CNF` is the identity authority: the retail disc also carries `DRAGON/SPYRO.EXE`, which is a
+different executable and must never be selected as Crash 3 merely because it is present. Crash 3 owns
+its measured boot group through `titles/crash3/core/Crash3Runtime`, with title-scoped cache and
+generated paths under `scratch/bin/crash3/` and `generated/crash3/`. It currently ends at the first
+crt0 call; no generated Crash 3 substrate exists yet.
 
 Crash 1 targets the North American NTSC-U release (`SCUS-94900`, executable `SCUS_949.00`). The exact
 identity/header evidence lives in `titles/crash1/executable.json` and is compared to the real bytes by

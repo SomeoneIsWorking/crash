@@ -14,7 +14,8 @@ import provision_title
 
 CRASH1 = provision_title.SPECS["crash1"]
 CRASH2 = provision_title.SPECS["crash2"]
-SPECS = (CRASH1, CRASH2)
+CRASH3 = provision_title.SPECS["crash3"]
+SPECS = (CRASH1, CRASH2, CRASH3)
 
 
 class ResolverTests(unittest.TestCase):
@@ -92,20 +93,20 @@ class ResolverTests(unittest.TestCase):
 
     def test_title_specific_keys_do_not_cross_select(self) -> None:
         selected = self.disc("other-title.chd")
-        with self.assertRaisesRegex(provision_title.Refused, "no disc image"):
-            provision_title.resolve_disc(
-                CRASH2,
-                None,
-                root=self.root / "empty",
-                environ={"PSXPORT_CRASH1_DISC": str(selected)},
-            )
-        with self.assertRaisesRegex(provision_title.Refused, "no disc image"):
-            provision_title.resolve_disc(
-                CRASH1,
-                None,
-                root=self.root / "empty",
-                environ={"PSXPORT_CRASH2_DISC": str(selected)},
-            )
+        for requested in SPECS:
+            for other in SPECS:
+                if requested is other:
+                    continue
+                with (
+                    self.subTest(requested=requested.slug, configured=other.slug),
+                    self.assertRaisesRegex(provision_title.Refused, "no disc image"),
+                ):
+                    provision_title.resolve_disc(
+                        requested,
+                        None,
+                        root=self.root / "empty",
+                        environ={other.env_keys[0]: str(selected)},
+                    )
 
     def test_single_dropin_is_supported_and_multiple_are_refused(self) -> None:
         dropin_root = self.root / "dropins"
@@ -138,15 +139,24 @@ class ProvisionTests(unittest.TestCase):
     def tearDown(self) -> None:
         self.temporary.cleanup()
 
-    def discdump(self, executable: str) -> pathlib.Path:
-        tool = self.root / f"fake-{executable}.py"
+    def discdump(
+        self, boot_target: str, *, extra_executables: tuple[str, ...] = ()
+    ) -> pathlib.Path:
+        tool = self.root / f"fake-{boot_target.replace('/', '-')}.py"
         tool.write_text(
             "#!/usr/bin/env python3\n"
             "import pathlib, sys\n"
             "out = pathlib.Path(sys.argv[2])\n"
             "out.mkdir(parents=True, exist_ok=True)\n"
-            f"(out / 'SYSTEM.CNF').write_text('BOOT = cdrom:\\\\{executable};1\\r\\n')\n"
-            f"(out / '{executable}').write_bytes(b'identity fixture')\n",
+            f"(out / 'SYSTEM.CNF').write_text('BOOT = cdrom:\\\\{boot_target};1\\r\\n')\n"
+            f"boot = out / {boot_target!r}\n"
+            "boot.parent.mkdir(parents=True, exist_ok=True)\n"
+            "boot.write_bytes(b'identity fixture')\n"
+            f"extras = {extra_executables!r}\n"
+            "for name in extras:\n"
+            "    extra = out / name\n"
+            "    extra.parent.mkdir(parents=True, exist_ok=True)\n"
+            "    extra.write_bytes(b'extra executable fixture')\n",
             encoding="utf-8",
         )
         tool.chmod(tool.stat().st_mode | stat.S_IXUSR)
@@ -157,15 +167,17 @@ class ProvisionTests(unittest.TestCase):
             with self.subTest(title=spec.slug):
                 executable = provision_title.expected_executable(spec)
                 output = self.root / f"{spec.slug}-out"
+                extras = ("DRAGON/SPYRO.EXE",) if spec is CRASH3 else ()
                 result = provision_title.provision(
                     spec,
                     self.disc,
-                    self.discdump(executable),
+                    self.discdump(executable, extra_executables=extras),
                     output_dir=output,
                     identity_check=lambda _: [],
                 )
                 self.assertEqual(result.read_bytes(), b"identity fixture")
                 self.assertTrue((output / "SYSTEM.CNF").is_file())
+                self.assertFalse((output / "DRAGON" / "SPYRO.EXE").exists())
 
     def test_identity_disagreement_refuses_without_publishing(self) -> None:
         for spec in SPECS:
@@ -184,19 +196,37 @@ class ProvisionTests(unittest.TestCase):
                 self.assertFalse((output / "SYSTEM.CNF").exists())
 
     def test_other_crash_title_boot_target_refuses_without_publishing(self) -> None:
-        crash1_executable = provision_title.expected_executable(CRASH1)
-        output = self.root / "wrong-title"
-        with self.assertRaisesRegex(
-            provision_title.Refused, "SCUS_949.00.*SCUS_941.54"
-        ):
+        for requested, other in ((CRASH1, CRASH2), (CRASH2, CRASH3), (CRASH3, CRASH1)):
+            expected = provision_title.expected_executable(requested)
+            wrong = provision_title.expected_executable(other)
+            output = self.root / f"wrong-{requested.slug}"
+            with (
+                self.subTest(requested=requested.slug, booted=other.slug),
+                self.assertRaisesRegex(provision_title.Refused, f"{wrong}.*{expected}"),
+            ):
+                provision_title.provision(
+                    requested,
+                    self.disc,
+                    self.discdump(wrong),
+                    output_dir=output,
+                    identity_check=lambda _: [],
+                )
+            self.assertFalse((output / wrong).exists())
+            self.assertFalse((output / "SYSTEM.CNF").exists())
+
+    def test_crash3_system_cnf_not_bundled_spyro_is_authoritative(self) -> None:
+        expected = provision_title.expected_executable(CRASH3)
+        output = self.root / "crash3-spyro-boot"
+        with self.assertRaisesRegex(provision_title.Refused, f"SPYRO.EXE.*{expected}"):
             provision_title.provision(
-                CRASH2,
+                CRASH3,
                 self.disc,
-                self.discdump(crash1_executable),
+                self.discdump("DRAGON/SPYRO.EXE", extra_executables=(expected,)),
                 output_dir=output,
                 identity_check=lambda _: [],
             )
-        self.assertFalse((output / crash1_executable).exists())
+        self.assertFalse((output / expected).exists())
+        self.assertFalse((output / "SPYRO.EXE").exists())
         self.assertFalse((output / "SYSTEM.CNF").exists())
 
 

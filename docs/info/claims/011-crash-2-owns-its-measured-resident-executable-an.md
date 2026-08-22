@@ -5,6 +5,8 @@ status: holds
 created: 2026-08-22
 tags: crash2,runtime,inheritance,crt0
 depends: CMakeLists.txt, psxport.pin, titles/crash2/core/crash2_runtime.cpp, titles/crash2/executable.json, tools/verify_runtime_image.py
+reconfirmed: 2026-08-22
+verified_at: 2026-08-22 18:32:27
 ---
 
 ## Claim
@@ -18,3 +20,7 @@ Clean Clang build against recorded psxport ad5cf802 passed crash2_runtime_inheri
 ## What would falsify it
 
 Crash2Runtime exposes a legacy compatibility view, invents a runtime product, any of the 15 real-image facts disagrees or disappears, the altered-fact control stops disagreeing, or the framework pin/interface changes without re-verification.
+
+## Re-confirmed 2026-08-22
+
+Fresh Clang 22 CTest passed Crash2Runtime inheritance; real SCUS_941.54 retained 15/15 typed runtime agreement and the altered global pointer produced exactly one named disagreement against recorded psxport ad5cf802.

@@ -50,12 +50,36 @@ Statuses: ✅ `re-verified` · 🟡 `re-partial` · 🔬 `in-progress` · ⬜ `t
 - notes: Begin at the measured entry and first-call boundary; do not copy Crash 1 seeds or addresses.
 
 ### CRASH3-01 — select and measure the Crash Bandicoot 3 executable
-- status: todo
+- status: re-verified
 - deps:
+- evidence: The real USA disc's `SYSTEM.CNF` selects `SCUS_942.44`, not its bundled `DRAGON/SPYRO.EXE`. The extracted 333,824-byte PS-X EXE has SHA-1 `ffa9252384eb16ce5ae14061bb87c86701ab4893`, SHA-256 `1b93cc563c90966e1d79b750f7d19bc1662859cceeb991775e9e9a22656d71d1`, entry `0x800489F8`, text `[0x80010000,0x80061000)`, gp `0`, and stack `0x801FFFF0`; the North America marker is present. The executable gate matches 11/11 tracked facts and passes its 4/4 both-answer suite. The separately extracted 393,216-byte `DRAGON/SPYRO.EXE` disagrees on name, size, both hashes, entry, and text size.
+- where: `titles/crash3/executable.json`, `tools/verify_executable.py`, gitignored `scratch/bin/crash3/SCUS_942.44`
+- gap: This proves executable identity and the disc's configured boot selection only; it does not authenticate the whole disc, execute the game, or make bundled demo content part of Crash 3.
+- notes: The title codeword is `SCUS-94244`. No Crash 1, Crash 2, or Spyro address is inherited.
+
+### CRASH3-02 — provision the selected disc and verify the first crt0 call
+- status: re-verified
+- deps: CRASH3-01
+- evidence: The shared serial-aware provisioner publishes only after `SYSTEM.CNF` boots `SCUS_942.44` and the executable matches 11/11 facts. Its 10-case suite includes three-way environment isolation, wrong-Crash-title refusal, a positive Crash 3 fixture carrying `DRAGON/SPYRO.EXE`, and refusal when that bundled path is made the boot target. Against clean pinned psxport `ad5cf802`, `crt0_extract` and the independent Mednafen CPU oracle agree 6/6 at executed `jal` ordinal 1, step 71,790, target `0x800112B8`: gp `0x80060878`, a0 `0x8006EA7C`, sp `0x801FFFF8`, and heap size `0x00190580`. The oracle's 39-case fixture passes independently.
+- where: `tools/provision_title.py`, `tests/test_provision_titles.py`, CMake `crash3_oracle_boot_check`, gitignored `scratch/bin/crash3/SCUS_942.44`
+- gap: This proves only the first real crt0 call boundary. No Crash 3 generated execution, BIOS continuation, hardware, native boot, or gameplay is claimed.
+- notes: CMake assigns Crash 3 only `scratch/bin/crash3/` and `generated/crash3/`; generated output remains absent and gitignored.
+
+### CRASH3-03 — own measured executable facts through the derived runtime
+- status: re-verified
+- deps: CRASH3-02
+- evidence: Against clean pinned psxport `ad5cf802`, `Crash3Runtime` directly inherits the title-agnostic `BoundaryRuntime`, which in turn inherits `GameRuntime`; both legacy views and all unmeasured runtime products remain null. Its `GuestProgramImage` matches 15/15 fields derived from the real executable and the framework's shipping crt0 decoder, and an altered global pointer produces one named disagreement. `gameMainEntry` remains explicitly zero because it has not been measured. The Clang build passes normal CTest, including all three runtime inheritance tests, the 10-case provisioning contract, and the complete format/size/clang-tidy policy gate.
+- where: `game/core/boundary_runtime.*`, `titles/crash3/core/crash3_runtime.*`, `tools/verify_runtime_image.py`, `tests/crash3_runtime*.cpp`, `tests/title_runtime_facts.h`
+- gap: No generated Crash 3 substrate or port/oracle execution comparison exists; CRASH3-04 begins there.
+- notes: `BoundaryRuntime` shares only the refusal/no-invented-products integration invariant. It contains no inferred Crash engine behavior and does not satisfy SHARED-01.
+
+### CRASH3-04 — recompile to the first real divergence
+- status: todo
+- deps: CRASH3-03
 - evidence:
-- where: `titles/crash3/`
-- gap: Region, serial, executable identity, hash, entry and load extent are unmeasured.
-- notes: Do not inherit another title's addresses.
+- where: `titles/crash3/`, gitignored `generated/crash3/`
+- gap: No Crash 3 generated substrate or port/oracle execution comparison exists.
+- notes: Begin at the measured entry and first-call boundary; do not copy another title's seeds or addresses.
 
 ## Provisioning and oracle
 

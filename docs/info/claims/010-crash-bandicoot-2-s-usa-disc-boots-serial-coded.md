@@ -6,7 +6,7 @@ created: 2026-08-22
 tags: crash2,identity,oracle
 depends: titles/crash2/executable.json, tools/provision_title.py
 reconfirmed: 2026-08-22
-verified_at: 2026-08-22 18:17:21
+verified_at: 2026-08-22 18:32:26
 ---
 
 ## Claim
@@ -28,3 +28,7 @@ Pinned ad5cf802 Crash 2 real gate matched SYSTEM.CNF and executable 11/11, passe
 ## Re-confirmed 2026-08-22
 
 Post-change verification on clean psxport ad5cf802: Clang CTest 4/4, title provision tests 9/9, Crash 1 boundary SELFTEST 12/12 with all eight calls 34/34 and EnterCriticalSection IRQ 1->0, Crash 1 oracle 39/39 and crt0 6/6, Crash 2 identity 11/11/runtime facts 15/15/oracle 39/39/crt0 6/6.
+
+## Re-confirmed 2026-08-22
+
+Refactored three-title provisioning passed 10/10; real Crash 2 still matched 11/11, runtime 15/15 plus altered-fact disagreement, oracle_spike 39/39, and first-call state 6/6 at step 81725 target 0x8001144C.

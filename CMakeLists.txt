@@ -44,26 +44,65 @@ target_include_directories(crash1_runtime PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/ti
 target_compile_features(crash1_runtime PUBLIC cxx_std_20)
 target_link_libraries(crash1_runtime PUBLIC crash_boundary_runtime)
 
-add_library(crash2_runtime STATIC "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash2/core/crash2_runtime.cpp")
-target_include_directories(crash2_runtime PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash2/core")
-target_compile_features(crash2_runtime PUBLIC cxx_std_20)
-target_link_libraries(crash2_runtime PUBLIC crash_boundary_runtime)
-
 add_executable(crash1_runtime_test "${CMAKE_CURRENT_SOURCE_DIR}/tests/crash1_runtime.cpp")
 target_include_directories(crash1_runtime_test PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/tests")
 target_compile_features(crash1_runtime_test PRIVATE cxx_std_20)
 target_link_libraries(crash1_runtime_test PRIVATE crash1_runtime)
 add_test(NAME crash1_runtime_inheritance COMMAND crash1_runtime_test)
 
-add_executable(crash2_runtime_test "${CMAKE_CURRENT_SOURCE_DIR}/tests/crash2_runtime.cpp")
-target_include_directories(crash2_runtime_test PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/tests")
-target_compile_features(crash2_runtime_test PRIVATE cxx_std_20)
-target_link_libraries(crash2_runtime_test PRIVATE crash2_runtime)
-add_test(NAME crash2_runtime_inheritance COMMAND crash2_runtime_test)
+function(add_crt0_boundary_title title)
+  file(READ "${CMAKE_CURRENT_SOURCE_DIR}/titles/${title}/executable.json" title_manifest_json)
+  string(JSON title_executable GET "${title_manifest_json}" executable)
+  set(title_cache "${CMAKE_CURRENT_SOURCE_DIR}/scratch/bin/${title}")
+  set(title_generated "${CMAKE_CURRENT_SOURCE_DIR}/generated/${title}")
+  set(title_exe "${title_cache}/${title_executable}")
 
-add_executable(crash2_runtime_facts "${CMAKE_CURRENT_SOURCE_DIR}/tests/crash2_runtime_facts.cpp")
-target_compile_features(crash2_runtime_facts PRIVATE cxx_std_20)
-target_link_libraries(crash2_runtime_facts PRIVATE crash2_runtime)
+  add_library(${title}_runtime STATIC
+              "${CMAKE_CURRENT_SOURCE_DIR}/titles/${title}/core/${title}_runtime.cpp")
+  target_include_directories(${title}_runtime
+                             PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/titles/${title}/core")
+  target_compile_features(${title}_runtime PUBLIC cxx_std_20)
+  target_link_libraries(${title}_runtime PUBLIC crash_boundary_runtime)
+  set_target_properties(
+    ${title}_runtime
+    PROPERTIES CRASH_TITLE_CACHE "${title_cache}" CRASH_TITLE_GENERATED "${title_generated}"
+  )
+
+  add_executable(${title}_runtime_test "${CMAKE_CURRENT_SOURCE_DIR}/tests/${title}_runtime.cpp")
+  target_include_directories(${title}_runtime_test PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/tests")
+  target_compile_features(${title}_runtime_test PRIVATE cxx_std_20)
+  target_link_libraries(${title}_runtime_test PRIVATE ${title}_runtime)
+  add_test(NAME ${title}_runtime_inheritance COMMAND ${title}_runtime_test)
+
+  add_executable(${title}_runtime_facts
+                 "${CMAKE_CURRENT_SOURCE_DIR}/tests/${title}_runtime_facts.cpp")
+  target_compile_features(${title}_runtime_facts PRIVATE cxx_std_20)
+  target_link_libraries(${title}_runtime_facts PRIVATE ${title}_runtime)
+
+  add_custom_target(
+    ${title}_oracle_boot_check
+    COMMAND
+      "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tools/provision_title.py"
+      --title ${title} --discdump "$<TARGET_FILE:discdump>"
+    COMMAND
+      "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tools/verify_executable.py"
+      --title ${title} --selftest --exe "${title_exe}"
+    COMMAND
+      "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tools/verify_runtime_image.py"
+      --title ${title} --exe "${title_exe}" --extractor "$<TARGET_FILE:crt0_extract>"
+      --runtime-facts "$<TARGET_FILE:${title}_runtime_facts>" --selftest
+    COMMAND "$<TARGET_FILE:oracle_spike>"
+    COMMAND
+      "${Python3_EXECUTABLE}" "${PSXPORT_DIR}/tools/oracle/crossvalidate_crt0.py"
+      "${title_exe}" --build "${CMAKE_BINARY_DIR}/psxport_build" --steps 400000
+    DEPENDS ${title}_runtime_facts crt0_extract discdump oracle_spike oracle_trace
+    USES_TERMINAL
+    VERBATIM
+  )
+endfunction()
+
+add_crt0_boundary_title(crash2)
+add_crt0_boundary_title(crash3)
 
 add_test(
   NAME crash_cpp_policy
@@ -146,27 +185,6 @@ add_custom_target(
     "${CMAKE_CURRENT_SOURCE_DIR}/scratch/bin/crash1/${CRASH1_EXECUTABLE}"
     --build "${CMAKE_BINARY_DIR}/psxport_build" --steps 400000
   DEPENDS crt0_extract discdump oracle_spike oracle_trace
-  USES_TERMINAL
-  VERBATIM
-)
-
-file(READ "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash2/executable.json" CRASH2_MANIFEST_JSON)
-string(JSON CRASH2_EXECUTABLE GET "${CRASH2_MANIFEST_JSON}" executable)
-set(CRASH2_EXE "${CMAKE_CURRENT_SOURCE_DIR}/scratch/bin/crash2/${CRASH2_EXECUTABLE}")
-add_custom_target(
-  crash2_oracle_boot_check
-  COMMAND
-    "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tools/provision_title.py"
-    --title crash2 --discdump "$<TARGET_FILE:discdump>"
-  COMMAND
-    "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tools/verify_runtime_image.py"
-    --title crash2 --exe "${CRASH2_EXE}" --extractor "$<TARGET_FILE:crt0_extract>"
-    --runtime-facts "$<TARGET_FILE:crash2_runtime_facts>" --selftest
-  COMMAND "$<TARGET_FILE:oracle_spike>"
-  COMMAND
-    "${Python3_EXECUTABLE}" "${PSXPORT_DIR}/tools/oracle/crossvalidate_crt0.py"
-    "${CRASH2_EXE}" --build "${CMAKE_BINARY_DIR}/psxport_build" --steps 400000
-  DEPENDS crash2_runtime_facts crt0_extract discdump oracle_spike oracle_trace
   USES_TERMINAL
   VERBATIM
 )

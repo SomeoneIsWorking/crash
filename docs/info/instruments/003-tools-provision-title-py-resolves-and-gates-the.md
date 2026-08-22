@@ -13,10 +13,12 @@ invokes the existing executable identity gate before publishing under `scratch/`
 
 ## Validated by
 
-2026-08-21: a real Crash Bandicoot USA disc produced the expected boot target and 11/11 executable
-match; a real Crash 2 USA disc produced the opposite answer and refused on `SCUS_941.54`. Nine tests
-exercise every resolution source, precedence, invalid/ambiguous inputs, successful publish, and
-failed identity without publish.
+2026-08-22: real Crash 1, Crash 2, and Crash 3 USA discs each produced their expected serial-coded
+boot target and an 11/11 executable match. The Crash 3 disc also contains `DRAGON/SPYRO.EXE`; the
+instrument followed `SYSTEM.CNF` to `SCUS_942.44`, while a fixture that made the bundled path the boot
+target refused. Ten tests exercise every resolution source, three-way title-key isolation,
+invalid/ambiguous inputs, successful publish, wrong-title boot targets, and failed identity without
+publish.
 
 ## Known failure modes
 

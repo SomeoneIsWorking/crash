@@ -6,7 +6,7 @@ created: 2026-08-22
 tags: crash1,syscall,oracle
 depends: tools/crash1_recomp.py, tests/crash1_recomp_boundary.cpp, titles/crash1/core/crash1_runtime.cpp
 reconfirmed: 2026-08-22
-verified_at: 2026-08-22 18:17:21
+verified_at: 2026-08-22 18:32:26
 ---
 
 ## Claim
@@ -36,3 +36,7 @@ Pinned ad5cf802 Crash 1 boundary gate matched eight calls 34/34, then separately
 ## Re-confirmed 2026-08-22
 
 Post-change verification on clean psxport ad5cf802: Clang CTest 4/4, title provision tests 9/9, Crash 1 boundary SELFTEST 12/12 with all eight calls 34/34 and EnterCriticalSection IRQ 1->0, Crash 1 oracle 39/39 and crt0 6/6, Crash 2 identity 11/11/runtime facts 15/15/oracle 39/39/crt0 6/6.
+
+## Re-confirmed 2026-08-22
+
+Post-Crash3 full Crash 1 boundary gate executed the measured generated EnterCriticalSection wrapper, retained selector 1, return 1, IRQ 1 to 0, and refused a different proven function.

@@ -14,10 +14,12 @@ their presence in this repository must not be read as implementation status; the
 measured frontier for each serial-identified title.
 
 Current status: framework scaffold plus verified North American disc/executable identities for Crash 1
-(`SCUS-94900`) and Crash 2 (`SCUS-94154`). Crash 2's symbolic crt0 decode agrees 6/6 with the independent
-CPU oracle at its first real call, and its derived runtime's typed executable facts agree 15/15 with the
-retail bytes. The clean Clang/CTest/real-data gates and both title regressions use recorded psxport
-`ad5cf802`. Crash 1 has 653 emitted static candidates. Its
+(`SCUS-94900`), Crash 2 (`SCUS-94154`), and Crash 3 (`SCUS-94244`). Crash 2 and Crash 3 each have a
+symbolic crt0 decode agreeing 6/6 with the independent CPU oracle at the first real call, and each
+derived runtime's typed executable facts agree 15/15 with its retail bytes. Crash 3's `SYSTEM.CNF`
+selection is explicit because its disc also contains the unrelated bootable-looking
+`DRAGON/SPYRO.EXE`. The clean Clang/CTest/real-data gates and all title regressions use recorded
+psxport `ad5cf802`. Crash 1 has 653 emitted static candidates. Its
 generated path agrees with the independent oracle on all 34
 CPU-state fields at the first eight executed calls. Nine addresses in the candidate set have
 execution provenance: eight generated bodies execute before the eighth observed target. The eighth
@@ -28,20 +30,20 @@ oracle has no BIOS or syscall-return model. There is now a direct, title-owned `
 with no legacy `GameConfig`/`GameHooks` views, but still no runnable port, full oracle boot, native
 producer, widescreen path, or interpolation path.
 
-## Configure the framework scaffold
+## Verify the framework scaffold
 
 ```sh
 python3 tools/psxport_sync.py --auto
-CC=clang CXX=clang++ cmake -S . -B scratch/build-clang \
-  -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
-CCACHE_DIR=scratch/ccache cmake --build scratch/build-clang --target crash_scaffold
+python3 tools/verify.py
 ```
 
-Run `ctest --test-dir scratch/build-clang --output-on-failure -R crash_cpp_policy` for the normal
-first-party C++ gate. The shared framework checker applies this repository's tracked `clang-format`
-and `clang-tidy` policy and the 1,200-line ownership cap without linting `external/psxport` or
-generated code. The runtime owner, its focused test, and the boundary runner are the repository's
-compile-backed first-party translation units.
+The verifier always configures and builds the authoritative `scratch/build-clang/` tree with Clang
+before running its complete CTest graph and framework pin check. This ordering is required: invoking
+`ctest` directly does not reconfigure CMake and can run a stale test graph after targets change. Raw
+`ctest --test-dir scratch/build-clang` is only a focused rerun after `tools/verify.py` has refreshed
+the tree. The shared framework checker applies this repository's tracked `clang-format` and
+`clang-tidy` policy and the 1,200-line ownership cap without linting `external/psxport` or generated
+code.
 
 ## Provision a measured title
 
@@ -51,17 +53,23 @@ provision the USA disc; the tool builds psxport's disc reader target when needed
 ```sh
 python3 tools/provision_title.py --title crash1 /path/to/Crash-Bandicoot-USA.chd
 python3 tools/provision_title.py --title crash2 /path/to/Crash-Bandicoot-2-USA.chd
+python3 tools/provision_title.py --title crash3 /path/to/Crash-Bandicoot-Warped-USA.chd
 ```
 
 The disc argument may instead come from the title key (`PSXPORT_CRASH1_DISC` or
-`PSXPORT_CRASH2_DISC`), `PSXPORT_DISC`, the same keys in the gitignored `.env`, or one `*.chd` drop-in
-at the repository root, in that order. A configured missing path and multiple drop-ins are refused.
-The shared implementation publishes into the matching `scratch/bin/<title>/` only after `SYSTEM.CNF`
-selects that title's serial-coded executable and all 11 tracked executable facts match.
+`PSXPORT_CRASH2_DISC` or `PSXPORT_CRASH3_DISC`), `PSXPORT_DISC`, the same keys in the gitignored
+`.env`, or one `*.chd` drop-in at the repository root, in that order. A configured missing path and
+multiple drop-ins are refused. The shared implementation publishes into the matching
+`scratch/bin/<title>/` only after `SYSTEM.CNF` selects that title's serial-coded executable and all 11
+tracked executable facts match. For Crash 3 this deliberately ignores the disc's bundled
+`DRAGON/SPYRO.EXE`; presence is not selection.
 
-Run `ctest --test-dir scratch/build-clang --output-on-failure -R
-'^(crash_cpp_policy|crash_title_provision_tests)$'` for the normal C++ policy and provisioning both-answer
-tests.
+After `tools/verify.py` refreshes the authoritative tree, a focused policy/provisioning rerun is:
+
+```sh
+ctest --test-dir scratch/build-clang --output-on-failure \
+  -R '^(crash_cpp_policy|crash_title_provision_tests)$'
+```
 
 ## Cross-check the first oracle window
 
@@ -74,11 +82,15 @@ PSXPORT_CRASH1_DISC=/path/to/Crash-Bandicoot-USA.chd \
 
 PSXPORT_CRASH2_DISC=/path/to/Crash-Bandicoot-2-USA.chd \
   cmake --build scratch/build-clang --target crash2_oracle_boot_check
+
+PSXPORT_CRASH3_DISC=/path/to/Crash-Bandicoot-Warped-USA.chd \
+  cmake --build scratch/build-clang --target crash3_oracle_boot_check
 ```
 
-Each target verifies only that title's crt0 call boundary. Crash 2 also compares all 15 typed runtime
-image facts against the executable and proves an altered fact disagrees. Neither target claims a full
-oracle boot or a runnable PC port.
+Each target verifies only that title's crt0 call boundary. Crash 2 and Crash 3 also compare all 15
+typed runtime image facts against the executable and prove an altered fact disagrees. Neither target
+claims a full oracle boot or a runnable PC port. CMake reserves independent
+`generated/<title>/` namespaces; no Crash 2 or Crash 3 generated substrate exists yet.
 
 ## Cross-check the resident calls before the first BIOS boundary
 

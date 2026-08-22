@@ -6,7 +6,7 @@ created: 2026-08-21
 tags: crash1,recompiler,oracle,crt0
 depends: CMakeLists.txt, psxport.pin, titles/crash1/executable.json, titles/crash1/recomp_seeds.json, tools/crash1_recomp.py, tests/crash1_recomp_boundary.cpp
 reconfirmed: 2026-08-22
-verified_at: 2026-08-22 18:17:20
+verified_at: 2026-08-22 18:32:26
 ---
 
 ## Claim
@@ -97,3 +97,7 @@ Pinned ad5cf802 crash1_recomp_boundary_check emitted 115->653 candidates and mat
 ## Re-confirmed 2026-08-22
 
 Post-change verification on clean psxport ad5cf802: Clang CTest 4/4, title provision tests 9/9, Crash 1 boundary SELFTEST 12/12 with all eight calls 34/34 and EnterCriticalSection IRQ 1->0, Crash 1 oracle 39/39 and crt0 6/6, Crash 2 identity 11/11/runtime facts 15/15/oracle 39/39/crt0 6/6.
+
+## Re-confirmed 2026-08-22
+
+Post-Crash3 full Crash 1 boundary gate re-emitted 115 seeds to 653 candidates and retained 34/34 equality at call one plus all later verified calls.

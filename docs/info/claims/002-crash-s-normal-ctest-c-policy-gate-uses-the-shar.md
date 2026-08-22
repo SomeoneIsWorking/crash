@@ -4,15 +4,16 @@ kind: claim
 status: holds
 created: 2026-08-21
 tags:
-depends: CMakeLists.txt
+depends: CMakeLists.txt, tools/verify.py
 reconfirmed: 2026-08-22
-verified_at: 2026-08-22 18:17:20
+verified_at: 2026-08-22 18:38:59
 ---
 
 ## Claim
 
-Crash's normal CTest C++ policy gate uses the shared psxport checker over every tracked first-party
-C/C++ file, and CMake refuses a non-Clang C++ compiler before configuring.
+Crash's normal verifier reconfigures and builds the authoritative Clang tree before running the full
+CTest graph; its C++ policy gate uses the shared psxport checker over every tracked first-party C/C++
+file, and CMake refuses a non-Clang C++ compiler before configuring.
 
 ## Evidence
 
@@ -24,9 +25,10 @@ project compiler guard.
 
 ## What would falsify it
 
-A tracked first-party C/C++ file escapes format, size or compile-backed clang-tidy checks; generated
-or vendored code enters the first-party denominator; a non-Clang compiler configures; or the shared
-checker/framework pin changes without re-verification.
+The normal verifier can run an old generated CTest graph, skips configure/build/pin checking, or uses
+a path other than `scratch/build-clang`; a tracked first-party C/C++ file escapes format, size or
+compile-backed clang-tidy checks; generated or vendored code enters the first-party denominator; a
+non-Clang compiler configures; or the shared checker/framework pin changes without re-verification.
 
 ## Re-confirmed 2026-08-21
 
@@ -51,3 +53,11 @@ Clean Clang 22 build against recorded psxport ad5cf802 passed normal CTest 4/4; 
 ## Re-confirmed 2026-08-22
 
 Post-change verification on clean psxport ad5cf802: Clang CTest 4/4, title provision tests 9/9, Crash 1 boundary SELFTEST 12/12 with all eight calls 34/34 and EnterCriticalSection IRQ 1->0, Crash 1 oracle 39/39 and crt0 6/6, Crash 2 identity 11/11/runtime facts 15/15/oracle 39/39/crt0 6/6.
+
+## Re-confirmed 2026-08-22
+
+Clang 22 normal CTest passed 5/5 after the three-title CMake/runtime integration; crash_cpp_policy passed full format, 1200-line, and compile-database clang-tidy checks.
+
+## Re-confirmed 2026-08-22
+
+tools/verify.py reconfigured and built authoritative scratch/build-clang with Clang 22, then ran current CTest 5/5 including all three runtime owners, full cpp policy, and serial provisioning; psxport pin check matched ad5cf802. The immediately preceding raw CTest graph had exposed the opposite stale 2-test answer.
