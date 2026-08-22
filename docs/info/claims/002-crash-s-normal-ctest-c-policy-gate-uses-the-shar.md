@@ -6,7 +6,7 @@ created: 2026-08-21
 tags:
 depends: CMakeLists.txt
 reconfirmed: 2026-08-22
-verified_at: 2026-08-22 14:15:24
+verified_at: 2026-08-22 17:39:21
 ---
 
 ## Claim
@@ -39,3 +39,7 @@ Post-landing CTest 2/2 passed; crash_cpp_policy format/size/clang-tidy now cover
 ## Re-confirmed 2026-08-22
 
 Pinned psxport 7f5d3f13 policy gate format-checked 4 first-party files, size-checked all 4 at the 1,200-line default, and ran clang-tidy over all 3 compile-backed C++ translation units; full CTest passed 3/3.
+
+## Re-confirmed 2026-08-22
+
+Fresh pinned Clang build ran normal CTest: crash1_runtime_inheritance, crash_cpp_policy, and crash1_provision_tests passed 3/3; the C++ policy gate checked touched first-party sources.

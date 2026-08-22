@@ -16,11 +16,13 @@ both integrations as missing until each has its own measured executable identity
 Current status: framework scaffold plus a verified Crash 1 North American disc/executable identity
 and 653 emitted static candidates. The generated path agrees with the independent oracle on all 34
 CPU-state fields at the first eight executed calls. Nine addresses in the candidate set have
-execution provenance: eight generated bodies execute before the eighth observed target. Two oracle
-instructions later, execution leaves mapped executable text at the BIOS exception vector. There is
-now a direct, title-owned `Crash1Runtime` seam with no legacy `GameConfig`/`GameHooks` views, but
-still no runnable port, full oracle boot, native producer, widescreen path, or
-interpolation path.
+execution provenance: eight generated bodies execute before the eighth observed target. The eighth
+target is the real `addiu $a0, 1; syscall 0` wrapper for `EnterCriticalSection`; the controlled port
+boundary executes that generated wrapper and proves the shipping HLE returns the prior IRQ state and
+disables delivery. The independent CPU instead enters `0xBFC00180`, correctly, because its focused
+oracle has no BIOS or syscall-return model. There is now a direct, title-owned `Crash1Runtime` seam
+with no legacy `GameConfig`/`GameHooks` views, but still no runnable port, full oracle boot, native
+producer, widescreen path, or interpolation path.
 
 ## Configure the framework scaffold
 
@@ -85,6 +87,10 @@ real emitter to refuse an out-of-text seed and the same comparator to name a del
 eighth-boundary `a0`; a real oracle trace capped immediately before call eight must report only
 `7/8` boundaries and refuse. Generated code remains gitignored and is never edited. This establishes
 the resident entry path through the final executed `jal` before the independent CPU leaves mapped
-text at `0xBFC00180`; BIOS, hardware, and later boot are still unverified. The emitter's 115 static
-seeds and 653 emitted candidates are discovery denominators, not claims that every candidate is
-executable code.
+text at `0xBFC00180`. The gate additionally executes the measured generated syscall wrapper on the
+port side, checks `EnterCriticalSection` changes IRQ state `1 -> 0` and returns `1`, and refuses a
+different execution-proven function as the wrapper. This is deliberately not reported as
+port/oracle agreement after the syscall: the independent harness cannot yet validate CP0
+Cause/EPC, model the BIOS syscall return, and resume at EPC+4. BIOS, hardware, and later boot are
+still unverified. The emitter's 115 static seeds and 653 emitted candidates are discovery
+denominators, not claims that every candidate is executable code.

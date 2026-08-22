@@ -6,7 +6,7 @@ created: 2026-08-21
 tags: crash1,recompiler,oracle,crt0
 depends: CMakeLists.txt, psxport.pin, titles/crash1/executable.json, titles/crash1/recomp_seeds.json, tools/crash1_recomp.py, tests/crash1_recomp_boundary.cpp
 reconfirmed: 2026-08-22
-verified_at: 2026-08-22 14:15:24
+verified_at: 2026-08-22 17:39:21
 ---
 
 ## Claim
@@ -81,3 +81,7 @@ Clean pinned 3418a79b build after whole-Game runner initialization: call one rem
 ## Re-confirmed 2026-08-22
 
 Pinned psxport 7f5d3f13 generated runner with the direct Crash1Runtime installed matched the independent oracle 34/34 at call one; all emission, short-window, ambiguity, and altered-register negative controls passed in SELFTEST 9/9.
+
+## Re-confirmed 2026-08-22
+
+Pinned psxport 7f5d3f13 boundary gate matched all 34 fields at call one and retained all refusal controls within SELFTEST 12/12.

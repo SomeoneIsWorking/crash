@@ -10,9 +10,15 @@ candidates and proves the generated path agrees with the independent oracle on a
 fields at each of the first eight executed calls, from `0x80011A18` through `0x8003E1F8`. Every
 target is recovered from execution, not entered in the seed file.
 
-This is an entry-through-eighth-call recompile boundary, not a runnable port. The 653-candidate
-emission count is not a code-correctness denominator: only the entry and eight call targets have
-execution provenance so far. The boundary runner installs the direct, title-owned `Crash1Runtime`;
-that runtime deliberately has no legacy configuration view or invented host behavior and refuses
-native boot until the next BIOS transition is modeled. Later resident code, BIOS, hardware,
-overlays, and gameplay remain unverified.
+This is an entry-through-eighth-call recompile boundary, not a runnable port. The eighth target is
+the measured `EnterCriticalSection` wrapper (`addiu $a0, 1; syscall 0`). The controlled port boundary
+executes that generated wrapper and verifies the shipping HLE returns prior IRQ state `1`, disables
+IRQ delivery, and rejects a different execution-proven function as the wrapper. The independent CPU
+correctly enters `0xBFC00180`, but its focused oracle has no BIOS/syscall-return model, so no
+post-syscall port/oracle equality is claimed.
+
+The 653-candidate emission count is not a code-correctness denominator: only the entry and eight
+call targets have execution provenance so far. The boundary runner installs the direct, title-owned
+`Crash1Runtime`; that runtime deliberately has no legacy configuration view or invented host behavior
+and refuses native boot until a validated oracle syscall return can resume at EPC+4. Later resident
+code, BIOS, hardware, overlays, and gameplay remain unverified.

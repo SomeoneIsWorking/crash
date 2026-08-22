@@ -16,8 +16,9 @@ void Crash1Runtime::registerOverrides(Game &) {}
 
 void Crash1Runtime::bootInit(Core &) {
   lucent::error("crash1-runtime",
-                "native boot is unavailable: Crash 1 execution currently ends at the measured BIOS "
-                "exception boundary 0xBFC00180");
+                "native boot is unavailable: the independent oracle currently stops at Crash 1's "
+                "EnterCriticalSection syscall exception; a validated post-syscall resume model is "
+                "required before later boot");
   std::abort();
 }
 

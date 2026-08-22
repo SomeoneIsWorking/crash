@@ -26,13 +26,21 @@ reported exactly one named mismatch when fed the real eighth port capture with `
 changed by one bit, proving both missing-boundary and disagreement answers rather than only the
 all-equal answer.
 
+The same shipping runner now has a controlled syscall mode. On the real executable it validates the
+eighth target's `addiu $a0, 1; syscall 0` words from loaded guest memory, executes the generated body,
+and records selector `1`, return value `1`, IRQ delivery `1 -> 0`, and the matching COP0 IE-bit clear.
+Pointing that mode at the seventh execution-proven function refuses before executing the syscall,
+proving the discriminator can produce the opposite answer.
+
 ## Known failure modes
 
 The symbolic crt0 decoder selects only the expected first target. The shared oracle recovers all
 later targets from actual execution; the consumer does not reimplement `jal` or delay-slot tracking.
 The target-override runner refuses repeated targets because it cannot distinguish two ordinal
 occurrences at the same address. It captures function-call boundaries, not every guest instruction,
-and this result covers only entry-through-eighth-call execution. It does not certify the remaining
-emitted candidates, the following BIOS exception transition, devices, overlays, or gameplay. The 115
+and this result covers only entry-through-eighth-call equality. The port-side syscall behavior is a
+separate controlled result: the independent oracle enters `0xBFC00180` and currently cannot expose
+Cause/EPC or resume the syscall at EPC+4, so the instrument does not claim post-syscall equality. It
+does not certify the remaining emitted candidates, later boot, devices, overlays, or gameplay. The 115
 static seeds and 653 emitted candidates are discovery denominators; only nine addresses currently
 have execution provenance.

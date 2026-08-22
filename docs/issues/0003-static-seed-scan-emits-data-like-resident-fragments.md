@@ -31,8 +31,10 @@ addresses observed, eight generated bodies actually executed.
 
 ## Proper next investigation
 
-Model and differentially verify the observed post-call-eight transition to the BIOS exception vector
-`0xBFC00180`. Separately make the shared emitter distinguish each mixed-table entry's executable provenance
-instead of accepting every target because the run as a whole looks like code. This repository must
-not patch or delete generated fragments locally, and explicit title seeds remain empty until an
-actual indirect execution miss proves an address.
+The post-call-eight instruction is now identified as the real `EnterCriticalSection` syscall and its
+port-side generated/HLE transition is controlled. The independent oracle still needs a validated
+syscall-exception return model before later boot can be compared. Separately make the shared emitter
+distinguish each mixed-table entry's executable provenance instead of accepting every target because
+the run as a whole looks like code. This repository must not patch or delete generated fragments
+locally, and explicit title seeds remain empty until an actual indirect execution miss proves an
+address.

@@ -11,9 +11,11 @@ updated: 2026-08-22
 ## Root cause
 
 The Crash repository is still a CPU-boundary scaffold, not a game port. The clean pinned gate proves
-only the resident entry through call eight. Two oracle instructions later execution leaves mapped
-executable text at the BIOS exception vector `0xBFC00180`; no port binary, BIOS continuation, frame
-loop, camera state, or game-code graphics submitter has been reached.
+the resident entry through call eight. That target is the real `addiu $a0, 1; syscall 0` wrapper for
+`EnterCriticalSection`; two oracle instructions later the independent CPU correctly enters
+`0xBFC00180`. The focused oracle has no BIOS or syscall-exception return model, so it cannot yet
+validate Cause/EPC and resume at EPC+4. No port binary, BIOS continuation, frame loop, camera state,
+or game-code graphics submitter has been reached.
 
 ## What was tried / dead ends
 
@@ -23,5 +25,14 @@ reconstruction from post-projection OT/GTE output would establish game-owned ren
 
 ## Proper next step
 
-Model and differentially verify the BIOS/exception transition, then continue the execution spine to
-the first frame loop. Camera and graphics-submitter RE begins only after that upstream path is real.
+Add a validated independent-oracle syscall return with Cause/EPC and wrong-selector/wrong-boundary
+refusals, then continue the execution spine to the first frame loop. Camera and graphics-submitter RE
+begins only after that upstream path is real.
+
+### Note (2026-08-22)
+The first text exit is now identified exactly. `SCUS_949.00` call eight targets `0x8003E1F8`
+(`addiu $a0, 1; syscall 0`), so step 62,083 at `0xBFC00180` is the independent CPU's correct
+syscall exception for `EnterCriticalSection`, not an arbitrary boot crash. The controlled generated
+port wrapper returns prior IRQ state `1` and disables IRQ delivery; a different execution-proven
+function refuses. Rendering remains blocked because `oracle_trace` has no syscall-exception Cause/EPC
+validation or EPC+4 resume, so no post-syscall equality or later boot is claimed.

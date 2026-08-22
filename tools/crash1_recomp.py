@@ -43,6 +43,27 @@ STATE_HEADER_RE = re.compile(
 STATE_REG_RE = re.compile(
     r"^# (?P<tag>[A-Z-]+)-REG (?P<name>[a-z0-9]+)=0x(?P<value>[0-9A-Fa-f]+)$"
 )
+TEXT_EXIT_RE = re.compile(
+    r"^# LEFT THE MAPPED TEXT at step (?P<step>\d+): "
+    r"pc=0x(?P<pc>[0-9A-Fa-f]+) is outside "
+)
+ENTER_CRITICAL_RE = re.compile(
+    r"^# PORT-ENTER-CRITICAL boundary=0x(?P<boundary>[0-9A-Fa-f]+) "
+    r"selector=0x(?P<selector>[0-9A-Fa-f]+)$",
+    re.MULTILINE,
+)
+ENTER_CRITICAL_V0_RE = re.compile(
+    r"^# PORT-ENTER-CRITICAL v0=0x(?P<v0>[0-9A-Fa-f]+)$", re.MULTILINE
+)
+ENTER_CRITICAL_IRQ_RE = re.compile(
+    r"^# PORT-ENTER-CRITICAL irq-before=(?P<before>\d+) irq-after=(?P<after>\d+)$",
+    re.MULTILINE,
+)
+ENTER_CRITICAL_STATUS_RE = re.compile(
+    r"^# PORT-ENTER-CRITICAL status-before=0x(?P<before>[0-9A-Fa-f]+) "
+    r"status-after=0x(?P<after>[0-9A-Fa-f]+)$",
+    re.MULTILINE,
+)
 REGISTER_NAMES = (
     "at",
     "v0",
@@ -103,6 +124,17 @@ class CallBoundary:
     ordinal: int
     step: int
     state: State
+
+
+@dataclass(frozen=True)
+class EnterCriticalBoundary:
+    address: int
+    selector: int
+    return_value: int
+    irq_before: int
+    irq_after: int
+    status_before: int
+    status_after: int
 
 
 def run(
@@ -278,6 +310,31 @@ def parse_call_boundary(text: str, ordinal: int) -> CallBoundary:
     return CallBoundary(ordinal, int(headers[0].group("step")), state)
 
 
+def parse_text_exit(text: str) -> tuple[int, int]:
+    matches = [match for line in text.splitlines() if (match := TEXT_EXIT_RE.match(line))]
+    if len(matches) != 1:
+        raise Refused(f"oracle trace has {len(matches)} mapped-text exit boundaries, expected 1")
+    return int(matches[0].group("step")), int(matches[0].group("pc"), 16)
+
+
+def parse_enter_critical(text: str) -> EnterCriticalBoundary:
+    header = ENTER_CRITICAL_RE.search(text)
+    result = ENTER_CRITICAL_V0_RE.search(text)
+    irq = ENTER_CRITICAL_IRQ_RE.search(text)
+    status = ENTER_CRITICAL_STATUS_RE.search(text)
+    if header is None or result is None or irq is None or status is None:
+        raise Refused("port runner omitted the complete EnterCriticalSection boundary block")
+    return EnterCriticalBoundary(
+        int(header.group("boundary"), 16),
+        int(header.group("selector"), 16),
+        int(result.group("v0"), 16),
+        int(irq.group("before")),
+        int(irq.group("after")),
+        int(status.group("before"), 16),
+        int(status.group("after"), 16),
+    )
+
+
 def require_unique_call_target(observed_targets: set[int], call: CallBoundary) -> None:
     if call.state.pc in observed_targets:
         raise Refused(
@@ -305,6 +362,28 @@ def capture_port_state(
             f"{port_result.stderr.rstrip()}"
         )
     return parse_state(port_result.stdout, "PORT-CALL-BOUNDARY")
+
+
+def capture_enter_critical(
+    executable: pathlib.Path, runner: pathlib.Path, entry: int, boundary: int
+) -> EnterCriticalBoundary:
+    result = run(
+        [
+            str(runner),
+            str(executable),
+            f"0x{entry:08X}",
+            f"0x{boundary:08X}",
+            "--execute-enter-critical",
+        ]
+    )
+    trace = RAW / "port-enter-critical.txt"
+    trace.write_text(result.stdout, encoding="utf-8")
+    if result.returncode:
+        raise Refused(
+            "port runner refused the measured EnterCriticalSection boundary with exit "
+            f"{result.returncode}:\n{result.stderr.rstrip()}"
+        )
+    return parse_enter_critical(result.stdout)
 
 
 def capture_states(
@@ -383,6 +462,78 @@ def check_comparison(
     return comparisons
 
 
+def check_enter_critical_boundary(
+    executable: pathlib.Path,
+    runner: pathlib.Path,
+    entry: int,
+    calls: list[tuple[CallBoundary, State]],
+) -> None:
+    last_call = calls[-1][0]
+    oracle_trace = (RAW / f"oracle-call-{last_call.ordinal}.txt").read_text(
+        encoding="utf-8"
+    )
+    exit_step, exit_pc = parse_text_exit(oracle_trace)
+    if exit_pc != 0xBFC00180 or exit_step != last_call.step + 2:
+        raise Refused(
+            "oracle did not enter the boot exception vector exactly two instructions after "
+            f"call {last_call.ordinal}: call-step={last_call.step}, "
+            f"exit-step={exit_step}, exit-pc=0x{exit_pc:08X}"
+        )
+    print(
+        "PASS oracle syscall boundary: call 8 executes addiu-a0-1/syscall-0, then "
+        f"vectors to 0x{exit_pc:08X} at step {exit_step}"
+    )
+
+    port = capture_enter_critical(executable, runner, entry, last_call.state.pc)
+    if port.address != last_call.state.pc:
+        raise Refused(
+            f"port captured syscall wrapper 0x{port.address:08X}, expected oracle call target "
+            f"0x{last_call.state.pc:08X}"
+        )
+    expected_status = port.status_before & ~1
+    if (
+        port.selector != 1
+        or port.return_value != 1
+        or port.irq_before != 1
+        or port.irq_after != 0
+        or port.status_after != expected_status
+    ):
+        raise Refused(
+            "port EnterCriticalSection semantics disagree: "
+            f"selector={port.selector}, v0={port.return_value}, "
+            f"irq={port.irq_before}->{port.irq_after}, "
+            f"status=0x{port.status_before:08X}->0x{port.status_after:08X}"
+        )
+    print(
+        "PASS port syscall boundary: generated wrapper selected EnterCriticalSection; "
+        "shipping HLE returned prior IRQ=1 and disabled IRQ delivery"
+    )
+
+    wrong_boundary = calls[-2][0].state.pc
+    negative = run(
+        [
+            str(runner),
+            str(executable),
+            f"0x{entry:08X}",
+            f"0x{wrong_boundary:08X}",
+            "--execute-enter-critical",
+        ]
+    )
+    if (
+        negative.returncode != 2
+        or "is not Crash 1's measured addiu-a0-1/syscall-0 wrapper"
+        not in negative.stderr
+    ):
+        raise Refused(
+            "port syscall discriminator accepted a different execution-proven function "
+            f"0x{wrong_boundary:08X}"
+        )
+    print(
+        "PASS negative syscall boundary: a different execution-proven function was refused "
+        "before EnterCriticalSection execution"
+    )
+
+
 def selftest(
     executable: pathlib.Path, build: pathlib.Path, runner: pathlib.Path, steps: int
 ) -> bool:
@@ -407,6 +558,9 @@ def selftest(
 
     comparisons = check_comparison(executable, build, runner, steps)
     last_call, last_port = comparisons[-1]
+    check_enter_critical_boundary(
+        executable, runner, require_executable(executable).entry, comparisons
+    )
 
     before_last_trace = RAW / "oracle-before-last-call.txt"
     before_last_result = run(
@@ -466,7 +620,7 @@ def selftest(
     print(
         "PASS negative comparison: one altered port register produced one named mismatch"
     )
-    print("SELFTEST 9/9")
+    print("SELFTEST 12/12")
     return True
 
 

@@ -6,7 +6,7 @@ created: 2026-08-21
 tags: crash1,oracle,crt0
 depends: CMakeLists.txt, psxport.pin, titles/crash1/executable.json, tools/provision_crash1.py
 reconfirmed: 2026-08-22
-verified_at: 2026-08-22 14:15:24
+verified_at: 2026-08-22 17:39:21
 ---
 
 ## Claim
@@ -78,3 +78,7 @@ Post-landing real Crash crt0 crossvalidation remained 6/6 against psxport 3418a7
 ## Re-confirmed 2026-08-22
 
 Pinned psxport 7f5d3f13 crash1_oracle_boot_check reprovisioned the real USA disc executable with 11/11 facts, passed the independent CPU fixture 39/39, and crossvalidated the first crt0 call 6/6 at step 57,910.
+
+## Re-confirmed 2026-08-22
+
+Pinned psxport 7f5d3f13 oracle_spike passed 39/39 and the real SCUS_949.00 symbolic/oracle first crt0 boundary agreed 6/6 at step 57910.

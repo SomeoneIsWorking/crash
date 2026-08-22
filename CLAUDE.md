@@ -31,4 +31,8 @@ cross-title RE proves shared ownership; it does not invent a shared `game/` laye
 
 Crash 1 targets the North American NTSC-U release (`SCUS-94900`, executable `SCUS_949.00`). The exact
 identity/header evidence lives in `titles/crash1/executable.json` and is compared to the real bytes by
-`tools/verify_executable.py`. This does not imply a provisioned disc or runnable port.
+`tools/verify_executable.py`. Current execution reaches the real `EnterCriticalSection` syscall wrapper:
+the port-side generated wrapper and HLE transition are verified, while the independent CPU oracle stops
+at `0xBFC00180` because it has no BIOS/syscall-return model. Do not call that post-syscall equality or
+advance later boot until the oracle validates Cause/EPC and resumes at EPC+4. None of this implies a
+runnable port.
