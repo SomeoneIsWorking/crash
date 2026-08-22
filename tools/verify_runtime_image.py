@@ -59,6 +59,10 @@ def expected_facts(
     manifest: dict[str, object], extractor_output: str
 ) -> dict[str, int]:
     want = verify_executable.expected(manifest)
+    runtime = manifest.get("runtime", {})
+    if not isinstance(runtime, dict):
+        raise Refused("manifest runtime facts must be an object")
+    game_main = int(str(runtime.get("game_main_entry", "0")), 0)
     text_begin = int(want["text_address"])
     text_end = text_begin + int(want["text_size"])
     return {
@@ -87,7 +91,7 @@ def expected_facts(
         "libc_init": capture(
             r"\| libcInit (0x[0-9A-Fa-f]+)", extractor_output, "libcInit"
         ),
-        "game_main": 0,
+        "game_main": game_main,
         "crt0_entry": int(want["entry"]),
         "resident_begin": text_begin & 0x1FFFFFFF,
         "resident_end": text_end & 0x1FFFFFFF,
@@ -143,7 +147,10 @@ def main() -> int:
         print(
             f"MATCH: {len(expected)}/{len(expected)} GuestProgramImage facts agree with the real executable"
         )
-        print("game_main=0 is an explicit unmeasured frontier, not a guessed address")
+        if expected["game_main"]:
+            print(f"game_main=0x{expected['game_main']:08X} is a tracked executable-call boundary")
+        else:
+            print("game_main=0 is an explicit unmeasured frontier, not a guessed address")
 
         if args.selftest:
             altered = dict(actual)

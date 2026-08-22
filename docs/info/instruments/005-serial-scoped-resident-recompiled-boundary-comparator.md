@@ -7,9 +7,11 @@ created: 2026-08-21
 
 ## Instrument
 
-`tools/crash1_recomp.py` plus `tests/crash1_recomp_boundary.cpp` — emits Crash 1's resident
-candidates, consumes psxport's canonical independent-oracle ordinal call captures, captures the same
-generated-call states, and compares complete register files.
+`tools/resident_recomp.py` behind the serial-scoped `tools/crash1_recomp.py` and
+`tools/scus_94244_recomp.py` entry points, plus the title-specific runners over
+`tests/recomp_boundary_support.h` — emits a verified title's resident candidates, consumes psxport's
+canonical independent-oracle ordinal call captures, captures the same generated-call states, and
+compares complete register files without sharing title addresses.
 
 ## Validated by
 
@@ -26,21 +28,30 @@ reported exactly one named mismatch when fed the real eighth port capture with `
 changed by one bit, proving both missing-boundary and disagreement answers rather than only the
 all-equal answer.
 
-The same shipping runner now has a controlled syscall mode. On the real executable it validates the
+The same shipping runner has a controlled syscall mode. On each real executable it validates the
 eighth target's `addiu $a0, 1; syscall 0` words from loaded guest memory, executes the generated body,
 and records selector `1`, return value `1`, IRQ delivery `1 -> 0`, and the matching COP0 IE-bit clear.
 Pointing that mode at the seventh execution-proven function refuses before executing the syscall,
 proving the discriminator can produce the opposite answer.
 
+On real `SCUS_942.44`, emitter `2026-08-22.1` produced 986 candidates from 297 seeds. Generated and
+oracle states agreed 34/34 at all eight calls: `0x800112B8`, `0x80011628`, game main
+`0x80048AA0`, `0x800154AC`, `0x8004BFBC`, `0x8004F37C`, `0x8004F914`, and syscall wrapper
+`0x80048C38`. The short trace refused at 7/8, an altered register produced one disagreement, and a
+different execution-proven target refused syscall execution. The same refactored implementation then
+reproduced all eight `SCUS_949.00` 34/34 comparisons and its existing syscall result.
+
 ## Known failure modes
 
-The symbolic crt0 decoder selects only the expected first target. The shared oracle recovers all
+The symbolic crt0 decoder selects only the expected first target. In `SCUS_942.44` that structural
+`libcInit` slot is not an A(39h) thunk, so the A0 modeled-return mechanism does not apply. The shared
+oracle recovers all
 later targets from actual execution; the consumer does not reimplement `jal` or delay-slot tracking.
 The target-override runner refuses repeated targets because it cannot distinguish two ordinal
 occurrences at the same address. It captures function-call boundaries, not every guest instruction,
 and this result covers only entry-through-eighth-call equality. The port-side syscall behavior is a
 separate controlled result: the independent oracle enters `0xBFC00180` and currently cannot expose
 Cause/EPC or resume the syscall at EPC+4, so the instrument does not claim post-syscall equality. It
-does not certify the remaining emitted candidates, later boot, devices, overlays, or gameplay. The 115
-static seeds and 653 emitted candidates are discovery denominators; only nine addresses currently
-have execution provenance.
+does not certify the remaining emitted candidates, later boot, devices, overlays, or gameplay. Static
+seed and emitted-candidate counts are discovery denominators; only nine addresses per verified title
+currently have execution provenance.

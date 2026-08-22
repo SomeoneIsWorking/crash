@@ -36,3 +36,6 @@ syscall exception for `EnterCriticalSection`, not an arbitrary boot crash. The c
 port wrapper returns prior IRQ state `1` and disables IRQ delivery; a different execution-proven
 function refuses. Rendering remains blocked because `oracle_trace` has no syscall-exception Cause/EPC
 validation or EPC+4 resume, so no post-syscall equality or later boot is claimed.
+
+### Note (2026-08-22)
+SCUS_942.44 now reaches the same honest class of boundary without borrowing SCUS_949.00 addresses: eight generated/oracle call states agree 34/34 through game main 0x80048AA0 and EnterCriticalSection wrapper 0x80048C38; the independent CPU enters 0xBFC00180 at step 75963. Crash 3 rendering remains blocked on the same missing syscall Cause/EPC validation and EPC+4 oracle resume, not on an A(39h) BIOS return.

@@ -115,65 +115,73 @@ add_test(
   COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tests/test_provision_titles.py"
 )
 set_tests_properties(crash_title_provision_tests PROPERTIES ENVIRONMENT "PYTHONDONTWRITEBYTECODE=1")
-file(READ "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/executable.json" CRASH1_MANIFEST_JSON)
-string(JSON CRASH1_EXECUTABLE GET "${CRASH1_MANIFEST_JSON}" executable)
-set(CRASH1_EXE "${CMAKE_CURRENT_SOURCE_DIR}/scratch/bin/crash1/${CRASH1_EXECUTABLE}")
-set(CRASH1_GENERATED "${CMAKE_CURRENT_SOURCE_DIR}/generated/crash1")
-add_custom_target(
-  crash1_recomp_generate
-  COMMAND
-    "${CMAKE_COMMAND}" -E env "PSXPORT_DIR=${PSXPORT_DIR}" "PYTHONDONTWRITEBYTECODE=1"
-    "${Python3_EXECUTABLE}" -B "${CMAKE_CURRENT_SOURCE_DIR}/tools/crash1_recomp.py"
-    --emit --exe "${CRASH1_EXE}" --output "${CRASH1_GENERATED}"
-  BYPRODUCTS
-    "${CRASH1_GENERATED}/overlay_table.c"
-    "${CRASH1_GENERATED}/shard_0.c"
-    "${CRASH1_GENERATED}/shard_disp.c"
-    "${CRASH1_GENERATED}/rec_decls.h"
-    "${CRASH1_GENERATED}/rec_sources.cmake"
-    "${CRASH1_GENERATED}/.recomp_version"
-  DEPENDS
-    "${CMAKE_CURRENT_SOURCE_DIR}/tools/crash1_recomp.py"
-    "${CMAKE_CURRENT_SOURCE_DIR}/tools/verify_executable.py"
-    "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/executable.json"
-    "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/recomp_seeds.json"
-    "${PSXPORT_DIR}/tools/recomp/emit.py"
-    "${PSXPORT_DIR}/tools/recomp/decode.py"
-    "${PSXPORT_DIR}/tools/recomp/psexe.py"
-  COMMENT "Crash 1: emitting the resident substrate from the verified USA executable"
-  VERBATIM
-)
-add_executable(
-  crash1_recomp_boundary EXCLUDE_FROM_ALL
-  "${CMAKE_CURRENT_SOURCE_DIR}/tests/crash1_recomp_boundary.cpp"
-  "${CRASH1_GENERATED}/overlay_table.c"
-  "${CRASH1_GENERATED}/shard_0.c"
-  "${CRASH1_GENERATED}/shard_disp.c"
-)
-add_dependencies(crash1_recomp_boundary crash1_recomp_generate)
-set_source_files_properties(
-  "${CRASH1_GENERATED}/overlay_table.c"
-  "${CRASH1_GENERATED}/shard_0.c"
-  "${CRASH1_GENERATED}/shard_disp.c"
-  PROPERTIES LANGUAGE CXX
-)
-target_include_directories(crash1_recomp_boundary PRIVATE "${CRASH1_GENERATED}")
-target_compile_features(crash1_recomp_boundary PRIVATE cxx_std_20)
-target_compile_options(
-  crash1_recomp_boundary PRIVATE -O1 -foptimize-sibling-calls -fno-strict-aliasing -fwrapv
-)
-target_link_libraries(crash1_recomp_boundary PRIVATE crash1_runtime)
-add_custom_target(
-  crash1_recomp_boundary_check
-  COMMAND
-    "${CMAKE_COMMAND}" -E env "PSXPORT_DIR=${PSXPORT_DIR}" "PYTHONDONTWRITEBYTECODE=1"
-    "${Python3_EXECUTABLE}" -B "${CMAKE_CURRENT_SOURCE_DIR}/tools/crash1_recomp.py"
-    --selftest --exe "${CRASH1_EXE}" --build "${CMAKE_BINARY_DIR}"
-    --runner "$<TARGET_FILE:crash1_recomp_boundary>"
-  DEPENDS crash1_recomp_boundary crt0_extract oracle_trace
-  USES_TERMINAL
-  VERBATIM
-)
+function(add_resident_recomp_title title tool)
+  file(READ "${CMAKE_CURRENT_SOURCE_DIR}/titles/${title}/executable.json" title_manifest_json)
+  string(JSON title_executable GET "${title_manifest_json}" executable)
+  set(title_exe "${CMAKE_CURRENT_SOURCE_DIR}/scratch/bin/${title}/${title_executable}")
+  set(title_generated "${CMAKE_CURRENT_SOURCE_DIR}/generated/${title}")
+
+  add_custom_target(
+    ${title}_recomp_generate
+    COMMAND
+      "${CMAKE_COMMAND}" -E env "PSXPORT_DIR=${PSXPORT_DIR}" "PYTHONDONTWRITEBYTECODE=1"
+      "${Python3_EXECUTABLE}" -B "${CMAKE_CURRENT_SOURCE_DIR}/tools/${tool}"
+      --emit --exe "${title_exe}" --output "${title_generated}"
+    BYPRODUCTS
+      "${title_generated}/overlay_table.c"
+      "${title_generated}/shard_0.c"
+      "${title_generated}/shard_disp.c"
+      "${title_generated}/rec_decls.h"
+      "${title_generated}/rec_sources.cmake"
+      "${title_generated}/.recomp_version"
+    DEPENDS
+      "${CMAKE_CURRENT_SOURCE_DIR}/tools/${tool}"
+      "${CMAKE_CURRENT_SOURCE_DIR}/tools/resident_recomp.py"
+      "${CMAKE_CURRENT_SOURCE_DIR}/tools/verify_executable.py"
+      "${CMAKE_CURRENT_SOURCE_DIR}/titles/${title}/executable.json"
+      "${CMAKE_CURRENT_SOURCE_DIR}/titles/${title}/recomp_seeds.json"
+      "${PSXPORT_DIR}/tools/recomp/emit.py"
+      "${PSXPORT_DIR}/tools/recomp/decode.py"
+      "${PSXPORT_DIR}/tools/recomp/psexe.py"
+    COMMENT "${title}: emitting the resident substrate from its verified USA executable"
+    VERBATIM
+  )
+  add_executable(
+    ${title}_recomp_boundary EXCLUDE_FROM_ALL
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/${title}_recomp_boundary.cpp"
+    "${title_generated}/overlay_table.c"
+    "${title_generated}/shard_0.c"
+    "${title_generated}/shard_disp.c"
+  )
+  add_dependencies(${title}_recomp_boundary ${title}_recomp_generate)
+  set_source_files_properties(
+    "${title_generated}/overlay_table.c"
+    "${title_generated}/shard_0.c"
+    "${title_generated}/shard_disp.c"
+    PROPERTIES LANGUAGE CXX
+  )
+  target_include_directories(${title}_recomp_boundary PRIVATE "${title_generated}")
+  target_compile_features(${title}_recomp_boundary PRIVATE cxx_std_20)
+  target_compile_options(
+    ${title}_recomp_boundary PRIVATE -O1 -foptimize-sibling-calls -fno-strict-aliasing -fwrapv
+  )
+  target_link_libraries(${title}_recomp_boundary PRIVATE ${title}_runtime)
+  add_custom_target(
+    ${title}_recomp_boundary_check
+    COMMAND
+      "${CMAKE_COMMAND}" -E env "PSXPORT_DIR=${PSXPORT_DIR}" "PYTHONDONTWRITEBYTECODE=1"
+      "${Python3_EXECUTABLE}" -B "${CMAKE_CURRENT_SOURCE_DIR}/tools/${tool}"
+      --selftest --exe "${title_exe}" --build "${CMAKE_BINARY_DIR}"
+      --runner "$<TARGET_FILE:${title}_recomp_boundary>"
+    DEPENDS ${title}_recomp_boundary crt0_extract oracle_trace
+    USES_TERMINAL
+    VERBATIM
+  )
+  set(${title}_exe "${title_exe}" PARENT_SCOPE)
+endfunction()
+
+add_resident_recomp_title(crash1 crash1_recomp.py)
+add_resident_recomp_title(crash3 scus_94244_recomp.py)
 add_custom_target(
   crash1_oracle_boot_check
   COMMAND
@@ -182,7 +190,7 @@ add_custom_target(
   COMMAND "$<TARGET_FILE:oracle_spike>"
   COMMAND
     "${Python3_EXECUTABLE}" "${PSXPORT_DIR}/tools/oracle/crossvalidate_crt0.py"
-    "${CMAKE_CURRENT_SOURCE_DIR}/scratch/bin/crash1/${CRASH1_EXECUTABLE}"
+    "${crash1_exe}"
     --build "${CMAKE_BINARY_DIR}/psxport_build" --steps 400000
   DEPENDS crt0_extract discdump oracle_spike oracle_trace
   USES_TERMINAL

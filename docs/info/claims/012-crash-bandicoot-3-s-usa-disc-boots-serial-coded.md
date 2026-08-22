@@ -5,6 +5,8 @@ status: holds
 created: 2026-08-22
 tags: crash3,identity,oracle
 depends: titles/crash3/executable.json, tools/provision_title.py, CMakeLists.txt
+reconfirmed: 2026-08-22
+verified_at: 2026-08-22 19:23:54
 ---
 
 ## Claim
@@ -18,3 +20,7 @@ Real USA CHD provisioning followed SYSTEM.CNF to SCUS_942.44 and matched titles/
 ## What would falsify it
 
 A supplied USA disc's SYSTEM.CNF boots a target other than SCUS_942.44, the provisioner selects bundled SPYRO.EXE by presence, any tracked hash/header/marker changes, or the independent oracle disagrees at the first call.
+
+## Re-confirmed 2026-08-22
+
+At recorded psxport 57a17a14, cached retail SCUS_942.44 matched manifest and executable selftest passed 4/4; oracle_spike passed 39/39; independent/symbolic first-call state retained 6/6 at step 71790 target 0x800112B8. The 10-case provision contract still proves SYSTEM.CNF, not DRAGON/SPYRO.EXE, owns selection; no disc was configured for a fresh extraction this run.

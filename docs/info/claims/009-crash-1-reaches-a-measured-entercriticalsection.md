@@ -4,9 +4,9 @@ kind: claim
 status: holds
 created: 2026-08-22
 tags: crash1,syscall,oracle
-depends: tools/crash1_recomp.py, tests/crash1_recomp_boundary.cpp, titles/crash1/core/crash1_runtime.cpp
+depends: tools/resident_recomp.py, tools/crash1_recomp.py, tests/recomp_boundary_support.h, tests/crash1_recomp_boundary.cpp, titles/crash1/core/crash1_runtime.cpp
 reconfirmed: 2026-08-22
-verified_at: 2026-08-22 18:32:26
+verified_at: 2026-08-22 19:23:54
 ---
 
 ## Claim
@@ -40,3 +40,7 @@ Post-change verification on clean psxport ad5cf802: Clang CTest 4/4, title provi
 ## Re-confirmed 2026-08-22
 
 Post-Crash3 full Crash 1 boundary gate executed the measured generated EnterCriticalSection wrapper, retained selector 1, return 1, IRQ 1 to 0, and refused a different proven function.
+
+## Re-confirmed 2026-08-22
+
+After extracting the shared serial-scoped runner/comparator at psxport 57a17a14, real SCUS_949.00 regenerated 115->653 candidates and retained eight calls at 34/34, the EnterCriticalSection IRQ 1->0 result, and all 12/12 controls.

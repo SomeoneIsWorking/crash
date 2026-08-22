@@ -7,6 +7,11 @@ not evidence of shared ownership.
 Statuses: ✅ `re-verified` · 🟡 `re-partial` · 🔬 `in-progress` · ⬜ `todo` · ⏸ blocked upstream ·
 ➖ `skip-by-design` · ⚠️ `hack`.
 
+
+
+
+
+
 ## Target identity
 
 ### CRASH1-01 — select and measure the Crash Bandicoot executable
@@ -28,18 +33,18 @@ Statuses: ✅ `re-verified` · 🟡 `re-partial` · 🔬 `in-progress` · ⬜ `t
 ### CRASH2-02 — provision the selected disc and verify the first crt0 call
 - status: re-verified
 - deps: CRASH2-01
-- evidence: The shared serial-aware provisioning path publishes only after `SYSTEM.CNF` boots `SCUS_941.54` and the executable matches 11/11 facts. Its 9-case both-answer suite includes cross-title environment isolation and refusal when Crash 2 is presented with Crash 1's `SCUS_949.00` boot target. Against clean pinned psxport `ad5cf802`, `crt0_extract` and the independent Mednafen CPU oracle agree 6/6 at executed `jal` ordinal 1, step 81,725, target `0x8001144C`: gp `0x8005F17C`, a0 `0x8006F1F4`, sp `0x801FFFF8`, and heap size `0x0018FE08`. The oracle's 39-case fixture passes independently.
+- evidence: The shared serial-aware provisioning path publishes only after SYSTEM.CNF boots SCUS_941.54 and the executable matches 11/11 facts. Its 10-case both-answer suite includes three-way title environment isolation and wrong-title refusal. Against clean pinned psxport 57a17a14, cached real SCUS_941.54 passes executable selftest 4/4, oracle_spike 39/39, and crt0_extract/independent CPU agreement 6/6 at executed jal ordinal 1, step 81,725, target 0x8001144C: gp 0x8005F17C, a0 0x8006F1F4, sp 0x801FFFF8, and heap size 0x0018FE08.
 - where: `tools/provision_title.py`, `tests/test_provision_titles.py`, CMake `crash2_oracle_boot_check`, gitignored `scratch/bin/crash2/SCUS_941.54`
 - gap: This proves only the first real crt0 call boundary. No Crash 2 generated execution, BIOS continuation, hardware, native boot, or gameplay is claimed.
-- notes: The 6/6 cross-check was reproduced with a clean build recording psxport `ad5cf802`; the asset remains outside git.
+- notes: The 6/6 real-byte cross-check was reproduced at psxport 57a17a14. No disc was configured for a fresh extraction in that run; prior SYSTEM.CNF provisioning evidence remains the disc-selection authority.
 
 ### CRASH2-03 — own measured executable facts through the derived runtime
 - status: re-verified
 - deps: CRASH2-02
-- evidence: Against clean pinned psxport `ad5cf802`, `Crash2Runtime` directly inherits the title-agnostic `BoundaryRuntime`, which in turn inherits `GameRuntime`; both legacy views and all unmeasured runtime products remain null. Its `GuestProgramImage` matches 15/15 fields derived from the real executable and the framework's shipping crt0 decoder, and an altered global pointer produces one named disagreement. `gameMainEntry` remains explicitly zero because it has not been measured. The clean Clang build passed normal CTest 4/4, including both runtime inheritance tests, the 9-case provisioning contract, and the complete format/size/clang-tidy policy gate; `tools/psxport_sync.py --check` confirms the build and recorded pin both name `ad5cf802`.
+- evidence: Against clean pinned psxport 57a17a14, Crash2Runtime directly inherits title-agnostic BoundaryRuntime, which inherits GameRuntime; legacy views and unmeasured runtime products remain null. GuestProgramImage matches 15/15 fields from real SCUS_941.54 and shipping crt0_extract, an altered global pointer produces one named disagreement, authoritative Clang CTest passes 5/5, and psxport_sync checks the same scratch/build-clang provenance.
 - where: `game/core/boundary_runtime.*`, `titles/crash2/core/crash2_runtime.*`, `tools/verify_runtime_image.py`, `tests/crash2_runtime*.cpp`
 - gap: No generated Crash 2 substrate or port/oracle execution comparison exists; CRASH2-04 begins there.
-- notes: `BoundaryRuntime` shares only the refusal/no-invented-products integration invariant. It contains no inferred Crash engine behavior and does not satisfy SHARED-01.
+- notes: BoundaryRuntime shares only refusal/no-invented-products integration invariants. gameMainEntry remains zero because Crash 2 game main is not measured.
 
 ### CRASH2-04 — recompile to the first real divergence
 - status: todo
@@ -60,26 +65,27 @@ Statuses: ✅ `re-verified` · 🟡 `re-partial` · 🔬 `in-progress` · ⬜ `t
 ### CRASH3-02 — provision the selected disc and verify the first crt0 call
 - status: re-verified
 - deps: CRASH3-01
-- evidence: The shared serial-aware provisioner publishes only after `SYSTEM.CNF` boots `SCUS_942.44` and the executable matches 11/11 facts. Its 10-case suite includes three-way environment isolation, wrong-Crash-title refusal, a positive Crash 3 fixture carrying `DRAGON/SPYRO.EXE`, and refusal when that bundled path is made the boot target. Against clean pinned psxport `ad5cf802`, `crt0_extract` and the independent Mednafen CPU oracle agree 6/6 at executed `jal` ordinal 1, step 71,790, target `0x800112B8`: gp `0x80060878`, a0 `0x8006EA7C`, sp `0x801FFFF8`, and heap size `0x00190580`. The oracle's 39-case fixture passes independently.
+- evidence: The shared serial-aware provisioner publishes only after SYSTEM.CNF boots SCUS_942.44 and the executable matches 11/11 facts. Its 10-case suite includes three-way environment isolation, wrong-Crash-title refusal, a positive Crash 3 fixture carrying DRAGON/SPYRO.EXE, and refusal when that bundled path is made the boot target. Against clean pinned psxport 57a17a14, crt0_extract and the independent Mednafen CPU oracle agree 6/6 at executed jal ordinal 1, step 71,790, target 0x800112B8: gp 0x80060878, a0 0x8006EA7C, sp 0x801FFFF8, and heap size 0x00190580. The oracle's 39-case fixture passes independently.
 - where: `tools/provision_title.py`, `tests/test_provision_titles.py`, CMake `crash3_oracle_boot_check`, gitignored `scratch/bin/crash3/SCUS_942.44`
-- gap: This proves only the first real crt0 call boundary. No Crash 3 generated execution, BIOS continuation, hardware, native boot, or gameplay is claimed.
-- notes: CMake assigns Crash 3 only `scratch/bin/crash3/` and `generated/crash3/`; generated output remains absent and gitignored.
+- gap: This proves executable selection and the first real crt0 call boundary. Generated execution is separately tracked by CRASH3-04; this step alone proves no BIOS continuation, hardware, native boot, or gameplay.
+- notes: CMake assigns Crash 3 only scratch/bin/crash3/ and generated/crash3/. The first structural call target is not an A(39h) thunk.
 
 ### CRASH3-03 — own measured executable facts through the derived runtime
 - status: re-verified
 - deps: CRASH3-02
-- evidence: Against clean pinned psxport `ad5cf802`, `Crash3Runtime` directly inherits the title-agnostic `BoundaryRuntime`, which in turn inherits `GameRuntime`; both legacy views and all unmeasured runtime products remain null. Its `GuestProgramImage` matches 15/15 fields derived from the real executable and the framework's shipping crt0 decoder, and an altered global pointer produces one named disagreement. `gameMainEntry` remains explicitly zero because it has not been measured. The Clang build passes normal CTest, including all three runtime inheritance tests, the 10-case provisioning contract, and the complete format/size/clang-tidy policy gate.
+- evidence: Against clean pinned psxport 57a17a14, Crash3Runtime directly inherits the title-agnostic BoundaryRuntime, which in turn inherits GameRuntime; both legacy views and unmeasured runtime products remain null. Its GuestProgramImage matches 15/15 fields derived from real SCUS_942.44 and the shipping crt0 decoder, including gameMainEntry 0x80048AA0 verified as oracle call three; an altered global pointer produces one named disagreement. Authoritative Clang CTest passes 5/5, including all three runtime inheritance tests, the 10-case provisioning contract, and format/size/clang-tidy policy.
 - where: `game/core/boundary_runtime.*`, `titles/crash3/core/crash3_runtime.*`, `tools/verify_runtime_image.py`, `tests/crash3_runtime*.cpp`, `tests/title_runtime_facts.h`
-- gap: No generated Crash 3 substrate or port/oracle execution comparison exists; CRASH3-04 begins there.
-- notes: `BoundaryRuntime` shares only the refusal/no-invented-products integration invariant. It contains no inferred Crash engine behavior and does not satisfy SHARED-01.
+- gap: The typed runtime owns measured executable facts and game main but still refuses native boot; CRASH3-04 tracks generated execution and the unresolved syscall continuation.
+- notes: BoundaryRuntime shares only the refusal/no-invented-products invariant. It contains no inferred Crash engine behavior and does not satisfy SHARED-01.
 
 ### CRASH3-04 — recompile to the first real divergence
-- status: todo
+- status: re-partial
 - deps: CRASH3-03
-- evidence:
-- where: `titles/crash3/`, gitignored `generated/crash3/`
-- gap: No Crash 3 generated substrate or port/oracle execution comparison exists.
-- notes: Begin at the measured entry and first-call boundary; do not copy another title's seeds or addresses.
+- evidence: Real SCUS_942.44 emitted 986 candidates from 297 static seeds with zero overlays under psxport 57a17a14 (emitter 2026-08-22.1). Generated execution and the independent Mednafen CPU agreed 34/34 at each of eight calls: 0x800112B8, 0x80011628, game main 0x80048AA0, 0x800154AC, 0x8004BFBC, 0x8004F37C, 0x8004F914, and 0x80048C38. Call eight is the measured addiu-a0-1/syscall-0 wrapper; the oracle enters 0xBFC00180 at step 75963, while the generated wrapper through shipping HLE returns prior IRQ 1 and disables delivery. The 12/12 suite includes out-of-text seed, 7/8 short-window, repeated-target, altered-register, and wrong-syscall-target refusals.
+- where: tools/scus_94244_recomp.py, tools/resident_recomp.py, tests/crash3_recomp_boundary.cpp, titles/crash3/recomp_seeds.json, CMake crash3_recomp_boundary_check, gitignored generated/crash3/ and scratch/raw/scus-94244-recomp/
+- gap: Port/oracle equality is proven only from entry through the eight call boundaries. The port-side generated syscall effect is separately proven, but the independent oracle cannot yet expose Cause/EPC or resume syscall execution at EPC+4, so post-syscall equality, later BIOS/hardware boot, frame output, and the remaining 978 emitted bodies are unverified.
+- notes: Generated code remains sacrosanct. Static discovery counts are not execution provenance; only nine addresses are execution-proven. The crt0 decoder's structural libcInit slot 0x800112B8 is not an A(39h) thunk in SCUS_942.44; do not apply the A0 modeled-return path to it.
+
 
 ## Provisioning and oracle
 
@@ -98,6 +104,7 @@ Statuses: ✅ `re-verified` · 🟡 `re-partial` · 🔬 `in-progress` · ⬜ `t
 - where: CMake `crash1_oracle_boot_check`; framework `oracle_spike`, `oracle_trace`, `crt0_extract`, and `crossvalidate_crt0.py`; gitignored boundary trace
 - gap: This proves the first independent crt0 window only. The direct Crash 1 runtime seam and generated boundary runner now exist, but BIOS, GPU, SPU, CD, DMA, timers, native boot, and gameplay remain outside this window.
 - notes: The call capture is independent of the symbolic expected target: it records the first executed jal after the entry prologue. Do not call this a full oracle boot or a PC port boot.
+
 
 ## Recompilation and ownership
 

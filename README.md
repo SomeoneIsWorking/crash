@@ -19,13 +19,14 @@ symbolic crt0 decode agreeing 6/6 with the independent CPU oracle at the first r
 derived runtime's typed executable facts agree 15/15 with its retail bytes. Crash 3's `SYSTEM.CNF`
 selection is explicit because its disc also contains the unrelated bootable-looking
 `DRAGON/SPYRO.EXE`. The clean Clang/CTest/real-data gates and all title regressions use recorded
-psxport `ad5cf802`. Crash 1 has 653 emitted static candidates. Its
-generated path agrees with the independent oracle on all 34
+psxport `57a17a14`. Crash 1 has 653 emitted static candidates. Its generated path agrees with the independent oracle on all 34
 CPU-state fields at the first eight executed calls. Nine addresses in the candidate set have
 execution provenance: eight generated bodies execute before the eighth observed target. The eighth
 target is the real `addiu $a0, 1; syscall 0` wrapper for `EnterCriticalSection`; the controlled port
 boundary executes that generated wrapper and proves the shipping HLE returns the prior IRQ state and
-disables delivery. The independent CPU instead enters `0xBFC00180`, correctly, because its focused
+disables delivery. Crash 3 independently emits 986 candidates from `SCUS_942.44`; its first eight
+calls also agree 34/34, including tracked game main `0x80048AA0` and its own syscall wrapper
+`0x80048C38`. The independent CPU instead enters `0xBFC00180`, correctly, because its focused
 oracle has no BIOS or syscall-return model. There is now a direct, title-owned `Crash1Runtime` seam
 with no legacy `GameConfig`/`GameHooks` views, but still no runnable port, full oracle boot, native
 producer, widescreen path, or interpolation path.
@@ -90,16 +91,17 @@ PSXPORT_CRASH3_DISC=/path/to/Crash-Bandicoot-Warped-USA.chd \
 Each target verifies only that title's crt0 call boundary. Crash 2 and Crash 3 also compare all 15
 typed runtime image facts against the executable and prove an altered fact disagrees. Neither target
 claims a full oracle boot or a runnable PC port. CMake reserves independent
-`generated/<title>/` namespaces; no Crash 2 or Crash 3 generated substrate exists yet.
+`generated/<title>/` namespaces; Crash 2 still has no generated substrate.
 
 ## Cross-check the resident calls before the first BIOS boundary
 
-Once the verified executable exists under `scratch/bin/crash1/`, one asset-gated target emits the
+Once the verified executable exists under its serial-scoped cache, an asset-gated target emits the
 resident substrate, builds its focused runner, compares the complete port-side register file against
 the independent oracle, and proves the comparator's opposite answer:
 
 ```sh
 cmake --build scratch/build-clang --target crash1_recomp_boundary_check -j16
+cmake --build scratch/build-clang --target crash3_recomp_boundary_check -j16
 ```
 
 The positive path compares `pc`, all 31 nonzero general-purpose registers, `lo`, and `hi` at calls
@@ -117,3 +119,9 @@ port/oracle agreement after the syscall: the independent harness cannot yet vali
 Cause/EPC, model the BIOS syscall return, and resume at EPC+4. BIOS, hardware, and later boot are
 still unverified. The emitter's 115 static seeds and 653 emitted candidates are discovery
 denominators, not claims that every candidate is executable code.
+
+The Crash 3 target uses only `SCUS-94244` artifacts and `titles/crash3/recomp_seeds.json`. Its eight
+call targets are `0x800112B8`, `0x80011628`, game main `0x80048AA0`, `0x800154AC`, `0x8004BFBC`,
+`0x8004F37C`, `0x8004F914`, and `0x80048C38`; each agrees 34/34. At step 75,963 the independent CPU
+enters `0xBFC00180` after the last target's syscall. No post-syscall equality or rendered-frame claim
+follows from this gate.

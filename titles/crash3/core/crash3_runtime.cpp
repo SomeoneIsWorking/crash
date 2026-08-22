@@ -11,7 +11,7 @@ const GuestProgramImage Crash3Runtime::programImage_{
     .heapBaseStoreAddress = 0x8005E1A8u,
     .globalPointer = 0x80060878u,
     .libcInitEntry = 0x800112B8u,
-    .gameMainEntry = 0,
+    .gameMainEntry = 0x80048AA0u,
     .crt0Entry = 0x800489F8u,
     .residentText = {0x00010000u, 0x00061000u},
     .backtraceText = {},
@@ -20,9 +20,9 @@ const GuestProgramImage Crash3Runtime::programImage_{
 
 Crash3Runtime::Crash3Runtime()
     : BoundaryRuntime("crash3-runtime",
-                      "native boot is unavailable: Crash 3 execution has been independently verified "
-                      "only through its first crt0 call boundary; a generated-path comparison is "
-                      "required before later boot") {}
+                      "native boot is unavailable: SCUS-94244 generated execution reaches its "
+                      "EnterCriticalSection syscall boundary, but independent post-syscall equality "
+                      "is not yet available") {}
 
 const GuestProgramImage *Crash3Runtime::guestProgramImage() const {
   return &programImage_;

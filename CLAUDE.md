@@ -45,8 +45,10 @@ Crash 3 targets the independently measured North American `SCUS-94244` executabl
 `SYSTEM.CNF` is the identity authority: the retail disc also carries `DRAGON/SPYRO.EXE`, which is a
 different executable and must never be selected as Crash 3 merely because it is present. Crash 3 owns
 its measured boot group through `titles/crash3/core/Crash3Runtime`, with title-scoped cache and
-generated paths under `scratch/bin/crash3/` and `generated/crash3/`. It currently ends at the first
-crt0 call; no generated Crash 3 substrate exists yet.
+generated paths under `scratch/bin/crash3/` and `generated/crash3/`. Its generated path agrees with
+the independent CPU at eight call boundaries through game main `0x80048AA0` and its own
+`EnterCriticalSection` wrapper `0x80048C38`. The oracle stops at the following syscall exception;
+no post-syscall equality or rendered frame exists yet.
 
 Crash 1 targets the North American NTSC-U release (`SCUS-94900`, executable `SCUS_949.00`). The exact
 identity/header evidence lives in `titles/crash1/executable.json` and is compared to the real bytes by

@@ -19,3 +19,6 @@ tools/verify.py is now the normal verifier. It configures scratch/build-clang wi
 ## Evidence
 
 The stale graph listed 2 tests and referenced deleted tests/test_provision_crash1.py. The shipping verifier then regenerated the same scratch/build-clang directory and ran 5/5: Crash 1, Crash 2, and Crash 3 runtime inheritance, crash_cpp_policy, and crash_title_provision_tests. All Crash 1/2/3 real gates subsequently passed from scratch/build-clang.
+
+### Note (2026-08-22)
+A second stale-path variant was found: tools/psxport_sync.py --check still read retired build/psxport_resolved.txt while tools/verify.py builds scratch/build-clang. That made a current 5/5 Clang run report the old ad5cf802 provenance. The checker now defaults to scratch/build-clang (and accepts --build-dir); the unchanged retired file supplies the opposite answer, while the authoritative tree matches recorded 57a17a14.

@@ -4,8 +4,8 @@
 
 namespace crash3 {
 
-// Process-lifetime owner of Crash 3's measured executable facts. Native boot remains unavailable
-// until execution is compared beyond the first real crt0 call boundary.
+// Process-lifetime owner of SCUS-94244's measured executable facts. Native boot remains unavailable
+// until the independent oracle can resume beyond the measured EnterCriticalSection syscall.
 class Crash3Runtime final : public crash::BoundaryRuntime {
 public:
   Crash3Runtime();
