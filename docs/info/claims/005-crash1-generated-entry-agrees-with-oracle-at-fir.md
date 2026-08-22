@@ -5,8 +5,8 @@ status: holds
 created: 2026-08-21
 tags: crash1,recompiler,oracle,crt0
 depends: CMakeLists.txt, psxport.pin, titles/crash1/executable.json, titles/crash1/recomp_seeds.json, tools/crash1_recomp.py, tests/crash1_recomp_boundary.cpp
-reconfirmed: 2026-08-21
-verified_at: 2026-08-21 14:16:30
+reconfirmed: 2026-08-22
+verified_at: 2026-08-22 12:29:39
 ---
 
 ## Claim
@@ -73,3 +73,7 @@ Pinned psxport 3418a79b: 115 static candidate seeds emitted 653 candidates; gene
 ## Re-confirmed 2026-08-21
 
 Post-landing generated entry matched all 34 compared fields at each of four canonical oracle calls; boundary selftest passed 9/9.
+
+## Re-confirmed 2026-08-22
+
+Clean pinned 3418a79b build after whole-Game runner initialization: call one remains 34/34 and all four negative-control classes pass within SELFTEST 9/9.

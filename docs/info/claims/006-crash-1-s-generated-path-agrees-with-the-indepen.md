@@ -5,8 +5,8 @@ status: holds
 created: 2026-08-21
 tags:
 depends: CMakeLists.txt, psxport.pin, titles/crash1/executable.json, titles/crash1/recomp_seeds.json, tools/crash1_recomp.py, tests/crash1_recomp_boundary.cpp
-reconfirmed: 2026-08-21
-verified_at: 2026-08-21 14:16:30
+reconfirmed: 2026-08-22
+verified_at: 2026-08-22 12:29:39
 ---
 
 ## Claim
@@ -68,3 +68,7 @@ Pinned psxport 3418a79b: Crash selftest passed 9/9; calls one through four match
 ## Re-confirmed 2026-08-21
 
 Post-landing four-call generated path remained 34/34 at steps 57910, 57931, 57935, and 57962 with short-trace, repeated-target, out-of-text, and altered-a0 opposites passing.
+
+## Re-confirmed 2026-08-22
+
+Clean pinned 3418a79b build after whole-Game runner initialization: calls one through four remain 34/34 and all four negative-control classes pass within the extended eight-call SELFTEST 9/9.

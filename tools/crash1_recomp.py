@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Emit and compare Crash 1's resident recompile across its first four call boundaries.
+"""Emit and compare Crash 1's resident recompile through its first BIOS boundary.
 
 The port side executes psxport's generated C from the retail USA executable. The reference side
 executes the same input bytes in the independent Mednafen CPU oracle. The symbolic crt0 decoder
 selects only the expected first-call target. Canonical ordinal capture in oracle_trace independently
-selects each actual call target and supplies every reference register file. The fourth boundary is
-reached only after the third target executes and returns, so it also checks that generated leaf's
-return path.
+selects each actual call target and supplies every reference register file. The first eight calls
+cover the resident entry path through the last executed ``jal`` before the independent CPU leaves
+mapped executable text for the BIOS exception vector.
 """
 
 from __future__ import annotations
@@ -78,7 +78,7 @@ REGISTER_NAMES = (
     "lo",
     "hi",
 )
-CALL_ORDINALS = tuple(range(1, 5))
+CALL_ORDINALS = tuple(range(1, 9))
 
 
 class Refused(RuntimeError):
@@ -368,11 +368,18 @@ def check_comparison(
             f"PASS: call {call.ordinal} at step {call.step}, target 0x{call.state.pc:08X}: "
             f"{total}/{total} state fields agree"
         )
+    executed_bodies = len(CALL_ORDINALS)
+    executable_addresses = executed_bodies + 1
     print(
-        "PASS execution denominator: 5 executable-proven addresses among the emitted "
-        "candidates (4 generated bodies executed, then 1 observed call target)"
+        f"PASS execution denominator: {executable_addresses} executable-proven addresses "
+        f"among the emitted candidates ({executed_bodies} generated bodies executed, then "
+        "1 observed call target)"
     )
-    print(f"traces: {RAW / 'oracle-call-4.txt'} and {RAW / 'port-call-4.txt'}")
+    last_ordinal = CALL_ORDINALS[-1]
+    print(
+        f"traces: {RAW / f'oracle-call-{last_ordinal}.txt'} and "
+        f"{RAW / f'port-call-{last_ordinal}.txt'}"
+    )
     return comparisons
 
 
