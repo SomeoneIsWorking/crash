@@ -6,7 +6,7 @@ created: 2026-08-22
 tags: crash3,identity,oracle
 depends: titles/crash3/executable.json, tools/provision_title.py, CMakeLists.txt
 reconfirmed: 2026-08-22
-verified_at: 2026-08-22 19:23:54
+verified_at: 2026-08-22 19:27:19
 ---
 
 ## Claim
@@ -24,3 +24,7 @@ A supplied USA disc's SYSTEM.CNF boots a target other than SCUS_942.44, the prov
 ## Re-confirmed 2026-08-22
 
 At recorded psxport 57a17a14, cached retail SCUS_942.44 matched manifest and executable selftest passed 4/4; oracle_spike passed 39/39; independent/symbolic first-call state retained 6/6 at step 71790 target 0x800112B8. The 10-case provision contract still proves SYSTEM.CNF, not DRAGON/SPYRO.EXE, owns selection; no disc was configured for a fresh extraction this run.
+
+## Re-confirmed 2026-08-22
+
+Post-change authoritative verification: python3 tools/verify.py passed Clang build and CTest 5/5; cached serial-scoped executable/oracle/runtime gates passed as documented on 2026-08-22.

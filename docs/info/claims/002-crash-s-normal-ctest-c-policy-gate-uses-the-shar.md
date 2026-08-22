@@ -6,7 +6,7 @@ created: 2026-08-21
 tags:
 depends: CMakeLists.txt, tools/verify.py, tools/psxport_sync.py
 reconfirmed: 2026-08-22
-verified_at: 2026-08-22 19:20:51
+verified_at: 2026-08-22 19:27:16
 ---
 
 ## Claim
@@ -69,3 +69,7 @@ Post-commit authoritative tools/verify.py reconfigured and built scratch/build-c
 ## Re-confirmed 2026-08-22
 
 At recorded psxport 57a17a14, tools/verify.py reconfigured authoritative scratch/build-clang with Clang, built it, ran current CTest 5/5 including full format/size/clang-tidy policy, then tools/psxport_sync.py --check read that same tree and matched the pin. The retired build/ tree still held ad5cf802, proving the corrected checker can expose the opposite stale-path answer.
+
+## Re-confirmed 2026-08-22
+
+Post-change authoritative verification: python3 tools/verify.py passed Clang build and CTest 5/5; cached serial-scoped executable/oracle/runtime gates passed as documented on 2026-08-22.

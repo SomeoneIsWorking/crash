@@ -6,7 +6,7 @@ created: 2026-08-22
 tags: crash1,syscall,oracle
 depends: tools/resident_recomp.py, tools/crash1_recomp.py, tests/recomp_boundary_support.h, tests/crash1_recomp_boundary.cpp, titles/crash1/core/crash1_runtime.cpp
 reconfirmed: 2026-08-22
-verified_at: 2026-08-22 19:23:54
+verified_at: 2026-08-22 19:27:18
 ---
 
 ## Claim
@@ -44,3 +44,7 @@ Post-Crash3 full Crash 1 boundary gate executed the measured generated EnterCrit
 ## Re-confirmed 2026-08-22
 
 After extracting the shared serial-scoped runner/comparator at psxport 57a17a14, real SCUS_949.00 regenerated 115->653 candidates and retained eight calls at 34/34, the EnterCriticalSection IRQ 1->0 result, and all 12/12 controls.
+
+## Re-confirmed 2026-08-22
+
+Post-change authoritative verification: python3 tools/verify.py passed Clang build and CTest 5/5; cached serial-scoped executable/oracle/runtime gates passed as documented on 2026-08-22.

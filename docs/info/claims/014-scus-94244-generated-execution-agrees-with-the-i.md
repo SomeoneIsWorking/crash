@@ -6,7 +6,7 @@ created: 2026-08-22
 tags: crash3,recomp,oracle,syscall
 depends: tools/resident_recomp.py, tests/crash3_recomp_boundary.cpp, titles/crash3/core/crash3_runtime.cpp, psxport.pin
 reconfirmed: 2026-08-22
-verified_at: 2026-08-22 19:23:54
+verified_at: 2026-08-22 19:27:19
 ---
 
 ## Claim
@@ -24,3 +24,7 @@ Any real SCUS_942.44 call target or register differs, game main is not call 3 at
 ## Re-confirmed 2026-08-22
 
 Reconfirmed after all implementation and documentation edits: SCUS-94244 regenerated 297->986 candidates at emitter 2026-08-22.1; calls one through eight each matched 34/34, call three matched game main 0x80048AA0, syscall boundary and IRQ 1->0 passed, every opposite-answer control passed, authoritative Clang CTest passed 5/5, and cached retail identity/runtime/crt0 gates passed 4/4, 15/15 plus mutation, and 6/6.
+
+## Re-confirmed 2026-08-22
+
+Post-change authoritative verification: python3 tools/verify.py passed Clang build and CTest 5/5; cached serial-scoped executable/oracle/runtime gates passed as documented on 2026-08-22.

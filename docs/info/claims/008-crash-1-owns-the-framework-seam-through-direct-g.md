@@ -6,7 +6,7 @@ created: 2026-08-22
 tags: runtime,inheritance
 depends: titles/crash1/core/crash1_runtime.cpp, titles/crash1/core/crash1_runtime.h, tests/crash1_runtime.cpp, tests/crash1_recomp_boundary.cpp, CMakeLists.txt
 reconfirmed: 2026-08-22
-verified_at: 2026-08-22 18:39:57
+verified_at: 2026-08-22 19:27:18
 ---
 
 ## Claim
@@ -48,3 +48,7 @@ Normal CTest passed Crash1Runtime inheritance after the shared boundary-title CM
 ## Re-confirmed 2026-08-22
 
 Post-commit authoritative Clang verifier passed the direct Crash1Runtime inheritance contract within the current 5/5 CTest graph.
+
+## Re-confirmed 2026-08-22
+
+Post-change authoritative verification: python3 tools/verify.py passed Clang build and CTest 5/5; cached serial-scoped executable/oracle/runtime gates passed as documented on 2026-08-22.

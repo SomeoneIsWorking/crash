@@ -6,7 +6,7 @@ created: 2026-08-22
 tags: crash3,runtime,inheritance,crt0
 depends: CMakeLists.txt, psxport.pin, titles/crash3/core/crash3_runtime.cpp, titles/crash3/executable.json, tools/verify_runtime_image.py
 reconfirmed: 2026-08-22
-verified_at: 2026-08-22 19:23:54
+verified_at: 2026-08-22 19:27:19
 ---
 
 ## Claim
@@ -28,3 +28,7 @@ Crash3Runtime exposes a legacy compatibility view, invents a runtime product, an
 ## Re-confirmed 2026-08-22
 
 At recorded psxport 57a17a14, Crash3Runtime inheritance passed; production runtime facts matched real SCUS_942.44 15/15 including game main 0x80048AA0, and the altered global-pointer control produced one named disagreement. Authoritative Clang CTest passed 5/5.
+
+## Re-confirmed 2026-08-22
+
+Post-change authoritative verification: python3 tools/verify.py passed Clang build and CTest 5/5; cached serial-scoped executable/oracle/runtime gates passed as documented on 2026-08-22.
