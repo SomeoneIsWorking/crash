@@ -9,6 +9,10 @@ The repository is one engine lineage with title-specific integration under `titl
 - `titles/crash2/`
 - `titles/crash3/`
 
+The shipping contract covers all three games. Crash 2 and Crash 3 are not optional follow-ups, but
+their presence in this repository must not be read as implementation status; the codemap records
+both integrations as missing until each has its own measured executable identity and runnable path.
+
 Current status: framework scaffold plus a verified Crash 1 North American disc/executable identity
 and 653 emitted static candidates. The generated path agrees with the independent oracle on all 34
 CPU-state fields at the first eight executed calls. Nine addresses in the candidate set have

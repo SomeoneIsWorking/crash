@@ -4,6 +4,11 @@ This repository ports Crash Bandicoot 1, 2, and 3 on one shared engine lineage. 
 belongs in `game/`; title-specific seams, executable facts, and assets belong in
 `titles/crash1/`, `titles/crash2/`, and `titles/crash3/`.
 
+The repository product is complete only when all three title integrations run: Crash Bandicoot,
+Crash Bandicoot 2, and Crash Bandicoot 3. A runnable Crash 1 integration alone does not satisfy that
+contract. This is product scope, not evidence that Crash 2 or Crash 3 works today; current measured
+coverage is tracked in `docs/codemap.md` and `docs/re-frontier.md`.
+
 Read `external/psxport/CLAUDE.md` and `external/psxport/docs/workspace/PROTOCOL.md` before work.
 Generated code is sacrosanct. Never commit discs, extracted executables, `generated/`, `.env`, or
 machine-specific paths. Run artifacts go under `scratch/`, never `/tmp`.
