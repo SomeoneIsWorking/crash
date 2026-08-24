@@ -5,6 +5,8 @@ status: holds
 created: 2026-08-24
 tags: build,compiler,launcher
 depends: CMakeLists.txt, tools/verify.py
+reconfirmed: 2026-08-24
+verified_at: 2026-08-24 23:24:10
 ---
 
 ## Claim
@@ -21,3 +23,7 @@ reports Clang, source search finds no `CMAKE_C_COMPILER_ID`/`CMAKE_CXX_COMPILER_
 ## What would falsify it
 
 A top-level configure path rejects an otherwise compatible compiler by identity, or tools/verify.py stops selecting Clang for authoritative verification.
+
+## Re-confirmed 2026-08-24
+
+At bb3a497, top-level CMake contains no compiler identity allowlist/denylist. Authoritative verification explicitly used Clang 22.1.8, while launcher tests passed explicit unfamiliar CC/CXX values through and allowed normal CMake discovery.

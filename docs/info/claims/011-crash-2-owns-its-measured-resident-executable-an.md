@@ -6,7 +6,7 @@ created: 2026-08-22
 tags: crash2,runtime,inheritance,crt0
 depends: CMakeLists.txt
 reconfirmed: 2026-08-24
-verified_at: 2026-08-24 23:08:06
+verified_at: 2026-08-24 23:24:01
 ---
 
 ## Claim
@@ -52,3 +52,7 @@ After aca3ecb, Crash 2 runtime CTest passed and real SCUS_941.54 reached tracked
 ## Re-confirmed 2026-08-24
 
 Clean recorded psxport 9c2e3f1c authoritative CTest passed Crash2Runtime inheritance; its cached real executable matched all 15 runtime facts with one altered-fact disagreement, and its serial boundary gate passed 13/13.
+
+## Re-confirmed 2026-08-24
+
+At bb3a497, crash2_runtime_inheritance passed in authoritative CTest 6/6, with the typed executable facts and clean framework pin unchanged.

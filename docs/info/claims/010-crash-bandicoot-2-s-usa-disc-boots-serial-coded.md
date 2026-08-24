@@ -6,7 +6,7 @@ created: 2026-08-22
 tags: crash2,identity,oracle
 depends: titles/crash2/executable.json, tools/provision_title.py
 reconfirmed: 2026-08-24
-verified_at: 2026-08-24 20:14:18
+verified_at: 2026-08-24 23:23:58
 ---
 
 ## Claim
@@ -44,3 +44,7 @@ At recorded psxport d2266f4b, cached real SCUS_941.54 passed identity selftest 4
 ## Re-confirmed 2026-08-24
 
 After aca3ecb, provisioning CTest passed and real SCUS_941.54 independently reproduced the tracked identity-derived calls and game-main address.
+
+## Re-confirmed 2026-08-24
+
+Post-landing Crash 2 manifest facts and USA executable selection remain gated by provisioning tests; its 15/15 runtime facts and 13/13 serial boundary evidence were reconfirmed against clean psxport 9c2e3f1c.

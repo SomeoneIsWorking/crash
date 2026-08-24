@@ -6,7 +6,7 @@ created: 2026-08-21
 tags: crash1,oracle,crt0
 depends: CMakeLists.txt
 reconfirmed: 2026-08-24
-verified_at: 2026-08-24 23:08:03
+verified_at: 2026-08-24 23:23:50
 ---
 
 ## Claim
@@ -118,3 +118,7 @@ After aca3ecb, root reran all three real-data resident boundary targets; Crash 1
 ## Re-confirmed 2026-08-24
 
 Clean psxport 9c2e3f1c crossvalidate_crt0 against cached identity-verified SCUS_949.00 agreed 6/6 between symbolic decoder and independent CPU; its both-answer selftest passed 5/5, and oracle_spike passed 43/43.
+
+## Re-confirmed 2026-08-24
+
+Post-landing evidence remains 6/6 for the Crash 1 independent crt0 comparison, 5/5 selftest, and 43/43 oracle fixture; authoritative Clang build and CTest 6/6 passed at bb3a497.

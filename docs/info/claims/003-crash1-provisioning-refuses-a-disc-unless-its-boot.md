@@ -5,8 +5,8 @@ status: holds
 created: 2026-08-21
 tags: crash1,disc,provisioning
 depends: tools/provision_title.py, tools/verify_executable.py, titles/crash1/executable.json
-reconfirmed: 2026-08-22
-verified_at: 2026-08-22 18:39:57
+reconfirmed: 2026-08-24
+verified_at: 2026-08-24 23:23:49
 ---
 
 ## Claim
@@ -41,3 +41,7 @@ The refactored three-title provisioner passed 10/10 tests and real Crash 1 provi
 ## Re-confirmed 2026-08-22
 
 Post-commit default-tree provisioning regression passed all 10 three-title tests; real Crash 1 identity remained 11/11.
+
+## Re-confirmed 2026-08-24
+
+At bb3a497, crash_title_provision_tests passed inside authoritative CTest 6/6; the real frozen prepare attempt refused the absent disc by exact supported sources before generation, proving the refusal path remains active.

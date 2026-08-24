@@ -5,6 +5,8 @@ status: holds
 created: 2026-08-20
 tags: crash1,executable
 depends: titles/crash1/executable.json, tools/verify_executable.py
+reconfirmed: 2026-08-24
+verified_at: 2026-08-24 23:23:46
 ---
 
 ## Claim
@@ -24,3 +26,7 @@ Falsified if a newly provisioned North American retail disc extracts different e
 `tools/provision_title.py --title crash1` used psxport `discdump` on a real USA disc: `SYSTEM.CNF` selected
 `SCUS_949.00`, and the extracted image matched all 11 manifest facts including SHA-256
 `aabf1464f90b2e0b81e712b77aebbdb88f303b16ce830535e2b0cd886ee280f2`.
+
+## Re-confirmed 2026-08-24
+
+Post-landing audit at bb3a497: the tracked Crash 1 manifest remains the identity authority, title provisioning tests pass in authoritative CTest 6/6, and the cached SCUS_949.00 emitted 115 seeds to 653 functions for the Clang product build.

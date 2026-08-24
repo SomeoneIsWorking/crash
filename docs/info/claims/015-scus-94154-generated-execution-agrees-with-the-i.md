@@ -6,7 +6,7 @@ created: 2026-08-22
 tags: crash2,recomp,oracle,syscall
 depends: tools/resident_recomp.py#check_comparison, tests/recomp_boundary_support.h#TitleBoundaryRunner, titles/crash2/core/crash2_runtime.cpp#programImage_
 reconfirmed: 2026-08-24
-verified_at: 2026-08-24 20:14:19
+verified_at: 2026-08-24 23:24:09
 ---
 
 ## Claim
@@ -32,3 +32,7 @@ At fetchable recorded psxport bc8c8897, real SCUS_941.54 regenerated 270 seeds t
 ## Re-confirmed 2026-08-24
 
 After aca3ecb, real SCUS_941.54 regenerated 998 candidates; eight calls agreed 34/34 including game main 0x80049BD4 and wrapper 0x80049D1C; controls passed 12/12.
+
+## Re-confirmed 2026-08-24
+
+Post-landing SCUS-94154 generated/oracle execution remains 34/34 through eight resident calls, including game main and its title-specific syscall wrapper; its 13/13 boundary suite was reconfirmed.

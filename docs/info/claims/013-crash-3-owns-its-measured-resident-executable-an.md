@@ -6,7 +6,7 @@ created: 2026-08-22
 tags: crash3,runtime,inheritance,crt0
 depends: CMakeLists.txt
 reconfirmed: 2026-08-24
-verified_at: 2026-08-24 23:08:07
+verified_at: 2026-08-24 23:24:05
 ---
 
 ## Claim
@@ -48,3 +48,7 @@ After aca3ecb, Crash 3 runtime CTest passed and its real-data boundary regenerat
 ## Re-confirmed 2026-08-24
 
 Clean recorded psxport 9c2e3f1c authoritative CTest passed Crash3Runtime inheritance; cached real SCUS_942.44 matched all 15 runtime facts with one altered-fact disagreement, and its serial boundary gate passed 13/13.
+
+## Re-confirmed 2026-08-24
+
+At bb3a497, crash3_runtime_inheritance passed in authoritative CTest 6/6, with 15/15 typed executable facts and the clean framework pin unchanged.

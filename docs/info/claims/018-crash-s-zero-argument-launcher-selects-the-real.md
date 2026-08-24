@@ -6,7 +6,7 @@ created: 2026-08-24
 tags: launcher,product
 depends: CMakeLists.txt
 reconfirmed: 2026-08-24
-verified_at: 2026-08-24 23:08:08
+verified_at: 2026-08-24 23:24:12
 ---
 
 ## Claim
@@ -32,3 +32,7 @@ Final frozen-uv launcher tests passed 7/7 directly and under authoritative Clang
 ## Re-confirmed 2026-08-24
 
 The shipping configure command now explicitly selects the isolated `scratch/build-player` tree with `BUILD_TESTING=OFF`; CMake omits its test executables and registrations in that configuration. The hermetic launcher test proves both configure passes carry the option and still build only discdump plus crash1_port, with no CTest command.
+
+## Re-confirmed 2026-08-24
+
+At bb3a497, launcher tests passed 7/7 and assert both player configure passes include BUILD_TESTING=OFF, only discdump/crash1_port are built, and no CTest/diagnostic command executes. The real frozen prepare route correctly refused only because no disc asset was configured.

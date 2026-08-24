@@ -6,7 +6,7 @@ created: 2026-08-22
 tags: crash3,recomp,oracle,syscall
 depends: tools/resident_recomp.py, tests/crash3_recomp_boundary.cpp, titles/crash3/core/crash3_runtime.cpp, psxport.pin
 reconfirmed: 2026-08-24
-verified_at: 2026-08-24 20:14:19
+verified_at: 2026-08-24 23:24:07
 ---
 
 ## Claim
@@ -40,3 +40,7 @@ At fetchable recorded psxport bc8c8897, real SCUS_942.44 regenerated 297 seeds t
 ## Re-confirmed 2026-08-24
 
 After aca3ecb, Crash 3 calls one through eight each agreed 34/34, oracle vectored at step 75963, and controls passed 12/12.
+
+## Re-confirmed 2026-08-24
+
+Post-landing SCUS-94244 generated/oracle execution remains 34/34 through eight resident calls, including game main and the title-specific syscall wrapper; its 13/13 boundary suite and clean 9c2e3f1c pin were reconfirmed.

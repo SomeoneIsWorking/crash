@@ -6,7 +6,7 @@ created: 2026-08-22
 tags: runtime,inheritance
 depends: CMakeLists.txt
 reconfirmed: 2026-08-24
-verified_at: 2026-08-24 23:08:06
+verified_at: 2026-08-24 23:23:56
 ---
 
 ## Claim
@@ -68,3 +68,7 @@ After aca3ecb, authoritative CTest 5/5 and Crash 1 resident boundary 12/12 passe
 ## Re-confirmed 2026-08-24
 
 Authoritative Clang CTest on clean recorded psxport 9c2e3f1c passed Crash1Runtime direct inheritance and its now-measured GuestProgramImage; direct 15/15 executable comparison and altered-fact control passed.
+
+## Re-confirmed 2026-08-24
+
+At bb3a497, all three direct runtime inheritance tests passed inside authoritative CTest 6/6; crash1_port linked the typed Crash1Runtime and no legacy compatibility owner was introduced.

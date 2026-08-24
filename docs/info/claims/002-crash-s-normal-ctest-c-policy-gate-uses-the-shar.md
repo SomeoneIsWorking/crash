@@ -6,7 +6,7 @@ created: 2026-08-21
 tags:
 depends: CMakeLists.txt, tools/verify.py, tools/run.py, psxport.pin
 reconfirmed: 2026-08-24
-verified_at: 2026-08-24 23:06:18
+verified_at: 2026-08-24 23:23:47
 ---
 
 ## Claim
@@ -89,3 +89,7 @@ After aca3ecb, root reran tools/verify.py: clean Clang configure/build, CTest 5/
 ## Re-confirmed 2026-08-24
 
 On 2026-08-24, uv run --frozen python tools/verify.py configured scratch/build-clang with clang/clang++, built crash1_port and all normal targets, passed CTest 6/6 including format/size/clang-tidy and launcher tests, then passed the recorded psxport 9c2e3f1c pin check.
+
+## Re-confirmed 2026-08-24
+
+At bb3a497, uv-frozen tools/verify.py explicitly configured Clang, built the current graph, passed CTest 6/6, and confirmed recorded psxport 9c2e3f1c. The separate player configuration carries BUILD_TESTING=OFF and builds only named shipping dependencies.

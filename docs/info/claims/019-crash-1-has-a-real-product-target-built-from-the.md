@@ -6,7 +6,7 @@ created: 2026-08-24
 tags: crash1,product,recomp
 depends: CMakeLists.txt
 reconfirmed: 2026-08-24
-verified_at: 2026-08-24 23:08:08
+verified_at: 2026-08-24 23:24:13
 ---
 
 ## Claim
@@ -24,3 +24,7 @@ if crash1_port stops linking the verified generated substrate or shared Resident
 ## Re-confirmed 2026-08-24
 
 Clean recorded psxport 9c2e3f1c authoritative Clang build linked crash1_port from the generated substrate and shared shipping execution owners; Crash 1 runtime facts passed 15/15 and the shared focused path passed 13/13. Product binary remained intentionally unrun.
+
+## Re-confirmed 2026-08-24
+
+At bb3a497, the isolated Clang player tree with BUILD_TESTING=OFF built crash1_port successfully from 653 emitted resident functions; authoritative Clang build and CTest 6/6 also passed. The product boundary remains explicitly non-gameplay.

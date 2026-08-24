@@ -6,7 +6,7 @@ created: 2026-08-21
 tags: crash1,recompiler,oracle,crt0
 depends: CMakeLists.txt
 reconfirmed: 2026-08-24
-verified_at: 2026-08-24 23:08:04
+verified_at: 2026-08-24 23:23:50
 ---
 
 ## Claim
@@ -125,3 +125,7 @@ After aca3ecb, crash1_recomp_boundary_check regenerated 653 candidates and passe
 ## Re-confirmed 2026-08-24
 
 Clean psxport 9c2e3f1c Crash 1 boundary gate emitted 115 to 653 candidates and matched the independent CPU at call one 34/34; out-of-text generation and altered-state controls refused.
+
+## Re-confirmed 2026-08-24
+
+Post-landing Crash 1 generated-entry comparison remains 34/34 through the recorded first eight calls, including the tracked game-main/syscall sequence; the generated substrate rebuilt and crash1_port linked at bb3a497.

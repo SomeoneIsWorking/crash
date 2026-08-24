@@ -6,7 +6,7 @@ created: 2026-08-22
 tags: crash3,identity,oracle
 depends: CMakeLists.txt
 reconfirmed: 2026-08-24
-verified_at: 2026-08-24 23:08:07
+verified_at: 2026-08-24 23:24:03
 ---
 
 ## Claim
@@ -40,3 +40,7 @@ After aca3ecb, provisioning CTest passed and real SCUS_942.44 regenerated indepe
 ## Re-confirmed 2026-08-24
 
 After the CMake/product changes, the 10-case serial-aware provisioning suite still passed including Crash 3 SYSTEM.CNF selection and bundled Spyro refusal; cached SCUS_942.44 retained 15/15 runtime identity and 13/13 serial boundary evidence on clean psxport 9c2e3f1c. No disc was configured for fresh extraction.
+
+## Re-confirmed 2026-08-24
+
+At bb3a497, the serial-aware provisioning suite passed and retains the Crash 3 SYSTEM.CNF selection negative against bundled DRAGON/SPYRO.EXE; runtime facts remain 15/15.

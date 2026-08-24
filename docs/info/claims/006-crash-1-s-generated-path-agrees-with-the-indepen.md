@@ -6,7 +6,7 @@ created: 2026-08-21
 tags:
 depends: CMakeLists.txt
 reconfirmed: 2026-08-24
-verified_at: 2026-08-24 23:08:05
+verified_at: 2026-08-24 23:23:51
 ---
 
 ## Claim
@@ -120,3 +120,7 @@ After aca3ecb, Crash 1 calls one through eight each agreed 34/34; syscall bounda
 ## Re-confirmed 2026-08-24
 
 Clean psxport 9c2e3f1c Crash 1 boundary gate matched all eight call states 34/34 and retained its short-window, repeated-target, and altered-register opposite-answer controls; SELFTEST 13/13.
+
+## Re-confirmed 2026-08-24
+
+Post-landing Crash 1 complete comparable state remains 34/34 at every admitted boundary, with the 13/13 boundary selftest and generated substrate product build unchanged at bb3a497.
