@@ -6,7 +6,7 @@ created: 2026-08-21
 tags:
 depends: CMakeLists.txt, tools/verify.py, tools/psxport_sync.py
 reconfirmed: 2026-08-24
-verified_at: 2026-08-24 20:05:16
+verified_at: 2026-08-24 20:14:17
 ---
 
 ## Claim
@@ -81,3 +81,7 @@ At recorded psxport d2266f4b, python3 tools/verify.py reconfigured the authorita
 ## Re-confirmed 2026-08-24
 
 At fetchable recorded psxport bc8c8897, python3 tools/verify.py reconfigured the authoritative Clang tree, built it, passed CTest 5/5 including all three explicit guest-picture policy checks and C++ policy, then matched the built SHA to psxport.pin.
+
+## Re-confirmed 2026-08-24
+
+After aca3ecb, root reran tools/verify.py: clean Clang configure/build, CTest 5/5, and pin check all passed.

@@ -6,7 +6,7 @@ created: 2026-08-22
 tags: crash1,syscall,oracle
 depends: tools/resident_recomp.py, tools/crash1_recomp.py, tests/recomp_boundary_support.h, tests/crash1_recomp_boundary.cpp, titles/crash1/core/crash1_runtime.cpp
 reconfirmed: 2026-08-24
-verified_at: 2026-08-24 19:35:19
+verified_at: 2026-08-24 20:14:18
 ---
 
 ## Claim
@@ -52,3 +52,7 @@ Post-change authoritative verification: python3 tools/verify.py passed Clang bui
 ## Re-confirmed 2026-08-24
 
 Against recorded psxport d2266f4b, the refactored TitleBoundaryRunner preserved real SCUS_949.00 generation (115 seeds to 653 candidates), eight calls at 34/34 fields each, the separate IRQ 1-to-0 HLE transition, all opposite-answer controls, and SELFTEST 12/12.
+
+## Re-confirmed 2026-08-24
+
+After aca3ecb, Crash 1 call eight agreed 34/34, oracle vectored at step 62083, generated HLE disabled IRQ, and mutation controls passed.

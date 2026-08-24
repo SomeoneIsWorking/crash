@@ -6,7 +6,7 @@ created: 2026-08-21
 tags: crash1,oracle,crt0
 depends: CMakeLists.txt, psxport.pin, titles/crash1/executable.json, tools/provision_title.py
 reconfirmed: 2026-08-24
-verified_at: 2026-08-24 20:05:16
+verified_at: 2026-08-24 20:14:17
 ---
 
 ## Claim
@@ -110,3 +110,7 @@ At recorded psxport d2266f4b, oracle_spike passed 43/43 and cached real SCUS_949
 ## Re-confirmed 2026-08-24
 
 At fetchable recorded psxport bc8c8897, oracle_spike passed 43/43 and cached real SCUS_949.00 symbolic/independent crt0 comparison retained 6/6 at step 57910 target 0x80011A18. No disc or game/GPU launch was performed.
+
+## Re-confirmed 2026-08-24
+
+After aca3ecb, root reran all three real-data resident boundary targets; Crash 1 retained its exact oracle agreement and negative controls at pinned bc8c8897.

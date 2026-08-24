@@ -6,7 +6,7 @@ created: 2026-08-22
 tags: runtime,inheritance
 depends: titles/crash1/core/crash1_runtime.cpp, titles/crash1/core/crash1_runtime.h, tests/crash1_runtime.cpp, tests/crash1_recomp_boundary.cpp, CMakeLists.txt
 reconfirmed: 2026-08-24
-verified_at: 2026-08-24 20:05:17
+verified_at: 2026-08-24 20:14:18
 ---
 
 ## Claim
@@ -60,3 +60,7 @@ At recorded psxport d2266f4b, CTest passed Crash1Runtime direct inheritance with
 ## Re-confirmed 2026-08-24
 
 At fetchable recorded psxport bc8c8897, CTest passed Crash1Runtime direct inheritance with null legacy views, no invented products, and explicit guestVramIsPicture=false; its boundary gate retained SELFTEST 12/12.
+
+## Re-confirmed 2026-08-24
+
+After aca3ecb, authoritative CTest 5/5 and Crash 1 resident boundary 12/12 passed with its direct runtime and explicit false picture policy.

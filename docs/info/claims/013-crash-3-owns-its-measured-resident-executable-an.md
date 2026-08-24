@@ -6,7 +6,7 @@ created: 2026-08-22
 tags: crash3,runtime,inheritance,crt0
 depends: CMakeLists.txt, psxport.pin, titles/crash3/core/crash3_runtime.cpp, titles/crash3/executable.json, tools/verify_runtime_image.py
 reconfirmed: 2026-08-24
-verified_at: 2026-08-24 20:05:17
+verified_at: 2026-08-24 20:14:19
 ---
 
 ## Claim
@@ -40,3 +40,7 @@ At recorded psxport d2266f4b, authoritative Clang CTest passed Crash3Runtime dir
 ## Re-confirmed 2026-08-24
 
 At fetchable recorded psxport bc8c8897, CTest passed Crash3Runtime direct inheritance and explicit guestVramIsPicture=false; production runtime facts matched cached real SCUS_942.44 at 15/15 with the altered-fact control, and its boundary gate passed SELFTEST 12/12.
+
+## Re-confirmed 2026-08-24
+
+After aca3ecb, Crash 3 runtime CTest passed and its real-data boundary regenerated 986 candidates with eight 34/34 comparisons.

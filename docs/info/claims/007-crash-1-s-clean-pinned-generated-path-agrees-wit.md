@@ -6,7 +6,7 @@ created: 2026-08-22
 tags:
 depends: CMakeLists.txt, psxport.pin, titles/crash1/executable.json, titles/crash1/recomp_seeds.json, tools/crash1_recomp.py, tests/crash1_recomp_boundary.cpp
 reconfirmed: 2026-08-24
-verified_at: 2026-08-24 20:05:17
+verified_at: 2026-08-24 20:14:18
 ---
 
 ## Claim
@@ -60,3 +60,7 @@ The authoritative Clang tree and pin check used clean recorded psxport d2266f4b;
 ## Re-confirmed 2026-08-24
 
 The authoritative Clang tree and pin check used clean fetchable psxport bc8c8897; real SCUS_949.00 then passed eight 34/34 generated/oracle comparisons and SELFTEST 12/12.
+
+## Re-confirmed 2026-08-24
+
+After aca3ecb, the clean recorded bc8c8897 build regenerated Crash 1 and reproduced all eight 34/34 comparisons plus controls.

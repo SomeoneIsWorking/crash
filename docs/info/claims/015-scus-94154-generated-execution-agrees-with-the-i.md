@@ -6,7 +6,7 @@ created: 2026-08-22
 tags: crash2,recomp,oracle,syscall
 depends: tools/resident_recomp.py#check_comparison, tests/recomp_boundary_support.h#TitleBoundaryRunner, titles/crash2/core/crash2_runtime.cpp#programImage_
 reconfirmed: 2026-08-24
-verified_at: 2026-08-24 20:05:17
+verified_at: 2026-08-24 20:14:19
 ---
 
 ## Claim
@@ -28,3 +28,7 @@ Against recorded psxport d2266f4b, real SCUS_941.54 regenerated from 270 seeds t
 ## Re-confirmed 2026-08-24
 
 At fetchable recorded psxport bc8c8897, real SCUS_941.54 regenerated 270 seeds to 998 candidates; eight calls agreed 34/34 including game main 0x80049BD4 and wrapper 0x80049D1C, the separate IRQ transition passed, and SELFTEST passed 12/12.
+
+## Re-confirmed 2026-08-24
+
+After aca3ecb, real SCUS_941.54 regenerated 998 candidates; eight calls agreed 34/34 including game main 0x80049BD4 and wrapper 0x80049D1C; controls passed 12/12.

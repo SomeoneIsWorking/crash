@@ -6,7 +6,7 @@ created: 2026-08-21
 tags:
 depends: CMakeLists.txt, psxport.pin, titles/crash1/executable.json, titles/crash1/recomp_seeds.json, tools/crash1_recomp.py, tests/crash1_recomp_boundary.cpp
 reconfirmed: 2026-08-24
-verified_at: 2026-08-24 20:05:16
+verified_at: 2026-08-24 20:14:17
 ---
 
 ## Claim
@@ -112,3 +112,7 @@ At recorded psxport d2266f4b, real SCUS_949.00 retained eight generated/oracle c
 ## Re-confirmed 2026-08-24
 
 At fetchable recorded psxport bc8c8897, real SCUS_949.00 retained eight generated/oracle comparisons at 34/34 fields each, separate EnterCriticalSection HLE evidence, and all 12/12 opposite-answer controls.
+
+## Re-confirmed 2026-08-24
+
+After aca3ecb, Crash 1 calls one through eight each agreed 34/34; syscall boundary and both-answer controls passed 12/12.

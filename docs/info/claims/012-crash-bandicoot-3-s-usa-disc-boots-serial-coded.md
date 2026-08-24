@@ -6,7 +6,7 @@ created: 2026-08-22
 tags: crash3,identity,oracle
 depends: titles/crash3/executable.json, tools/provision_title.py, CMakeLists.txt
 reconfirmed: 2026-08-24
-verified_at: 2026-08-24 19:46:32
+verified_at: 2026-08-24 20:14:19
 ---
 
 ## Claim
@@ -32,3 +32,7 @@ Post-change authoritative verification: python3 tools/verify.py passed Clang bui
 ## Re-confirmed 2026-08-24
 
 At recorded psxport d2266f4b, cached real SCUS_942.44 passed oracle_spike 43/43 and symbolic/independent first-call comparison 6/6 at step 71790 target 0x800112B8; the 10-case provisioning contract still passed, including DRAGON/SPYRO.EXE refusal. No disc was configured for fresh reprovisioning.
+
+## Re-confirmed 2026-08-24
+
+After aca3ecb, provisioning CTest passed and real SCUS_942.44 regenerated independently through its tracked game-main and syscall boundaries.

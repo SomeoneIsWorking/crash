@@ -6,7 +6,7 @@ created: 2026-08-21
 tags: crash1,recompiler,oracle,crt0
 depends: CMakeLists.txt, psxport.pin, titles/crash1/executable.json, titles/crash1/recomp_seeds.json, tools/crash1_recomp.py, tests/crash1_recomp_boundary.cpp
 reconfirmed: 2026-08-24
-verified_at: 2026-08-24 20:05:16
+verified_at: 2026-08-24 20:14:17
 ---
 
 ## Claim
@@ -117,3 +117,7 @@ At recorded psxport d2266f4b, real SCUS_949.00 regenerated 115 seeds to 653 cand
 ## Re-confirmed 2026-08-24
 
 At fetchable recorded psxport bc8c8897, real SCUS_949.00 regenerated 115 seeds to 653 candidates and its generated entry path agreed with the independent CPU at eight call boundaries, 34/34 fields each; SELFTEST passed 12/12.
+
+## Re-confirmed 2026-08-24
+
+After aca3ecb, crash1_recomp_boundary_check regenerated 653 candidates and passed every entry/call comparison and 12/12 controls.

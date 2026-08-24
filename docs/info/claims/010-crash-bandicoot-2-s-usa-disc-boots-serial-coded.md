@@ -6,7 +6,7 @@ created: 2026-08-22
 tags: crash2,identity,oracle
 depends: titles/crash2/executable.json, tools/provision_title.py
 reconfirmed: 2026-08-24
-verified_at: 2026-08-24 19:46:31
+verified_at: 2026-08-24 20:14:18
 ---
 
 ## Claim
@@ -40,3 +40,7 @@ Post-commit default-tree real Crash 2 gate passed identity 11/11, executable sel
 ## Re-confirmed 2026-08-24
 
 At recorded psxport d2266f4b, cached real SCUS_941.54 passed identity selftest 4/4, oracle_spike 43/43, and symbolic/independent first-call comparison 6/6 at step 81725 target 0x8001144C; the 10-case provisioning contract passed in CTest. No disc was configured for fresh reprovisioning, so prior SYSTEM.CNF evidence remains the disc-selection authority.
+
+## Re-confirmed 2026-08-24
+
+After aca3ecb, provisioning CTest passed and real SCUS_941.54 independently reproduced the tracked identity-derived calls and game-main address.
