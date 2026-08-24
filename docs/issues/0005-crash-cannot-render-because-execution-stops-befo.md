@@ -5,17 +5,16 @@ status: open
 symptom: The Crash 1 product exits at the first syscall boundary without a frame loop, camera state, or native graphics producer
 tags: crash1,rendering,boot,blocked
 created: 2026-08-22
-updated: 2026-08-24
+updated: 2026-08-25
 ---
 
 ## Root cause
 
-The Crash 1 product now owns the measured resident entry through call eight, but call eight targets the
-real `addiu $a0, 1; syscall 0` wrapper for `EnterCriticalSection`; two oracle instructions later the
-independent CPU correctly enters `0xBFC00180`. The focused oracle has no BIOS or syscall-exception
-return model, so it cannot yet validate Cause/EPC and resume at EPC+4. `crash1_port` performs the
-separately verified shipping HLE transition and then refuses to jump past that missing evidence. No
-BIOS continuation, frame loop, camera state, or game-code graphics submitter has been reached.
+The focused harness has removed the old syscall-model blocker: it validates Cause `0x20` and EPC
+`0x8003E1FC`, resumes both CPUs at `0x8003E200`, and agrees 34/34 at the following B(56h) dispatch
+(`pc=0xB0`, `t1=0x56`, `ra=0x800431B8`). The product still stops after its measured
+`EnterCriticalSection` HLE transition, and neither path executes the B0 HLE call. No later BIOS
+continuation, frame loop, camera state, or game-code graphics submitter has been reached.
 
 ## What was tried / dead ends
 
@@ -25,9 +24,9 @@ reconstruction from post-projection OT/GTE output would establish game-owned ren
 
 ## Proper next step
 
-Add a validated independent-oracle syscall return with Cause/EPC and wrong-selector/wrong-boundary
-refusals, then continue the execution spine to the first frame loop. Camera and graphics-submitter RE
-begins only after that upstream path is real.
+Integrate the proven syscall continuation into `crash1_port`, compare the B(56h) HLE effect and next
+real boundary, then continue the execution spine to the first frame loop. Camera and
+graphics-submitter RE begins only after that upstream path is real.
 
 ### Note (2026-08-22)
 The first text exit is now identified exactly. `SCUS_949.00` call eight targets `0x8003E1F8`
@@ -48,4 +47,11 @@ Crash 1 is no longer blocked on the absence of a product executable. `crash1_por
 harness share `ResidentProgram` setup and the measured `EnterCriticalSection` owner, so the product
 loads the real executable and reaches the same verified boundary. This removes the false-launcher
 structural block but does not resolve this issue: the product exits at the boundary and still renders
-no frame. The next step remains independent Cause/EPC validation and EPC+4 resume.
+no frame.
+
+### Note (2026-08-25)
+Recorded psxport `8611d756` and the serial-scoped shipping harness remove the missing Cause/EPC model:
+Crash 1, 2, and 3 each pass 16/16, retain the measured syscall exception, resume at EPC+4, and agree
+34/34 at the following B0 dispatch. Wrong selector and wrong syscall target refuse. This advances the
+differential boundary but does not resolve the issue: the Crash 1 product still stops at the syscall,
+and no B0 HLE, frame, input loop, audio loop, camera, or graphics producer has executed.

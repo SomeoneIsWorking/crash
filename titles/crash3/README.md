@@ -11,7 +11,8 @@ provisioned cache, generated substrate, and evidence traces are isolated at `scr
 
 Generated execution agrees with the independent CPU oracle 34/34 at each of the first eight calls,
 ending at `SCUS_942.44`'s `0x80048C38` `EnterCriticalSection` wrapper. Two instructions later the
-oracle enters `0xBFC00180`; its focused harness cannot yet validate Cause/EPC and resume at EPC+4.
+oracle enters `0xBFC00180`; Cause `0x20`, EPC `0x80048C3C`, the EPC+4 resume, and the following B0
+dispatch agree exactly. The B0 HLE itself has not yet executed under the differential gate.
 The structural first-call slot `0x800112B8` is not an A(39h) thunk, so applying the oracle's A0
 modeled-return mechanism there is explicitly refused. Later boot, a frame, gameplay, and enhancements
 remain unimplemented.

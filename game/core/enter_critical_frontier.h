@@ -16,6 +16,10 @@ struct EnterCriticalObservation {
   int irqAfter{};
   std::uint32_t statusBefore{};
   std::uint32_t statusAfter{};
+  std::uint32_t causeBefore{};
+  std::uint32_t causeAfter{};
+  std::uint32_t epcBefore{};
+  std::uint32_t epcAfter{};
 };
 
 struct EnterCriticalResult {

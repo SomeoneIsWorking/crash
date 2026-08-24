@@ -19,18 +19,20 @@ symbolic crt0 decode agreeing 6/6 with the independent CPU oracle at the first r
 derived runtime's typed executable facts agree 15/15 with its retail bytes. Crash 3's `SYSTEM.CNF`
 selection is explicit because its disc also contains the unrelated bootable-looking
 `DRAGON/SPYRO.EXE`. The clean Clang/CTest/real-data gates and all title regressions use recorded
-psxport `9c2e3f1c`. Crash 1 has 653 emitted static candidates. Its generated path agrees with the independent oracle on all 34
+psxport `8611d756`. Crash 1 has 653 emitted static candidates. Its generated path agrees with the independent oracle on all 34
 CPU-state fields at the first eight executed calls. Nine addresses in the candidate set have
 execution provenance: eight generated bodies execute before the eighth observed target. The eighth
 target is the real `addiu $a0, 1; syscall 0` wrapper for `EnterCriticalSection`; the controlled port
 boundary executes that generated wrapper and proves the shipping HLE returns the prior IRQ state and
-disables delivery. Crash 3 independently emits 986 candidates from `SCUS_942.44`; its first eight
+disables delivery. The independent and shipping CPUs also agree on syscall Cause/EPC, resume at EPC+4,
+and the following 34/34 BIOS B dispatch state; Crash 1 reaches B(56h), with `t1=0x56` and
+`ra=0x800431B8`. Crash 3 independently emits 986 candidates from `SCUS_942.44`; its first eight
 calls also agree 34/34, including tracked game main `0x80048AA0` and its own syscall wrapper
-`0x80048C38`. The independent CPU instead enters `0xBFC00180`, correctly, because its focused
-oracle has no BIOS or syscall-return model. The real `crash1_port` product now owns that same measured
+`0x80048C38`, then agrees 34/34 at its first post-return B0 dispatch. The real `crash1_port` product owns that measured
 execution path: it loads `SCUS_949.00`, starts at retail crt0, reaches the generated syscall wrapper,
-performs the verified shipping HLE transition, reports the unresolved Cause/EPC blocker, and exits.
-There is still no post-syscall boot, rendered frame, native producer, widescreen path, interpolation
+performs the verified shipping HLE transition, and exits. The focused harness has advanced beyond it,
+but the product has not yet been wired to continue to the proven B(56h) boundary. There is still no
+executed BIOS B call, rendered frame, native producer, widescreen path, interpolation
 path, or Crash 2/3 product.
 
 ## Run the current product
@@ -59,8 +61,9 @@ Missing native dependencies are refused with the exact Homebrew, APT, DNF, or su
 install command. Caller-selected `CC`/`CXX` values pass through; the launcher prefers Clang when it is
 available but does not whitelist or blacklist compiler identities.
 
-The current product executes the retail program only through the first independently verified syscall
-boundary and then exits successfully with the next blocker. It is not yet playable and does not render
+The current product executes the retail program only through the measured `EnterCriticalSection`
+transition and then exits successfully. The shipping/oracle boundary harness continues to B(56h), but
+that proven continuation is not yet wired into the product. It is not playable and does not render
 a window or frame. Crash 2 and Crash 3 remain measured integrations without player products.
 
 ## Verify the project
@@ -145,24 +148,24 @@ capture; Crash does not duplicate the oracle's MIPS call-tracking rules. The con
 real emitter to refuse an out-of-text seed and the same comparator to name a deliberately altered
 eighth-boundary `a0`; a real oracle trace capped immediately before call eight must report only
 `7/8` boundaries and refuse. Generated code remains gitignored and is never edited. This establishes
-the resident entry path through the final executed `jal` before the independent CPU leaves mapped
-text at `0xBFC00180`. The gate additionally executes the measured generated syscall wrapper on the
-port side, checks `EnterCriticalSection` changes IRQ state `1 -> 0` and returns `1`, and refuses a
-different execution-proven function as the wrapper. This is deliberately not reported as
-port/oracle agreement after the syscall: the independent harness cannot yet validate CP0
-Cause/EPC, model the BIOS syscall return, and resume at EPC+4. BIOS, hardware, and later boot are
-still unverified. The emitter's 115 static seeds and 653 emitted candidates are discovery
+the resident entry path through the syscall and its first post-return dispatch. The gate executes the
+measured generated wrapper, checks `EnterCriticalSection` changes IRQ state `1 -> 0` and returns `1`,
+validates Cause `0x20` and the title-specific EPC against the independent CPU, pops the Status mode
+stack once, resumes at EPC+4, and compares the next dynamic dispatch 34/34. Crash 1 reaches PC `0xB0`
+with `t1=0x56` and `ra=0x800431B8`, identifying BIOS B(56h). A different syscall target and wrong
+selector both refuse before resume. Executing the B0 HLE, hardware, and later boot remain unverified.
+The emitter's 115 static seeds and 653 emitted candidates are discovery
 denominators, not claims that every candidate is executable code.
 
 The Crash 3 target uses only `SCUS-94244` artifacts and `titles/crash3/recomp_seeds.json`. Its eight
 call targets are `0x800112B8`, `0x80011628`, game main `0x80048AA0`, `0x800154AC`, `0x8004BFBC`,
 `0x8004F37C`, `0x8004F914`, and `0x80048C38`; each agrees 34/34. At step 75,963 the independent CPU
-enters `0xBFC00180` after the last target's syscall. No post-syscall equality or rendered-frame claim
-follows from this gate.
+enters `0xBFC00180` after the last target's syscall; Cause/EPC/resume and the following B0 dispatch now
+agree 34/34. No executed B0 HLE or rendered-frame claim follows from this gate.
 
 The Crash 2 target likewise uses only `SCUS-94154` artifacts and `titles/crash2/recomp_seeds.json`.
 Its eight call targets are `0x8001144C`, `0x800117BC`, game main `0x80049BD4`, `0x80015614`,
 `0x8004B1B8`, `0x8004EC30`, `0x8004F1F8`, and `0x80049D1C`; each agrees 34/34. Each title manifest
-tracks its own game-main and first-syscall address plus call ordinal, and the 13-case gate mutates the
+tracks its own game-main and first-syscall address plus call ordinal, and the 16-case gate mutates the
 tracked syscall frontier to prove a named disagreement. This shared harness structure is not a Crash 2
 or Crash 3 player implementation.

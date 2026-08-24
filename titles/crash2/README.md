@@ -11,6 +11,7 @@ direct `GameRuntime` inheritance through the boundary-only integration base. It 
 Current execution evidence reaches eight real calls. The generated path and independent Mednafen CPU
 agree 34/34 at each boundary, including game main `0x80049BD4` and the title's own
 `EnterCriticalSection` wrapper `0x80049D1C`. The generated wrapper separately proves the shipping HLE
-effect, while the independent CPU enters `0xBFC00180` at step 85,898. The oracle cannot yet expose the
-syscall Cause/EPC or resume at EPC+4, so there is no post-syscall equality, BIOS continuation, frame,
+effect, while the independent CPU enters `0xBFC00180` at step 85,898. Cause `0x20`, EPC `0x80049D20`,
+the EPC+4 resume, and the following B0 dispatch agree exactly; the B0 HLE itself is not yet executed.
+There is no later BIOS continuation, frame,
 graphics producer, widescreen path, or gameplay claim.

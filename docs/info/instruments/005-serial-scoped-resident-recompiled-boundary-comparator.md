@@ -55,10 +55,9 @@ The symbolic crt0 decoder selects only the expected first target. In `SCUS_942.4
 oracle recovers all
 later targets from actual execution; the consumer does not reimplement `jal` or delay-slot tracking.
 The target-override runner refuses repeated targets because it cannot distinguish two ordinal
-occurrences at the same address. It captures function-call boundaries, not every guest instruction,
-and this result covers only entry-through-eighth-call equality. The port-side syscall behavior is a
-separate controlled result: the independent oracle enters `0xBFC00180` and currently cannot expose
-Cause/EPC or resume the syscall at EPC+4, so the instrument does not claim post-syscall equality. It
-does not certify the remaining emitted candidates, later boot, devices, overlays, or gameplay. Static
-seed and emitted-candidate counts are discovery denominators; only nine addresses per verified title
-currently have execution provenance.
+occurrences at the same address. It captures function-call boundaries, not every guest instruction.
+The modeled syscall return is deliberately narrow: only the expected selector may resume, and the
+first post-return comparison stops before the B0 HLE mutates state. It therefore certifies Cause/EPC,
+one Status mode-stack pop, EPC+4 resume, and the first B0 dispatch state, not the B0 service effect,
+remaining emitted candidates, later boot, devices, overlays, or gameplay. Static seed and
+emitted-candidate counts remain discovery denominators.

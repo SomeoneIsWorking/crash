@@ -1,12 +1,13 @@
 ---
 id: C009
 kind: claim
-status: holds
+status: falsified
 created: 2026-08-22
 tags: crash1,syscall,oracle
 depends: game/core/resident_program.cpp, game/core/enter_critical_frontier.cpp, titles/crash1/core/crash1_port.cpp, titles/crash1/executable.json, tools/resident_recomp.py, tests/recomp_boundary_support.h
 reconfirmed: 2026-08-24
 verified_at: 2026-08-24 23:23:57
+falsified_on: 2026-08-25
 ---
 
 ## Claim
@@ -64,3 +65,9 @@ Against clean recorded psxport 9c2e3f1c on 2026-08-24, crash1_recomp_boundary_ch
 ## Re-confirmed 2026-08-24
 
 At bb3a497, crash1_port rebuilt from the 653-function retail substrate and shares resident_program plus enter_critical_frontier with the 13/13 boundary harness. The product stops at the measured syscall and does not claim post-syscall execution.
+
+## FALSIFIED 2026-08-25
+
+Framework 1e3afdfb now exposes the independent syscall exception/return seam; all three real serial gates validate Cause/EPC, resume at EPC+4, and agree 34/34 with the shipping CPU at the following B0 dispatch boundary.
+
+> Anything that cited this claim as proof must be re-checked. Grep the repo for it.

@@ -28,8 +28,9 @@ title with a real product executable. Its slim shell shim enters the frozen uv e
 substrate, builds `crash1_port`, and launches that exact product. The launcher never runs
 `crash_scaffold`, CTest, an oracle, or a boundary diagnostic. `--prepare-only` exercises the same
 provision/build route without starting the product. The executable begins the real retail program at
-crt0 and reaches the independently verified `EnterCriticalSection` boundary; it exits there because
-Cause/EPC validation and syscall resume remain the first honest blocker. This is a real current-frontier
+crt0 and reaches the independently verified `EnterCriticalSection` boundary; it still exits there even
+though the focused shipping/oracle harness now proves Cause/EPC, resumes at EPC+4, and agrees at the
+following B(56h) dispatch. Integrating that proven continuation is the first honest blocker. This is a real current-frontier
 product, not a claim that Crash 1 renders a frame or that Crash 2/3 have product targets.
 
 **`external/psxport` is NOT a git submodule** (2026-08-16): it is a symlink to the workspace's shared
@@ -62,7 +63,7 @@ framework refusal/no-invented-products invariant between title runtimes; it is n
 Crash engine behavior. Crash 2 must not reuse Crash 1 seeds, addresses, or syscall conclusions. Its
 generated path now agrees with the independent CPU at eight
 serial-specific calls through game main `0x80049BD4` and its own `EnterCriticalSection` wrapper
-`0x80049D1C`. The independent CPU then enters `0xBFC00180`; no post-syscall equality or frame exists.
+`0x80049D1C`. Cause/EPC, EPC+4 resume, and the following B0 dispatch now agree 34/34; the B0 HLE and frame do not yet execute.
 
 Crash 3 targets the independently measured North American `SCUS-94244` executable `SCUS_942.44`.
 `SYSTEM.CNF` is the identity authority: the retail disc also carries `DRAGON/SPYRO.EXE`, which is a
@@ -70,14 +71,14 @@ different executable and must never be selected as Crash 3 merely because it is 
 its measured boot group through `titles/crash3/core/Crash3Runtime`, with title-scoped cache and
 generated paths under `scratch/bin/crash3/` and `generated/crash3/`. Its generated path agrees with
 the independent CPU at eight call boundaries through game main `0x80048AA0` and its own
-`EnterCriticalSection` wrapper `0x80048C38`. The oracle stops at the following syscall exception;
-no post-syscall equality or rendered frame exists yet.
+`EnterCriticalSection` wrapper `0x80048C38`. Cause/EPC, EPC+4 resume, and the following B0 dispatch
+agree 34/34; the B0 HLE and rendered frame do not yet execute.
 
 Crash 1 targets the North American NTSC-U release (`SCUS-94900`, executable `SCUS_949.00`). The exact
 identity/header evidence lives in `titles/crash1/executable.json` and is compared to the real bytes by
 `tools/verify_executable.py`. Current execution reaches the real `EnterCriticalSection` syscall wrapper:
-the `crash1_port` product and focused harness share the port-side generated wrapper/HLE transition,
-while the independent CPU oracle stops at `0xBFC00180` because it has no BIOS/syscall-return model. Do
-not call that post-syscall equality or advance later boot until the oracle validates Cause/EPC and
-resumes at EPC+4. The product is runnable only to this explicitly reported boundary; it is not yet a
+the `crash1_port` product and focused harness share the port-side generated wrapper/HLE transition.
+The focused gate now validates Cause/EPC, resumes both CPUs at EPC+4, and agrees 34/34 at B(56h), with
+`t1=0x56` and `ra=0x800431B8`. It does not execute the B0 HLE. The product is runnable only to its
+explicitly reported syscall boundary and has not yet integrated the proven continuation; it is not a
 playable or rendered game.

@@ -52,13 +52,17 @@ inline void captureCallBoundary(Core *core, std::string_view codeword) {
   std::exit(EXIT_SUCCESS);
 }
 
-inline void executeEnterCritical(Core *core, std::string_view codeword, OverrideFn generatedBody) {
+inline crash::EnterCriticalResult
+requireEnterCritical(Core *core, std::string_view codeword, OverrideFn generatedBody) {
   const crash::EnterCriticalResult result = crash::runEnterCriticalFrontier(*core, codeword, generatedBody);
   if (!result.accepted) {
     std::fprintf(stderr, "REFUSED: %s\n", result.detail.c_str());
     std::exit(2);
   }
-  const crash::EnterCriticalObservation &observation = result.observation;
+  return result;
+}
+
+inline void printEnterCritical(std::string_view codeword, const crash::EnterCriticalObservation &observation) {
   std::printf("# %.*s-PORT-ENTER-CRITICAL boundary=0x%08X selector=0x%08X\n",
               static_cast<int>(codeword.size()),
               codeword.data(),
@@ -78,32 +82,66 @@ inline void executeEnterCritical(Core *core, std::string_view codeword, Override
               codeword.data(),
               observation.statusBefore,
               observation.statusAfter);
+  std::printf("# %.*s-PORT-ENTER-CRITICAL cause-before=0x%08X cause-after=0x%08X\n",
+              static_cast<int>(codeword.size()),
+              codeword.data(),
+              observation.causeBefore,
+              observation.causeAfter);
+  std::printf("# %.*s-PORT-ENTER-CRITICAL epc-before=0x%08X epc-after=0x%08X\n",
+              static_cast<int>(codeword.size()),
+              codeword.data(),
+              observation.epcBefore,
+              observation.epcAfter);
   std::fflush(stdout);
+}
+
+inline void executeEnterCritical(Core *core, std::string_view codeword, OverrideFn generatedBody) {
+  const crash::EnterCriticalResult result = requireEnterCritical(core, codeword, generatedBody);
+  printEnterCritical(codeword, result.observation);
   std::exit(EXIT_SUCCESS);
 }
 
+inline void resumeEnterCritical(Core *core, std::string_view codeword, OverrideFn generatedBody) {
+  const crash::EnterCriticalResult result = requireEnterCritical(core, codeword, generatedBody);
+  printEnterCritical(codeword, result.observation);
+}
+
 template <typename Runtime>
-int runBoundary(int argc, char **argv, std::string_view codeword, OverrideFn captureCall, OverrideFn enterCritical) {
-  if (argc != 4 && argc != 5) {
-    std::fprintf(stderr, "usage: %s <PS-X EXE> <entry> <call-target> [--execute-enter-critical]\n", argv[0]);
+int runBoundary(int argc,
+                char **argv,
+                std::string_view codeword,
+                OverrideFn captureCall,
+                OverrideFn enterCritical,
+                OverrideFn resumeCritical) {
+  if (argc != 4 && argc != 5 && argc != 6) {
+    std::fprintf(stderr,
+                 "usage: %s <PS-X EXE> <entry> <call-target> "
+                 "[--execute-enter-critical | --resume-enter-critical-to <call-target>]\n",
+                 argv[0]);
     return 2;
   }
 
   const std::uint32_t entry = parseAddress(argv[2], "entry");
   const std::uint32_t boundary = parseAddress(argv[3], "call-target");
   const bool executeEnter = argc == 5 && std::string_view(argv[4]) == "--execute-enter-critical";
-  if (argc == 5 && !executeEnter) {
+  const bool resumeEnter = argc == 6 && std::string_view(argv[4]) == "--resume-enter-critical-to";
+  if ((argc == 5 && !executeEnter) || (argc == 6 && !resumeEnter)) {
     std::fprintf(stderr, "REFUSED: unknown boundary mode %s\n", argv[4]);
     return 2;
   }
+  const std::uint32_t finalBoundary = resumeEnter ? parseAddress(argv[5], "post-syscall call-target") : boundary;
   static Runtime runtime;
   return crash::runResidentProgram({
       .runtime = runtime,
       .codeword = codeword,
       .executable = argv[1],
       .entry = entry,
-      .boundary = boundary,
+      .boundary = finalBoundary,
       .boundaryHandler = executeEnter ? enterCritical : captureCall,
+      .boundaryKind =
+          resumeEnter ? crash::ResidentBoundaryKind::DynamicDispatch : crash::ResidentBoundaryKind::GeneratedEntry,
+      .transitionBoundary = resumeEnter ? boundary : 0,
+      .transitionHandler = resumeEnter ? resumeCritical : nullptr,
   });
 }
 
@@ -112,7 +150,7 @@ public:
   static int run(int argc, char **argv, std::string_view codeword, OverrideFn generatedEnterCritical) {
     codeword_ = codeword;
     generatedEnterCritical_ = generatedEnterCritical;
-    return runBoundary<Runtime>(argc, argv, codeword, captureCall, captureEnterCritical);
+    return runBoundary<Runtime>(argc, argv, codeword, captureCall, captureEnterCritical, resumeFromEnterCritical);
   }
 
 private:
@@ -122,6 +160,10 @@ private:
 
   static void captureEnterCritical(Core *core) {
     executeEnterCritical(core, codeword_, generatedEnterCritical_);
+  }
+
+  static void resumeFromEnterCritical(Core *core) {
+    resumeEnterCritical(core, codeword_, generatedEnterCritical_);
   }
 
   static inline std::string_view codeword_;

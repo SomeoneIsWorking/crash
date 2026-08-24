@@ -42,6 +42,21 @@ TEXT_EXIT_RE = re.compile(
     r"^# LEFT THE MAPPED TEXT at step (?P<step>\d+): "
     r"pc=0x(?P<pc>[0-9A-Fa-f]+) is outside "
 )
+SYSCALL_EXCEPTION_RE = re.compile(
+    r"^# SYSCALL-EXCEPTION vector=0x(?P<vector>[0-9A-Fa-f]+) "
+    r"selector=0x(?P<selector>[0-9A-Fa-f]+) status=0x(?P<status>[0-9A-Fa-f]+) "
+    r"cause=0x(?P<cause>[0-9A-Fa-f]+) epc=0x(?P<epc>[0-9A-Fa-f]+) "
+    r"step=(?P<step>\d+)$",
+    re.MULTILINE,
+)
+MODELED_SYSCALL_RETURN_RE = re.compile(
+    r"^# MODELED-SYSCALL-RETURN selector=0x(?P<selector>[0-9A-Fa-f]+) "
+    r"resume=0x(?P<resume>[0-9A-Fa-f]+) v0=0x(?P<v0>[0-9A-Fa-f]+) "
+    r"v1=0x(?P<v1>[0-9A-Fa-f]+) status=0x(?P<status>[0-9A-Fa-f]+) "
+    r"cause=0x(?P<cause>[0-9A-Fa-f]+) epc=0x(?P<epc>[0-9A-Fa-f]+) "
+    r"step=(?P<step>\d+)$",
+    re.MULTILINE,
+)
 REGISTER_NAMES = (
     "at",
     "v0",
@@ -138,6 +153,33 @@ class EnterCriticalBoundary:
     irq_after: int
     status_before: int
     status_after: int
+    cause_before: int
+    cause_after: int
+    epc_before: int
+    epc_after: int
+
+
+@dataclass(frozen=True)
+class SyscallException:
+    vector: int
+    selector: int
+    status: int
+    cause: int
+    epc: int
+    step: int
+
+
+@dataclass(frozen=True)
+class ModeledSyscallReturn:
+    selector: int
+    resume: int
+    v0: int
+    v1: int
+    status: int
+    cause: int
+    epc: int
+    step: int
+    next_call: CallBoundary
 
 
 def run(
@@ -320,6 +362,50 @@ def parse_text_exit(text: str) -> tuple[int, int]:
     return int(matches[0].group("step")), int(matches[0].group("pc"), 16)
 
 
+def parse_modeled_syscall_return(text: str) -> tuple[SyscallException, ModeledSyscallReturn]:
+    exceptions = list(SYSCALL_EXCEPTION_RE.finditer(text))
+    returns = list(MODELED_SYSCALL_RETURN_RE.finditer(text))
+    if len(exceptions) != 1 or len(returns) != 1:
+        raise Refused(
+            "oracle modeled syscall trace must contain one exception and one return record"
+        )
+    exception_match = exceptions[0]
+    return_match = returns[0]
+    exception = SyscallException(
+        int(exception_match.group("vector"), 16),
+        int(exception_match.group("selector"), 16),
+        int(exception_match.group("status"), 16),
+        int(exception_match.group("cause"), 16),
+        int(exception_match.group("epc"), 16),
+        int(exception_match.group("step")),
+    )
+    post_state = parse_state(text, "POST-RETURN-CALL-BOUNDARY")
+    post_headers = [
+        match
+        for line in text.splitlines()
+        if (match := STATE_HEADER_RE.match(line))
+        and match.group("tag") == "POST-RETURN-CALL-BOUNDARY"
+    ]
+    if len(post_headers) != 1 or post_headers[0].group("step") is None:
+        raise Refused("oracle modeled syscall trace has no unique post-return call step")
+    modeled = ModeledSyscallReturn(
+        int(return_match.group("selector"), 16),
+        int(return_match.group("resume"), 16),
+        int(return_match.group("v0"), 16),
+        int(return_match.group("v1"), 16),
+        int(return_match.group("status"), 16),
+        int(return_match.group("cause"), 16),
+        int(return_match.group("epc"), 16),
+        int(return_match.group("step")),
+        CallBoundary(
+            1,
+            int(post_headers[0].group("step")),
+            post_state,
+        ),
+    )
+    return exception, modeled
+
+
 def parse_enter_critical(text: str, spec: TitleSpec) -> EnterCriticalBoundary:
     marker = re.escape(spec.codeword)
     header = re.search(
@@ -345,7 +431,26 @@ def parse_enter_critical(text: str, spec: TitleSpec) -> EnterCriticalBoundary:
         text,
         re.MULTILINE,
     )
-    if header is None or result is None or irq is None or status is None:
+    cause = re.search(
+        rf"^# {marker}-PORT-ENTER-CRITICAL cause-before=0x(?P<before>[0-9A-Fa-f]+) "
+        rf"cause-after=0x(?P<after>[0-9A-Fa-f]+)$",
+        text,
+        re.MULTILINE,
+    )
+    epc = re.search(
+        rf"^# {marker}-PORT-ENTER-CRITICAL epc-before=0x(?P<before>[0-9A-Fa-f]+) "
+        rf"epc-after=0x(?P<after>[0-9A-Fa-f]+)$",
+        text,
+        re.MULTILINE,
+    )
+    if (
+        header is None
+        or result is None
+        or irq is None
+        or status is None
+        or cause is None
+        or epc is None
+    ):
         raise Refused("port runner omitted the complete EnterCriticalSection boundary block")
     return EnterCriticalBoundary(
         int(header.group("boundary"), 16),
@@ -355,6 +460,10 @@ def parse_enter_critical(text: str, spec: TitleSpec) -> EnterCriticalBoundary:
         int(irq.group("after")),
         int(status.group("before"), 16),
         int(status.group("after"), 16),
+        int(cause.group("before"), 16),
+        int(cause.group("after"), 16),
+        int(epc.group("before"), 16),
+        int(epc.group("after"), 16),
     )
 
 
@@ -412,6 +521,68 @@ def capture_enter_critical(
             f"{result.returncode}:\n{result.stderr.rstrip()}"
         )
     return parse_enter_critical(result.stdout, spec)
+
+
+def capture_oracle_after_enter_critical(
+    executable: pathlib.Path,
+    build: pathlib.Path,
+    steps: int,
+    ordinal: int,
+    spec: TitleSpec,
+) -> tuple[SyscallException, ModeledSyscallReturn]:
+    trace = spec.raw / "oracle-after-enter-critical.txt"
+    result = run(
+        [
+            str(tool_path(build, "tools/oracle/oracle_trace")),
+            str(executable),
+            "--steps",
+            str(steps),
+            "--capture-call",
+            str(ordinal),
+            "--model-syscall-return",
+            "1:1",
+            "--summary-only",
+            "--out",
+            str(trace),
+        ]
+    )
+    if result.returncode:
+        raise Refused(
+            "oracle_trace refused the modeled EnterCriticalSection return with exit "
+            f"{result.returncode}:\n{result.stderr.rstrip()}"
+        )
+    return parse_modeled_syscall_return(trace.read_text(encoding="utf-8"))
+
+
+def capture_port_after_enter_critical(
+    executable: pathlib.Path,
+    runner: pathlib.Path,
+    entry: int,
+    syscall_boundary: int,
+    next_boundary: int,
+    spec: TitleSpec,
+) -> tuple[EnterCriticalBoundary, State]:
+    result = run(
+        [
+            str(runner),
+            str(executable),
+            f"0x{entry:08X}",
+            f"0x{syscall_boundary:08X}",
+            "--resume-enter-critical-to",
+            f"0x{next_boundary:08X}",
+        ]
+    )
+    trace = spec.raw / "port-after-enter-critical.txt"
+    trace.write_text(result.stdout, encoding="utf-8")
+    if result.returncode:
+        raise Refused(
+            "port runner refused the post-EnterCriticalSection boundary with exit "
+            f"{result.returncode}:\n{result.stderr.rstrip()}"
+        )
+    return (
+        parse_enter_critical(result.stdout, spec),
+        parse_state(result.stdout, f"{spec.codeword}-PORT-CALL-BOUNDARY"),
+    )
 
 
 def capture_states(
@@ -551,8 +722,10 @@ def check_comparison(
 
 def check_enter_critical_boundary(
     executable: pathlib.Path,
+    build: pathlib.Path,
     runner: pathlib.Path,
     entry: int,
+    steps: int,
     calls: list[tuple[CallBoundary, State]],
     spec: TitleSpec,
 ) -> None:
@@ -579,22 +752,91 @@ def check_enter_critical_boundary(
             f"0x{last_call.state.pc:08X}"
         )
     expected_status = port.status_before & ~1
+    expected_cause = (port.cause_before & 0x0000FF00) | 0x20
+    expected_epc = port.address + 4
     if (
         port.selector != 1
         or port.return_value != 1
         or port.irq_before != 1
         or port.irq_after != 0
         or port.status_after != expected_status
+        or port.cause_after != expected_cause
+        or port.epc_after != expected_epc
     ):
         raise Refused(
             "port EnterCriticalSection semantics disagree: "
             f"selector={port.selector}, v0={port.return_value}, "
             f"irq={port.irq_before}->{port.irq_after}, "
-            f"status=0x{port.status_before:08X}->0x{port.status_after:08X}"
+            f"status=0x{port.status_before:08X}->0x{port.status_after:08X}, "
+            f"cause=0x{port.cause_before:08X}->0x{port.cause_after:08X}, "
+            f"epc=0x{port.epc_before:08X}->0x{port.epc_after:08X}"
         )
     print(
         "PASS port syscall boundary: generated wrapper selected EnterCriticalSection; "
-        "shipping HLE returned prior IRQ=1 and disabled IRQ delivery"
+        "shipping HLE retained syscall Cause/EPC, returned prior IRQ=1, and disabled IRQ delivery"
+    )
+
+    exception, modeled = capture_oracle_after_enter_critical(
+        executable, build, steps, last_call.ordinal, spec
+    )
+    expected_status = (exception.status & ~0x0F) | ((exception.status >> 2) & 0x0F)
+    if (
+        exception.vector != 0xBFC00180
+        or exception.selector != 1
+        or ((exception.cause >> 2) & 0x1F) != 8
+        or (exception.cause >> 31) != 0
+        or exception.epc != last_call.state.pc + 4
+        or exception.step != exit_step
+        or modeled.selector != 1
+        or modeled.v0 != 1
+        or modeled.resume != exception.epc + 4
+        or modeled.status != expected_status
+        or modeled.cause != exception.cause
+        or modeled.epc != exception.epc
+        or modeled.step != exception.step
+    ):
+        raise Refused(
+            "oracle modeled syscall return contradicts the measured exception: "
+            f"vector=0x{exception.vector:08X}, selector={exception.selector}, "
+            f"status=0x{exception.status:08X}->0x{modeled.status:08X}, "
+            f"cause=0x{exception.cause:08X}->0x{modeled.cause:08X}, "
+            f"epc=0x{exception.epc:08X}->0x{modeled.epc:08X}, "
+            f"resume=0x{modeled.resume:08X}"
+        )
+    if port.cause_after != exception.cause or port.epc_after != exception.epc:
+        raise Refused(
+            "shipping exception record disagrees with the independent CPU: "
+            f"cause oracle=0x{exception.cause:08X} port=0x{port.cause_after:08X}, "
+            f"epc oracle=0x{exception.epc:08X} port=0x{port.epc_after:08X}"
+        )
+    print(
+        "PASS independent syscall return: Cause/EPC agree exactly; one Status mode-stack "
+        f"pop resumes at 0x{modeled.resume:08X}"
+    )
+
+    resumed_transition, resumed_port = capture_port_after_enter_critical(
+        executable,
+        runner,
+        entry,
+        last_call.state.pc,
+        modeled.next_call.state.pc,
+        spec,
+    )
+    mismatches = compare_states(modeled.next_call.state, resumed_port)
+    if mismatches:
+        raise Refused(
+            "port/oracle disagreement at the first post-syscall call boundary:\n"
+            + "\n".join(mismatches)
+        )
+    if (
+        resumed_transition.cause_after != exception.cause
+        or resumed_transition.epc_after != exception.epc
+    ):
+        raise Refused("resumed shipping run did not retain the proven syscall Cause/EPC record")
+    print(
+        "PASS post-syscall boundary: independent and shipping CPUs agree "
+        f"{1 + len(REGISTER_NAMES)}/{1 + len(REGISTER_NAMES)} at call target "
+        f"0x{modeled.next_call.state.pc:08X}"
     )
 
     wrong_boundary = calls[-2][0].state.pc
@@ -620,6 +862,29 @@ def check_enter_critical_boundary(
         "PASS negative syscall boundary: a different execution-proven function was refused "
         "before EnterCriticalSection execution"
     )
+
+    wrong_selector_trace = spec.raw / "oracle-wrong-syscall-selector.txt"
+    wrong_selector = run(
+        [
+            str(tool_path(build, "tools/oracle/oracle_trace")),
+            str(executable),
+            "--steps",
+            str(steps),
+            "--model-syscall-return",
+            "2:1",
+            "--summary-only",
+            "--out",
+            str(wrong_selector_trace),
+        ]
+    )
+    wrong_text = (
+        wrong_selector_trace.read_text(encoding="utf-8")
+        if wrong_selector_trace.is_file()
+        else ""
+    )
+    if wrong_selector.returncode != 2 or "# MODELED-SYSCALL-RETURN" in wrong_text:
+        raise Refused("real oracle accepted the wrong EnterCriticalSection selector")
+    print("PASS negative independent syscall return: wrong selector refused before resume")
 
 
 def selftest(
@@ -674,8 +939,10 @@ def selftest(
 
     check_enter_critical_boundary(
         executable,
+        build,
         runner,
         require_executable(executable, spec).entry,
+        steps,
         comparisons,
         spec,
     )
@@ -738,7 +1005,7 @@ def selftest(
     print(
         "PASS negative comparison: one altered port register produced one named mismatch"
     )
-    print("SELFTEST 13/13")
+    print("SELFTEST 16/16")
     return True
 
 
