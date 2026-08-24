@@ -4,9 +4,9 @@ kind: claim
 status: holds
 created: 2026-08-21
 tags: crash1,recompiler,oracle,crt0
-depends: CMakeLists.txt, psxport.pin, titles/crash1/executable.json, titles/crash1/recomp_seeds.json, tools/crash1_recomp.py, tests/crash1_recomp_boundary.cpp
+depends: CMakeLists.txt
 reconfirmed: 2026-08-24
-verified_at: 2026-08-24 20:14:17
+verified_at: 2026-08-24 23:08:04
 ---
 
 ## Claim
@@ -121,3 +121,7 @@ At fetchable recorded psxport bc8c8897, real SCUS_949.00 regenerated 115 seeds t
 ## Re-confirmed 2026-08-24
 
 After aca3ecb, crash1_recomp_boundary_check regenerated 653 candidates and passed every entry/call comparison and 12/12 controls.
+
+## Re-confirmed 2026-08-24
+
+Clean psxport 9c2e3f1c Crash 1 boundary gate emitted 115 to 653 candidates and matched the independent CPU at call one 34/34; out-of-text generation and altered-state controls refused.

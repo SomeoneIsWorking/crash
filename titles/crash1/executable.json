@@ -14,6 +14,12 @@
     "stack_address": "0x801FFFF0",
     "stack_offset": "0x00000000"
   },
+  "runtime": {
+    "game_main_entry": "0x8003E0C0",
+    "game_main_call_ordinal": 3,
+    "first_syscall_entry": "0x8003E1F8",
+    "first_syscall_call_ordinal": 8
+  },
   "region_markers": [
     "Sony Computer Entertainment Inc. for North America area",
     "BASCUS-94900"

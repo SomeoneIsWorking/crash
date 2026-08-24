@@ -4,9 +4,9 @@ kind: claim
 status: holds
 created: 2026-08-21
 tags:
-depends: CMakeLists.txt, tools/verify.py, tools/psxport_sync.py
+depends: CMakeLists.txt, tools/verify.py, tools/run.py, psxport.pin
 reconfirmed: 2026-08-24
-verified_at: 2026-08-24 20:14:17
+verified_at: 2026-08-24 23:06:18
 ---
 
 ## Claim
@@ -85,3 +85,7 @@ At fetchable recorded psxport bc8c8897, python3 tools/verify.py reconfigured the
 ## Re-confirmed 2026-08-24
 
 After aca3ecb, root reran tools/verify.py: clean Clang configure/build, CTest 5/5, and pin check all passed.
+
+## Re-confirmed 2026-08-24
+
+On 2026-08-24, uv run --frozen python tools/verify.py configured scratch/build-clang with clang/clang++, built crash1_port and all normal targets, passed CTest 6/6 including format/size/clang-tidy and launcher tests, then passed the recorded psxport 9c2e3f1c pin check.

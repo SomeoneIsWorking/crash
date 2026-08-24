@@ -3,7 +3,7 @@ project(crash_port LANGUAGES C CXX)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
-enable_testing()
+include(CTest)
 
 # PSXPORT_DIR — the framework. external/psxport is NOT a git submodule (2026-08-16): it is a symlink
 # to the workspace's shared framework clone, or a private clone at this repo's psxport.pin on a fresh
@@ -39,11 +39,18 @@ target_include_directories(crash1_runtime PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/ti
 target_compile_features(crash1_runtime PUBLIC cxx_std_20)
 target_link_libraries(crash1_runtime PUBLIC crash_boundary_runtime)
 
-add_executable(crash1_runtime_test "${CMAKE_CURRENT_SOURCE_DIR}/tests/crash1_runtime.cpp")
-target_include_directories(crash1_runtime_test PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/tests")
-target_compile_features(crash1_runtime_test PRIVATE cxx_std_20)
-target_link_libraries(crash1_runtime_test PRIVATE crash1_runtime)
-add_test(NAME crash1_runtime_inheritance COMMAND crash1_runtime_test)
+if(BUILD_TESTING)
+  add_executable(crash1_runtime_test "${CMAKE_CURRENT_SOURCE_DIR}/tests/crash1_runtime.cpp")
+  target_include_directories(crash1_runtime_test PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/tests")
+  target_compile_features(crash1_runtime_test PRIVATE cxx_std_20)
+  target_link_libraries(crash1_runtime_test PRIVATE crash1_runtime)
+  add_test(NAME crash1_runtime_inheritance COMMAND crash1_runtime_test)
+
+  add_executable(crash1_runtime_facts "${CMAKE_CURRENT_SOURCE_DIR}/tests/crash1_runtime_facts.cpp")
+  target_include_directories(crash1_runtime_facts PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/tests")
+  target_compile_features(crash1_runtime_facts PRIVATE cxx_std_20)
+  target_link_libraries(crash1_runtime_facts PRIVATE crash1_runtime)
+endif()
 
 function(add_crt0_boundary_title title)
   file(READ "${CMAKE_CURRENT_SOURCE_DIR}/titles/${title}/executable.json" title_manifest_json)
@@ -63,53 +70,62 @@ function(add_crt0_boundary_title title)
     PROPERTIES CRASH_TITLE_CACHE "${title_cache}" CRASH_TITLE_GENERATED "${title_generated}"
   )
 
-  add_executable(${title}_runtime_test "${CMAKE_CURRENT_SOURCE_DIR}/tests/${title}_runtime.cpp")
-  target_include_directories(${title}_runtime_test PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/tests")
-  target_compile_features(${title}_runtime_test PRIVATE cxx_std_20)
-  target_link_libraries(${title}_runtime_test PRIVATE ${title}_runtime)
-  add_test(NAME ${title}_runtime_inheritance COMMAND ${title}_runtime_test)
+  if(BUILD_TESTING)
+    add_executable(${title}_runtime_test "${CMAKE_CURRENT_SOURCE_DIR}/tests/${title}_runtime.cpp")
+    target_include_directories(${title}_runtime_test PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/tests")
+    target_compile_features(${title}_runtime_test PRIVATE cxx_std_20)
+    target_link_libraries(${title}_runtime_test PRIVATE ${title}_runtime)
+    add_test(NAME ${title}_runtime_inheritance COMMAND ${title}_runtime_test)
 
-  add_executable(${title}_runtime_facts
-                 "${CMAKE_CURRENT_SOURCE_DIR}/tests/${title}_runtime_facts.cpp")
-  target_compile_features(${title}_runtime_facts PRIVATE cxx_std_20)
-  target_link_libraries(${title}_runtime_facts PRIVATE ${title}_runtime)
+    add_executable(${title}_runtime_facts
+                   "${CMAKE_CURRENT_SOURCE_DIR}/tests/${title}_runtime_facts.cpp")
+    target_compile_features(${title}_runtime_facts PRIVATE cxx_std_20)
+    target_link_libraries(${title}_runtime_facts PRIVATE ${title}_runtime)
 
-  add_custom_target(
-    ${title}_oracle_boot_check
-    COMMAND
-      "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tools/provision_title.py"
-      --title ${title} --discdump "$<TARGET_FILE:discdump>"
-    COMMAND
-      "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tools/verify_executable.py"
-      --title ${title} --selftest --exe "${title_exe}"
-    COMMAND
-      "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tools/verify_runtime_image.py"
-      --title ${title} --exe "${title_exe}" --extractor "$<TARGET_FILE:crt0_extract>"
-      --runtime-facts "$<TARGET_FILE:${title}_runtime_facts>" --selftest
-    COMMAND "$<TARGET_FILE:oracle_spike>"
-    COMMAND
-      "${Python3_EXECUTABLE}" "${PSXPORT_DIR}/tools/oracle/crossvalidate_crt0.py"
-      "${title_exe}" --build "${CMAKE_BINARY_DIR}/psxport_build" --steps 400000
-    DEPENDS ${title}_runtime_facts crt0_extract discdump oracle_spike oracle_trace
-    USES_TERMINAL
-    VERBATIM
-  )
+    add_custom_target(
+      ${title}_oracle_boot_check
+      COMMAND
+        "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tools/provision_title.py"
+        --title ${title} --discdump "$<TARGET_FILE:discdump>"
+      COMMAND
+        "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tools/verify_executable.py"
+        --title ${title} --selftest --exe "${title_exe}"
+      COMMAND
+        "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tools/verify_runtime_image.py"
+        --title ${title} --exe "${title_exe}" --extractor "$<TARGET_FILE:crt0_extract>"
+        --runtime-facts "$<TARGET_FILE:${title}_runtime_facts>" --selftest
+      COMMAND "$<TARGET_FILE:oracle_spike>"
+      COMMAND
+        "${Python3_EXECUTABLE}" "${PSXPORT_DIR}/tools/oracle/crossvalidate_crt0.py"
+        "${title_exe}" --build "${CMAKE_BINARY_DIR}/psxport_build" --steps 400000
+      DEPENDS ${title}_runtime_facts crt0_extract discdump oracle_spike oracle_trace
+      USES_TERMINAL
+      VERBATIM
+    )
+  endif()
 endfunction()
 
 add_crt0_boundary_title(crash2)
 add_crt0_boundary_title(crash3)
 
-add_test(
-  NAME crash_cpp_policy
-  COMMAND
-    "${Python3_EXECUTABLE}" "${PSXPORT_DIR}/tools/check_cpp_style.py"
-    --root "${CMAKE_CURRENT_SOURCE_DIR}" --compile-commands "${CMAKE_BINARY_DIR}"
-)
-add_test(
-  NAME crash_title_provision_tests
-  COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tests/test_provision_titles.py"
-)
-set_tests_properties(crash_title_provision_tests PROPERTIES ENVIRONMENT "PYTHONDONTWRITEBYTECODE=1")
+if(BUILD_TESTING)
+  add_test(
+    NAME crash_cpp_policy
+    COMMAND
+      "${Python3_EXECUTABLE}" "${PSXPORT_DIR}/tools/check_cpp_style.py"
+      --root "${CMAKE_CURRENT_SOURCE_DIR}" --compile-commands "${CMAKE_BINARY_DIR}"
+  )
+  add_test(
+    NAME crash_title_provision_tests
+    COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tests/test_provision_titles.py"
+  )
+  set_tests_properties(crash_title_provision_tests PROPERTIES ENVIRONMENT "PYTHONDONTWRITEBYTECODE=1")
+  add_test(
+    NAME crash_launcher_tests
+    COMMAND "${Python3_EXECUTABLE}" -B "${CMAKE_CURRENT_SOURCE_DIR}/tests/test_run.py"
+  )
+  set_tests_properties(crash_launcher_tests PROPERTIES ENVIRONMENT "PYTHONDONTWRITEBYTECODE=1")
+endif()
 function(add_resident_recomp_title title tool)
   file(READ "${CMAKE_CURRENT_SOURCE_DIR}/titles/${title}/executable.json" title_manifest_json)
   string(JSON title_executable GET "${title_manifest_json}" executable)
@@ -143,6 +159,8 @@ function(add_resident_recomp_title title tool)
   )
   add_executable(
     ${title}_recomp_boundary EXCLUDE_FROM_ALL
+    "${CMAKE_CURRENT_SOURCE_DIR}/game/core/enter_critical_frontier.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/game/core/resident_program.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/tests/${title}_recomp_boundary.cpp"
     "${title_generated}/overlay_table.c"
     "${title_generated}/shard_0.c"
@@ -178,17 +196,71 @@ endfunction()
 add_resident_recomp_title(crash1 crash1_recomp.py)
 add_resident_recomp_title(crash2 scus_94154_recomp.py)
 add_resident_recomp_title(crash3 scus_94244_recomp.py)
-add_custom_target(
-  crash1_oracle_boot_check
-  COMMAND
-    "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tools/provision_title.py"
-    --title crash1 --discdump "$<TARGET_FILE:discdump>"
-  COMMAND "$<TARGET_FILE:oracle_spike>"
-  COMMAND
-    "${Python3_EXECUTABLE}" "${PSXPORT_DIR}/tools/oracle/crossvalidate_crt0.py"
-    "${crash1_exe}"
-    --build "${CMAKE_BINARY_DIR}/psxport_build" --steps 400000
-  DEPENDS crt0_extract discdump oracle_spike oracle_trace
-  USES_TERMINAL
-  VERBATIM
-)
+if(BUILD_TESTING)
+  add_custom_target(
+    crash1_oracle_boot_check
+    COMMAND
+      "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tools/provision_title.py"
+      --title crash1 --discdump "$<TARGET_FILE:discdump>"
+    COMMAND "$<TARGET_FILE:oracle_spike>"
+    COMMAND
+      "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tools/verify_runtime_image.py"
+      --title crash1 --exe "${crash1_exe}" --extractor "$<TARGET_FILE:crt0_extract>"
+      --runtime-facts "$<TARGET_FILE:crash1_runtime_facts>" --selftest
+    COMMAND
+      "${Python3_EXECUTABLE}" "${PSXPORT_DIR}/tools/oracle/crossvalidate_crt0.py"
+      "${crash1_exe}"
+      --build "${CMAKE_BINARY_DIR}/psxport_build" --steps 400000
+    DEPENDS crash1_runtime_facts crt0_extract discdump oracle_spike oracle_trace
+    USES_TERMINAL
+    VERBATIM
+  )
+endif()
+
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/generated/crash1/rec_sources.cmake")
+  file(READ "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/executable.json" crash1_manifest_json)
+  string(JSON crash1_first_syscall_entry GET "${crash1_manifest_json}" runtime first_syscall_entry)
+  set(crash1_generated "${CMAKE_CURRENT_SOURCE_DIR}/generated/crash1")
+  include("${crash1_generated}/rec_sources.cmake")
+  set(crash1_generated_sources)
+  foreach(generated_source IN LISTS GEN_REC_SRCS)
+    list(APPEND crash1_generated_sources "${crash1_generated}/${generated_source}")
+  endforeach()
+  add_executable(
+    crash1_port
+    "${CMAKE_CURRENT_SOURCE_DIR}/game/core/enter_critical_frontier.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/game/core/resident_program.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/core/crash1_port.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/main.cpp"
+    ${crash1_generated_sources}
+  )
+  add_dependencies(crash1_port crash1_recomp_generate)
+  set_source_files_properties(${crash1_generated_sources} PROPERTIES LANGUAGE CXX)
+  target_include_directories(
+    crash1_port
+    PRIVATE
+      "${CMAKE_CURRENT_SOURCE_DIR}/game/core"
+      "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/core"
+      "${crash1_generated}"
+  )
+  target_compile_definitions(
+    crash1_port PRIVATE "CRASH1_FIRST_SYSCALL_ENTRY=${crash1_first_syscall_entry}u"
+  )
+  target_compile_features(crash1_port PRIVATE cxx_std_20)
+  target_compile_options(
+    crash1_port PRIVATE -O1 -foptimize-sibling-calls -fno-strict-aliasing -fwrapv
+  )
+  target_link_libraries(crash1_port PRIVATE crash1_runtime)
+  set_target_properties(
+    crash1_port
+    PROPERTIES
+      ENABLE_EXPORTS ON
+      RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/scratch/bin"
+  )
+else()
+  message(
+    STATUS
+      "crash1_port: NOT configured because generated/crash1/rec_sources.cmake is absent; "
+      "provision SCUS_949.00 and run tools/crash1_recomp.py --emit before reconfiguring"
+  )
+endif()

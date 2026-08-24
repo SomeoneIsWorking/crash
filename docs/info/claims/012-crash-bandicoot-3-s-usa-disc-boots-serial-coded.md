@@ -4,9 +4,9 @@ kind: claim
 status: holds
 created: 2026-08-22
 tags: crash3,identity,oracle
-depends: titles/crash3/executable.json, tools/provision_title.py, CMakeLists.txt
+depends: CMakeLists.txt
 reconfirmed: 2026-08-24
-verified_at: 2026-08-24 20:14:19
+verified_at: 2026-08-24 23:08:07
 ---
 
 ## Claim
@@ -36,3 +36,7 @@ At recorded psxport d2266f4b, cached real SCUS_942.44 passed oracle_spike 43/43 
 ## Re-confirmed 2026-08-24
 
 After aca3ecb, provisioning CTest passed and real SCUS_942.44 regenerated independently through its tracked game-main and syscall boundaries.
+
+## Re-confirmed 2026-08-24
+
+After the CMake/product changes, the 10-case serial-aware provisioning suite still passed including Crash 3 SYSTEM.CNF selection and bundled Spyro refusal; cached SCUS_942.44 retained 15/15 runtime identity and 13/13 serial boundary evidence on clean psxport 9c2e3f1c. No disc was configured for fresh extraction.

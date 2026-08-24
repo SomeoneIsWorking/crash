@@ -4,9 +4,9 @@ kind: claim
 status: holds
 created: 2026-08-22
 tags:
-depends: CMakeLists.txt, psxport.pin, titles/crash1/executable.json, titles/crash1/recomp_seeds.json, tools/crash1_recomp.py, tests/crash1_recomp_boundary.cpp
+depends: CMakeLists.txt
 reconfirmed: 2026-08-24
-verified_at: 2026-08-24 20:14:18
+verified_at: 2026-08-24 23:08:05
 ---
 
 ## Claim
@@ -64,3 +64,7 @@ The authoritative Clang tree and pin check used clean fetchable psxport bc8c8897
 ## Re-confirmed 2026-08-24
 
 After aca3ecb, the clean recorded bc8c8897 build regenerated Crash 1 and reproduced all eight 34/34 comparisons plus controls.
+
+## Re-confirmed 2026-08-24
+
+Against newly recorded clean psxport 9c2e3f1c, Crash 1 again matched all eight call states 34/34, tracked game main and syscall ordinals by manifest, and passed all 13 controls; pin check agreed with both Clang build trees.

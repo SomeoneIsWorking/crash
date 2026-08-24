@@ -2,5 +2,5 @@
 #include "title_runtime_contract.h"
 
 int main() {
-  return verifyTitleRuntimeContract<crash1::Crash1Runtime>("Crash1Runtime", false);
+  return verifyTitleRuntimeContract<crash1::Crash1Runtime>("Crash1Runtime", true);
 }

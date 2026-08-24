@@ -22,11 +22,15 @@ Clang is the maintainer verification toolchain, not a player-facing compiler ide
 Top-level CMake accepts the compatible compiler selected by the caller; `tools/verify.py` explicitly
 selects Clang for authoritative evidence. Do not add compiler identity allowlists or denylists.
 
-There is no player launcher yet because there is no player executable: `crash_scaffold` depends on
-psxport's agnosticism smoke, and the remaining executables are tests or boundary diagnostics. A future
-zero-argument `run.sh` must launch the Crash trilogy's current player product through a locked Python
-bootstrap. It must never substitute `crash_scaffold`, CTest, or an oracle/boundary runner for that
-product.
+`./run.sh` is the player entry point and currently selects Crash Bandicoot 1, the repository's only
+title with a real product executable. Its slim shell shim enters the frozen uv environment and
+`tools/run.py` resolves psxport, provisions the user's USA disc, emits the serial-scoped resident
+substrate, builds `crash1_port`, and launches that exact product. The launcher never runs
+`crash_scaffold`, CTest, an oracle, or a boundary diagnostic. `--prepare-only` exercises the same
+provision/build route without starting the product. The executable begins the real retail program at
+crt0 and reaches the independently verified `EnterCriticalSection` boundary; it exits there because
+Cause/EPC validation and syscall resume remain the first honest blocker. This is a real current-frontier
+product, not a claim that Crash 1 renders a frame or that Crash 2/3 have product targets.
 
 **`external/psxport` is NOT a git submodule** (2026-08-16): it is a symlink to the workspace's shared
 framework clone when one exists, or a private clone at this repo's `psxport.pin` on a fresh machine.
@@ -43,11 +47,13 @@ none has a measured frame or native picture producer. This is a refusal to claim
 not evidence that presentation works; change it per title only when real frame evidence proves the
 guest VRAM is that title's picture.
 
-Crash 1's framework seam lives in `titles/crash1/core/crash1_runtime.*`. It follows Dusklight's
-composition/owner boundary: the boundary entry point installs one process-lifetime derived runtime,
-then drives only the already-measured generated CPU path. The runtime stays title-owned until
-cross-title RE proves shared ownership; it does not invent a shared `game/` layer, legacy
-`GameConfig`/`GameHooks` views, runtime products, or a native-boot bypass.
+Crash 1's framework seam lives in `titles/crash1/core/crash1_runtime.*`, and its product composition
+lives in `titles/crash1/core/crash1_port.*`. It follows Dusklight's composition/owner boundary:
+`game/core/resident_program.*` owns the reusable generated-program setup, while
+`game/core/enter_critical_frontier.*` owns the measured syscall transition used by both the product
+and differential harness. The runtime stays title-owned until cross-title RE proves shared ownership;
+the shared modules encode framework execution mechanics, not inferred Crash engine behavior. There
+are still no legacy `GameConfig`/`GameHooks` views or a native-boot bypass.
 
 Crash 2 targets the independently measured North American `SCUS-94154` executable `SCUS_941.54`.
 Its title runtime lives in `titles/crash2/core/` and owns the measured boot group through the typed
@@ -70,7 +76,8 @@ no post-syscall equality or rendered frame exists yet.
 Crash 1 targets the North American NTSC-U release (`SCUS-94900`, executable `SCUS_949.00`). The exact
 identity/header evidence lives in `titles/crash1/executable.json` and is compared to the real bytes by
 `tools/verify_executable.py`. Current execution reaches the real `EnterCriticalSection` syscall wrapper:
-the port-side generated wrapper and HLE transition are verified, while the independent CPU oracle stops
-at `0xBFC00180` because it has no BIOS/syscall-return model. Do not call that post-syscall equality or
-advance later boot until the oracle validates Cause/EPC and resumes at EPC+4. None of this implies a
-runnable port.
+the `crash1_port` product and focused harness share the port-side generated wrapper/HLE transition,
+while the independent CPU oracle stops at `0xBFC00180` because it has no BIOS/syscall-return model. Do
+not call that post-syscall equality or advance later boot until the oracle validates Cause/EPC and
+resumes at EPC+4. The product is runnable only to this explicitly reported boundary; it is not yet a
+playable or rendered game.

@@ -13,13 +13,13 @@ The shipping contract covers all three games. Crash 2 and Crash 3 are not option
 their presence in this repository must not be read as implementation status; the codemap records the
 measured frontier for each serial-identified title.
 
-Current status: framework scaffold plus verified North American disc/executable identities for Crash 1
+Current status: a current-frontier Crash 1 product plus verified North American disc/executable identities for Crash 1
 (`SCUS-94900`), Crash 2 (`SCUS-94154`), and Crash 3 (`SCUS-94244`). Crash 2 and Crash 3 each have a
 symbolic crt0 decode agreeing 6/6 with the independent CPU oracle at the first real call, and each
 derived runtime's typed executable facts agree 15/15 with its retail bytes. Crash 3's `SYSTEM.CNF`
 selection is explicit because its disc also contains the unrelated bootable-looking
 `DRAGON/SPYRO.EXE`. The clean Clang/CTest/real-data gates and all title regressions use recorded
-psxport `57a17a14`. Crash 1 has 653 emitted static candidates. Its generated path agrees with the independent oracle on all 34
+psxport `9c2e3f1c`. Crash 1 has 653 emitted static candidates. Its generated path agrees with the independent oracle on all 34
 CPU-state fields at the first eight executed calls. Nine addresses in the candidate set have
 execution provenance: eight generated bodies execute before the eighth observed target. The eighth
 target is the real `addiu $a0, 1; syscall 0` wrapper for `EnterCriticalSection`; the controlled port
@@ -27,16 +27,43 @@ boundary executes that generated wrapper and proves the shipping HLE returns the
 disables delivery. Crash 3 independently emits 986 candidates from `SCUS_942.44`; its first eight
 calls also agree 34/34, including tracked game main `0x80048AA0` and its own syscall wrapper
 `0x80048C38`. The independent CPU instead enters `0xBFC00180`, correctly, because its focused
-oracle has no BIOS or syscall-return model. There is now a direct, title-owned `Crash1Runtime` seam
-with no legacy `GameConfig`/`GameHooks` views, but still no runnable port, full oracle boot, native
-producer, widescreen path, or interpolation path.
+oracle has no BIOS or syscall-return model. The real `crash1_port` product now owns that same measured
+execution path: it loads `SCUS_949.00`, starts at retail crt0, reaches the generated syscall wrapper,
+performs the verified shipping HLE transition, reports the unresolved Cause/EPC blocker, and exits.
+There is still no post-syscall boot, rendered frame, native producer, widescreen path, interpolation
+path, or Crash 2/3 product.
 
-There is no `run.sh` yet because the repository has no player executable. The `crash_scaffold` CMake
-target is a framework agnosticism smoke, not a playable fallback, and the other executables are tests
-or boundary diagnostics. Once a player product exists, the zero-argument launcher will provision,
-build, and run that product; it will not run CTest or substitute a diagnostic target.
+## Run the current product
 
-## Verify the framework scaffold
+Install `uv`, CMake, Git, pkg-config, SDL3 development files, and a compatible C/C++ compiler. Then
+provide the North American Crash Bandicoot disc either as the optional argument or through
+`PSXPORT_CRASH1_DISC`, `PSXPORT_DISC`, the equivalent gitignored `.env` entries, or one repository-root
+CHD:
+
+```sh
+./run.sh /path/to/Crash-Bandicoot-USA.chd
+```
+
+With a configured disc, zero arguments are the normal path:
+
+```sh
+./run.sh
+```
+
+The slim shell entry uses `uv run --frozen`; the locked interpreter performs psxport synchronization,
+provisioning, substrate emission, CMake configuration, and product build before launching only
+`scratch/bin/crash1_port`. Its isolated player tree sets `BUILD_TESTING=OFF`; it does not configure or
+run CTest, `crash_scaffold`, or any diagnostic. To validate the
+fresh-clone provisioning/build contract without starting the product, use `./run.sh --prepare-only`.
+Missing native dependencies are refused with the exact Homebrew, APT, DNF, or supported Windows
+install command. Caller-selected `CC`/`CXX` values pass through; the launcher prefers Clang when it is
+available but does not whitelist or blacklist compiler identities.
+
+The current product executes the retail program only through the first independently verified syscall
+boundary and then exits successfully with the next blocker. It is not yet playable and does not render
+a window or frame. Crash 2 and Crash 3 remain measured integrations without player products.
+
+## Verify the project
 
 ```sh
 python3 tools/psxport_sync.py --auto
@@ -96,8 +123,8 @@ PSXPORT_CRASH3_DISC=/path/to/Crash-Bandicoot-Warped-USA.chd \
 
 Each target verifies only that title's crt0 call boundary. Crash 2 and Crash 3 also compare all 15
 typed runtime image facts against the executable and prove an altered fact disagrees. Neither target
-claims a full oracle boot or a runnable PC port. CMake reserves independent
-`generated/<title>/` namespaces; Crash 2 still has no generated substrate.
+claims a full oracle boot. CMake reserves independent `generated/<title>/` namespaces. These oracle
+targets are evidence tools and are never part of the player launch route.
 
 ## Cross-check the resident calls before the first BIOS boundary
 
@@ -107,6 +134,7 @@ the independent oracle, and proves the comparator's opposite answer:
 
 ```sh
 cmake --build scratch/build-clang --target crash1_recomp_boundary_check -j16
+cmake --build scratch/build-clang --target crash2_recomp_boundary_check -j16
 cmake --build scratch/build-clang --target crash3_recomp_boundary_check -j16
 ```
 
@@ -131,3 +159,10 @@ call targets are `0x800112B8`, `0x80011628`, game main `0x80048AA0`, `0x800154AC
 `0x8004F37C`, `0x8004F914`, and `0x80048C38`; each agrees 34/34. At step 75,963 the independent CPU
 enters `0xBFC00180` after the last target's syscall. No post-syscall equality or rendered-frame claim
 follows from this gate.
+
+The Crash 2 target likewise uses only `SCUS-94154` artifacts and `titles/crash2/recomp_seeds.json`.
+Its eight call targets are `0x8001144C`, `0x800117BC`, game main `0x80049BD4`, `0x80015614`,
+`0x8004B1B8`, `0x8004EC30`, `0x8004F1F8`, and `0x80049D1C`; each agrees 34/34. Each title manifest
+tracks its own game-main and first-syscall address plus call ordinal, and the 13-case gate mutates the
+tracked syscall frontier to prove a named disagreement. This shared harness structure is not a Crash 2
+or Crash 3 player implementation.

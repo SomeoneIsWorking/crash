@@ -4,9 +4,9 @@ kind: claim
 status: holds
 created: 2026-08-21
 tags:
-depends: CMakeLists.txt, psxport.pin, titles/crash1/executable.json, titles/crash1/recomp_seeds.json, tools/crash1_recomp.py, tests/crash1_recomp_boundary.cpp
+depends: CMakeLists.txt
 reconfirmed: 2026-08-24
-verified_at: 2026-08-24 20:14:17
+verified_at: 2026-08-24 23:08:05
 ---
 
 ## Claim
@@ -116,3 +116,7 @@ At fetchable recorded psxport bc8c8897, real SCUS_949.00 retained eight generate
 ## Re-confirmed 2026-08-24
 
 After aca3ecb, Crash 1 calls one through eight each agreed 34/34; syscall boundary and both-answer controls passed 12/12.
+
+## Re-confirmed 2026-08-24
+
+Clean psxport 9c2e3f1c Crash 1 boundary gate matched all eight call states 34/34 and retained its short-window, repeated-target, and altered-register opposite-answer controls; SELFTEST 13/13.

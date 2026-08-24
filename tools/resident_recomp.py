@@ -463,6 +463,36 @@ def capture_states(
     return comparisons
 
 
+def require_tracked_call(
+    comparisons: list[tuple[CallBoundary, State]],
+    runtime: dict[str, object],
+    *,
+    entry_key: str,
+    ordinal_key: str,
+    label: str,
+    codeword: str,
+) -> None:
+    entry = int(str(runtime.get(entry_key, "0")), 0)
+    ordinal = int(runtime.get(ordinal_key, 0))
+    if not entry and not ordinal:
+        return
+    if not entry or not ordinal:
+        raise Refused(
+            f"tracked {label} must declare both {entry_key} and {ordinal_key}"
+        )
+    matches = [call for call, _ in comparisons if call.ordinal == ordinal]
+    if len(matches) != 1 or matches[0].state.pc != entry:
+        observed = matches[0].state.pc if len(matches) == 1 else 0
+        raise Refused(
+            f"tracked {label} call {ordinal} at 0x{entry:08X} "
+            f"disagrees with oracle target 0x{observed:08X}"
+        )
+    print(
+        f"PASS {codeword}: {label} call {ordinal} reached tracked entry "
+        f"0x{entry:08X}"
+    )
+
+
 def check_comparison(
     executable: pathlib.Path,
     build: pathlib.Path,
@@ -488,20 +518,22 @@ def check_comparison(
     runtime = manifest.get("runtime", {})
     if not isinstance(runtime, dict):
         raise Refused("manifest runtime facts must be an object")
-    game_main_entry = int(str(runtime.get("game_main_entry", "0")), 0)
-    game_main_ordinal = int(runtime.get("game_main_call_ordinal", 0))
-    if game_main_entry or game_main_ordinal:
-        matches = [call for call, _ in comparisons if call.ordinal == game_main_ordinal]
-        if len(matches) != 1 or matches[0].state.pc != game_main_entry:
-            observed = matches[0].state.pc if len(matches) == 1 else 0
-            raise Refused(
-                f"tracked game-main call {game_main_ordinal} at 0x{game_main_entry:08X} "
-                f"disagrees with oracle target 0x{observed:08X}"
-            )
-        print(
-            f"PASS {spec.codeword}: game-main call {game_main_ordinal} "
-            f"reached tracked entry 0x{game_main_entry:08X}"
-        )
+    require_tracked_call(
+        comparisons,
+        runtime,
+        entry_key="game_main_entry",
+        ordinal_key="game_main_call_ordinal",
+        label="game-main",
+        codeword=spec.codeword,
+    )
+    require_tracked_call(
+        comparisons,
+        runtime,
+        entry_key="first_syscall_entry",
+        ordinal_key="first_syscall_call_ordinal",
+        label="first-syscall",
+        codeword=spec.codeword,
+    )
     executed_bodies = len(spec.call_ordinals)
     executable_addresses = executed_bodies + 1
     print(
@@ -618,6 +650,28 @@ def selftest(
 
     comparisons = check_comparison(executable, build, runner, steps, spec)
     last_call, last_port = comparisons[-1]
+    manifest = verify_executable.load_manifest(spec.manifest)
+    runtime = manifest.get("runtime", {})
+    if not isinstance(runtime, dict):
+        raise Refused("manifest runtime facts must be an object")
+    altered_runtime = dict(runtime)
+    altered_runtime["first_syscall_entry"] = f"0x{last_call.state.pc ^ 4:08X}"
+    try:
+        require_tracked_call(
+            comparisons,
+            altered_runtime,
+            entry_key="first_syscall_entry",
+            ordinal_key="first_syscall_call_ordinal",
+            label="first-syscall",
+            codeword=spec.codeword,
+        )
+    except Refused as exc:
+        if "disagrees with oracle target" not in str(exc):
+            raise Refused("altered tracked frontier named the wrong cause") from exc
+    else:
+        raise Refused("tracked first-syscall comparison accepted an altered entry")
+    print("PASS negative tracked frontier: altered first-syscall entry disagreed by name")
+
     check_enter_critical_boundary(
         executable,
         runner,
@@ -684,7 +738,7 @@ def selftest(
     print(
         "PASS negative comparison: one altered port register produced one named mismatch"
     )
-    print("SELFTEST 12/12")
+    print("SELFTEST 13/13")
     return True
 
 

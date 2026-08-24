@@ -10,7 +10,11 @@ class Crash1Runtime final : public crash::BoundaryRuntime {
 public:
   Crash1Runtime();
 
+  const GuestProgramImage *guestProgramImage() const override;
   bool guestVramIsPicture(const Game &game) const override;
+
+private:
+  static const GuestProgramImage programImage_;
 };
 
 } // namespace crash1

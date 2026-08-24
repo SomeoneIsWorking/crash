@@ -1,20 +1,17 @@
 #pragma once
 
 #include "core.h"
-#include "game.h"
+#include "enter_critical_frontier.h"
 #include "rec_decls.h"
+#include "resident_program.h"
 
 #include <array>
 #include <charconv>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
-#include <memory>
 #include <string_view>
 #include <system_error>
-
-void load_exe(const char *path, Core *core);
-int rec_func_index(std::uint32_t address);
 
 namespace crash::test {
 
@@ -56,37 +53,31 @@ inline void captureCallBoundary(Core *core, std::string_view codeword) {
 }
 
 inline void executeEnterCritical(Core *core, std::string_view codeword, OverrideFn generatedBody) {
-  constexpr std::uint32_t kLoadEnterCriticalSelector = 0x24040001;
-  constexpr std::uint32_t kSyscallZero = 0x0000000C;
-  if (core->mem_r32(core->pc) != kLoadEnterCriticalSelector || core->mem_r32(core->pc + 4) != kSyscallZero) {
-    std::fprintf(stderr,
-                 "REFUSED: requested syscall boundary 0x%08X is not %.*s's measured "
-                 "addiu-a0-1/syscall-0 wrapper\n",
-                 core->pc,
-                 static_cast<int>(codeword.size()),
-                 codeword.data());
+  const crash::EnterCriticalResult result = crash::runEnterCriticalFrontier(*core, codeword, generatedBody);
+  if (!result.accepted) {
+    std::fprintf(stderr, "REFUSED: %s\n", result.detail.c_str());
     std::exit(2);
   }
-
-  const int irqBefore = core->game->hle.irq_enabled;
-  const std::uint32_t statusBefore = core->cop0[12];
-  generatedBody(core);
+  const crash::EnterCriticalObservation &observation = result.observation;
   std::printf("# %.*s-PORT-ENTER-CRITICAL boundary=0x%08X selector=0x%08X\n",
               static_cast<int>(codeword.size()),
               codeword.data(),
-              core->pc,
-              core->r[4]);
-  std::printf("# %.*s-PORT-ENTER-CRITICAL v0=0x%08X\n", static_cast<int>(codeword.size()), codeword.data(), core->r[2]);
+              observation.boundary,
+              observation.selector);
+  std::printf("# %.*s-PORT-ENTER-CRITICAL v0=0x%08X\n",
+              static_cast<int>(codeword.size()),
+              codeword.data(),
+              observation.returnValue);
   std::printf("# %.*s-PORT-ENTER-CRITICAL irq-before=%d irq-after=%d\n",
               static_cast<int>(codeword.size()),
               codeword.data(),
-              irqBefore,
-              core->game->hle.irq_enabled);
+              observation.irqBefore,
+              observation.irqAfter);
   std::printf("# %.*s-PORT-ENTER-CRITICAL status-before=0x%08X status-after=0x%08X\n",
               static_cast<int>(codeword.size()),
               codeword.data(),
-              statusBefore,
-              core->cop0[12]);
+              observation.statusBefore,
+              observation.statusAfter);
   std::fflush(stdout);
   std::exit(EXIT_SUCCESS);
 }
@@ -105,30 +96,15 @@ int runBoundary(int argc, char **argv, std::string_view codeword, OverrideFn cap
     std::fprintf(stderr, "REFUSED: unknown boundary mode %s\n", argv[4]);
     return 2;
   }
-  if (rec_func_index(entry) < 0 || rec_func_index(boundary) < 0) {
-    std::fprintf(stderr,
-                 "REFUSED: %.*s generated substrate omits entry 0x%08X or boundary 0x%08X\n",
-                 static_cast<int>(codeword.size()),
-                 codeword.data(),
-                 entry,
-                 boundary);
-    return 2;
-  }
-
   static Runtime runtime;
-  psxport_install_game(runtime);
-  auto game = std::make_unique<Game>();
-  Core *core = &game->core;
-  load_exe(argv[1], core);
-  shard_set_override(boundary, executeEnter ? enterCritical : captureCall);
-  main_dispatch(core, entry);
-  std::fprintf(stderr,
-               "FAIL: %.*s entry 0x%08X returned without reaching boundary 0x%08X\n",
-               static_cast<int>(codeword.size()),
-               codeword.data(),
-               entry,
-               boundary);
-  return 1;
+  return crash::runResidentProgram({
+      .runtime = runtime,
+      .codeword = codeword,
+      .executable = argv[1],
+      .entry = entry,
+      .boundary = boundary,
+      .boundaryHandler = executeEnter ? enterCritical : captureCall,
+  });
 }
 
 template <typename Runtime> class TitleBoundaryRunner {

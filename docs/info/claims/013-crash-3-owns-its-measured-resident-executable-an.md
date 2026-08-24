@@ -4,9 +4,9 @@ kind: claim
 status: holds
 created: 2026-08-22
 tags: crash3,runtime,inheritance,crt0
-depends: CMakeLists.txt, psxport.pin, titles/crash3/core/crash3_runtime.cpp, titles/crash3/executable.json, tools/verify_runtime_image.py
+depends: CMakeLists.txt
 reconfirmed: 2026-08-24
-verified_at: 2026-08-24 20:14:19
+verified_at: 2026-08-24 23:08:07
 ---
 
 ## Claim
@@ -44,3 +44,7 @@ At fetchable recorded psxport bc8c8897, CTest passed Crash3Runtime direct inheri
 ## Re-confirmed 2026-08-24
 
 After aca3ecb, Crash 3 runtime CTest passed and its real-data boundary regenerated 986 candidates with eight 34/34 comparisons.
+
+## Re-confirmed 2026-08-24
+
+Clean recorded psxport 9c2e3f1c authoritative CTest passed Crash3Runtime inheritance; cached real SCUS_942.44 matched all 15 runtime facts with one altered-fact disagreement, and its serial boundary gate passed 13/13.

@@ -4,9 +4,9 @@ kind: claim
 status: holds
 created: 2026-08-21
 tags: crash1,oracle,crt0
-depends: CMakeLists.txt, psxport.pin, titles/crash1/executable.json, tools/provision_title.py
+depends: CMakeLists.txt
 reconfirmed: 2026-08-24
-verified_at: 2026-08-24 20:14:17
+verified_at: 2026-08-24 23:08:03
 ---
 
 ## Claim
@@ -114,3 +114,7 @@ At fetchable recorded psxport bc8c8897, oracle_spike passed 43/43 and cached rea
 ## Re-confirmed 2026-08-24
 
 After aca3ecb, root reran all three real-data resident boundary targets; Crash 1 retained its exact oracle agreement and negative controls at pinned bc8c8897.
+
+## Re-confirmed 2026-08-24
+
+Clean psxport 9c2e3f1c crossvalidate_crt0 against cached identity-verified SCUS_949.00 agreed 6/6 between symbolic decoder and independent CPU; its both-answer selftest passed 5/5, and oracle_spike passed 43/43.

@@ -4,9 +4,9 @@ kind: claim
 status: holds
 created: 2026-08-22
 tags: crash2,runtime,inheritance,crt0
-depends: CMakeLists.txt, psxport.pin, titles/crash2/core/crash2_runtime.cpp, titles/crash2/executable.json, tools/verify_runtime_image.py
+depends: CMakeLists.txt
 reconfirmed: 2026-08-24
-verified_at: 2026-08-24 20:14:18
+verified_at: 2026-08-24 23:08:06
 ---
 
 ## Claim
@@ -48,3 +48,7 @@ At fetchable recorded psxport bc8c8897, CTest passed Crash2Runtime direct inheri
 ## Re-confirmed 2026-08-24
 
 After aca3ecb, Crash 2 runtime CTest passed and real SCUS_941.54 reached tracked game main 0x80049BD4 with 34/34 state agreement.
+
+## Re-confirmed 2026-08-24
+
+Clean recorded psxport 9c2e3f1c authoritative CTest passed Crash2Runtime inheritance; its cached real executable matched all 15 runtime facts with one altered-fact disagreement, and its serial boundary gate passed 13/13.

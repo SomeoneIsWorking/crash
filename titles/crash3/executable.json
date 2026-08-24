@@ -16,7 +16,9 @@
   },
   "runtime": {
     "game_main_entry": "0x80048AA0",
-    "game_main_call_ordinal": 3
+    "game_main_call_ordinal": 3,
+    "first_syscall_entry": "0x80048C38",
+    "first_syscall_call_ordinal": 8
   },
   "region_markers": [
     "Sony Computer Entertainment Inc. for North America area"

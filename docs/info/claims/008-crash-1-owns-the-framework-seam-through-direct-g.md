@@ -4,9 +4,9 @@ kind: claim
 status: holds
 created: 2026-08-22
 tags: runtime,inheritance
-depends: titles/crash1/core/crash1_runtime.cpp, titles/crash1/core/crash1_runtime.h, tests/crash1_runtime.cpp, tests/crash1_recomp_boundary.cpp, CMakeLists.txt
+depends: CMakeLists.txt
 reconfirmed: 2026-08-24
-verified_at: 2026-08-24 20:14:18
+verified_at: 2026-08-24 23:08:06
 ---
 
 ## Claim
@@ -64,3 +64,7 @@ At fetchable recorded psxport bc8c8897, CTest passed Crash1Runtime direct inheri
 ## Re-confirmed 2026-08-24
 
 After aca3ecb, authoritative CTest 5/5 and Crash 1 resident boundary 12/12 passed with its direct runtime and explicit false picture policy.
+
+## Re-confirmed 2026-08-24
+
+Authoritative Clang CTest on clean recorded psxport 9c2e3f1c passed Crash1Runtime direct inheritance and its now-measured GuestProgramImage; direct 15/15 executable comparison and altered-fact control passed.
