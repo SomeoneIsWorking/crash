@@ -11,6 +11,7 @@ public:
   Crash3Runtime();
 
   const GuestProgramImage *guestProgramImage() const override;
+  bool guestVramIsPicture(const Game &game) const override;
 
 private:
   static const GuestProgramImage programImage_;

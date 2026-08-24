@@ -8,4 +8,8 @@ Crash1Runtime::Crash1Runtime()
                       "EnterCriticalSection syscall exception; a validated post-syscall resume model is "
                       "required before later boot") {}
 
+bool Crash1Runtime::guestVramIsPicture(const Game &) const {
+  return false;
+}
+
 } // namespace crash1

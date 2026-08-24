@@ -7,8 +7,8 @@ created: 2026-08-21
 
 ## Instrument
 
-`tools/resident_recomp.py` behind the serial-scoped `tools/crash1_recomp.py` and
-`tools/scus_94244_recomp.py` entry points, plus the title-specific runners over
+`tools/resident_recomp.py` behind the serial-scoped `tools/crash1_recomp.py`,
+`tools/scus_94154_recomp.py`, and `tools/scus_94244_recomp.py` entry points, plus the title-specific runners over
 `tests/recomp_boundary_support.h` — emits a verified title's resident candidates, consumes psxport's
 canonical independent-oracle ordinal call captures, captures the same generated-call states, and
 compares complete register files without sharing title addresses.
@@ -40,6 +40,13 @@ oracle states agreed 34/34 at all eight calls: `0x800112B8`, `0x80011628`, game 
 `0x80048C38`. The short trace refused at 7/8, an altered register produced one disagreement, and a
 different execution-proven target refused syscall execution. The same refactored implementation then
 reproduced all eight `SCUS_949.00` 34/34 comparisons and its existing syscall result.
+
+On real `SCUS_941.54`, emitter `2026-08-22.1` produced 998 candidates from 270 seeds. Generated and
+oracle states agreed 34/34 at all eight calls: `0x8001144C`, `0x800117BC`, game main
+`0x80049BD4`, `0x80015614`, `0x8004B1B8`, `0x8004EC30`, `0x8004F1F8`, and syscall wrapper
+`0x80049D1C`. The same negative controls refused a 7/8 short trace, an out-of-text seed, an ambiguous
+repeated target, and a different function requested as the syscall wrapper; flipping one captured
+register produced exactly one named disagreement.
 
 ## Known failure modes
 

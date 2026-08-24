@@ -9,6 +9,8 @@ namespace crash1 {
 class Crash1Runtime final : public crash::BoundaryRuntime {
 public:
   Crash1Runtime();
+
+  bool guestVramIsPicture(const Game &game) const override;
 };
 
 } // namespace crash1

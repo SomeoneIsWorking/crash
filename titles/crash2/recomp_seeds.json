@@ -1,0 +1,13 @@
+// Crash Bandicoot 2 (`SCUS-94154`) resident recompiler seeds.
+//
+// psxport independently roots discovery at this executable's entry, scans its binary pointers and
+// tables, and follows direct calls. These lists are deliberately empty. Add an address only after a
+// real `SCUS_941.54` run reports an indirect-only `[recomp-MISS]`, with evidence that the address
+// belongs to this executable. Never import addresses from either other Crash executable.
+{
+  "main": [],
+  "main_reentry": [],
+  "overlay_bases": {},
+  "overlay_base_patterns": [],
+  "overlay_seeds": {}
+}

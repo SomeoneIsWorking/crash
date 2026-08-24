@@ -5,8 +5,8 @@ status: holds
 created: 2026-08-21
 tags: crash1,oracle,crt0
 depends: CMakeLists.txt, psxport.pin, titles/crash1/executable.json, tools/provision_title.py
-reconfirmed: 2026-08-22
-verified_at: 2026-08-22 19:27:16
+reconfirmed: 2026-08-24
+verified_at: 2026-08-24 20:05:16
 ---
 
 ## Claim
@@ -102,3 +102,11 @@ Post-commit default-tree real Crash 1 oracle fixture remained 39/39 and crt0 bou
 ## Re-confirmed 2026-08-22
 
 Post-change authoritative verification: python3 tools/verify.py passed Clang build and CTest 5/5; cached serial-scoped executable/oracle/runtime gates passed as documented on 2026-08-22.
+
+## Re-confirmed 2026-08-24
+
+At recorded psxport d2266f4b, oracle_spike passed 43/43 and cached real SCUS_949.00 crossvalidated symbolic crt0 decode against the independent CPU at 6/6 fields, step 57910, target 0x80011A18. Disc reprovisioning was not rerun because no disc path was configured.
+
+## Re-confirmed 2026-08-24
+
+At fetchable recorded psxport bc8c8897, oracle_spike passed 43/43 and cached real SCUS_949.00 symbolic/independent crt0 comparison retained 6/6 at step 57910 target 0x80011A18. No disc or game/GPU launch was performed.

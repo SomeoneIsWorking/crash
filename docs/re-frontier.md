@@ -7,11 +7,6 @@ not evidence of shared ownership.
 Statuses: ✅ `re-verified` · 🟡 `re-partial` · 🔬 `in-progress` · ⬜ `todo` · ⏸ blocked upstream ·
 ➖ `skip-by-design` · ⚠️ `hack`.
 
-
-
-
-
-
 ## Target identity
 
 ### CRASH1-01 — select and measure the Crash Bandicoot executable
@@ -33,26 +28,26 @@ Statuses: ✅ `re-verified` · 🟡 `re-partial` · 🔬 `in-progress` · ⬜ `t
 ### CRASH2-02 — provision the selected disc and verify the first crt0 call
 - status: re-verified
 - deps: CRASH2-01
-- evidence: The shared serial-aware provisioning path publishes only after SYSTEM.CNF boots SCUS_941.54 and the executable matches 11/11 facts. Its 10-case both-answer suite includes three-way title environment isolation and wrong-title refusal. Against clean pinned psxport 57a17a14, cached real SCUS_941.54 passes executable selftest 4/4, oracle_spike 39/39, and crt0_extract/independent CPU agreement 6/6 at executed jal ordinal 1, step 81,725, target 0x8001144C: gp 0x8005F17C, a0 0x8006F1F4, sp 0x801FFFF8, and heap size 0x0018FE08.
+- evidence: The shared serial-aware provisioning path publishes only after SYSTEM.CNF boots SCUS_941.54 and the executable matches 11/11 facts. Its 10-case both-answer suite includes three-way title environment isolation and wrong-title refusal. Against clean pinned psxport bc8c8897, cached real SCUS_941.54 passes executable selftest 4/4, oracle_spike 43/43, and crt0_extract/independent CPU agreement 6/6 at executed jal ordinal 1, step 81,725, target 0x8001144C: gp 0x8005F17C, a0 0x8006F1F4, sp 0x801FFFF8, and heap size 0x0018FE08.
 - where: `tools/provision_title.py`, `tests/test_provision_titles.py`, CMake `crash2_oracle_boot_check`, gitignored `scratch/bin/crash2/SCUS_941.54`
 - gap: This proves only the first real crt0 call boundary. No Crash 2 generated execution, BIOS continuation, hardware, native boot, or gameplay is claimed.
-- notes: The 6/6 real-byte cross-check was reproduced at psxport 57a17a14. No disc was configured for a fresh extraction in that run; prior SYSTEM.CNF provisioning evidence remains the disc-selection authority.
+- notes: The 6/6 real-byte cross-check was reproduced at psxport bc8c8897. No disc was configured for a fresh extraction in that run; prior SYSTEM.CNF provisioning evidence remains the disc-selection authority.
 
 ### CRASH2-03 — own measured executable facts through the derived runtime
 - status: re-verified
 - deps: CRASH2-02
-- evidence: Against clean pinned psxport 57a17a14, Crash2Runtime directly inherits title-agnostic BoundaryRuntime, which inherits GameRuntime; legacy views and unmeasured runtime products remain null. GuestProgramImage matches 15/15 fields from real SCUS_941.54 and shipping crt0_extract, an altered global pointer produces one named disagreement, authoritative Clang CTest passes 5/5, and psxport_sync checks the same scratch/build-clang provenance.
+- evidence: Against clean pinned psxport bc8c8897, Crash2Runtime directly inherits title-agnostic BoundaryRuntime, which inherits GameRuntime; legacy views and unmeasured runtime products remain null, and the title explicitly reports `guestVramIsPicture=false` because no frame producer exists. GuestProgramImage matches 15/15 fields from real SCUS_941.54 and shipping crt0_extract, including game main 0x80049BD4 independently observed at oracle call three; an altered global pointer produces one named disagreement, authoritative Clang CTest passes 5/5, and psxport_sync checks the same scratch/build-clang provenance.
 - where: `game/core/boundary_runtime.*`, `titles/crash2/core/crash2_runtime.*`, `tools/verify_runtime_image.py`, `tests/crash2_runtime*.cpp`
-- gap: No generated Crash 2 substrate or port/oracle execution comparison exists; CRASH2-04 begins there.
-- notes: BoundaryRuntime shares only refusal/no-invented-products integration invariants. gameMainEntry remains zero because Crash 2 game main is not measured.
+- gap: The typed runtime now owns measured executable facts and game main 0x80049BD4; CRASH2-04 tracks generated execution and the unresolved syscall continuation.
+- notes: BoundaryRuntime shares only refusal/no-invented-products integration invariants. The game-main address is owned by Crash 2's manifest and runtime because the independent CPU reaches it at call three.
 
 ### CRASH2-04 — recompile to the first real divergence
-- status: todo
+- status: re-partial
 - deps: CRASH2-03
-- evidence:
-- where: `titles/crash2/`
-- gap: No Crash 2 generated substrate or port/oracle execution comparison exists.
-- notes: Begin at the measured entry and first-call boundary; do not copy Crash 1 seeds or addresses.
+- evidence: Real SCUS_941.54 emitted 998 candidates from 270 static seeds with zero overlays under psxport bc8c8897 (emitter 2026-08-22.1). Generated execution and the independent Mednafen CPU agreed 34/34 at each of eight calls: 0x8001144C, 0x800117BC, game main 0x80049BD4, 0x80015614, 0x8004B1B8, 0x8004EC30, 0x8004F1F8, and 0x80049D1C. Call eight is the measured addiu-a0-1/syscall-0 wrapper; the oracle enters 0xBFC00180 at step 85898, while the generated wrapper through shipping HLE returns prior IRQ 1 and disables delivery. The 12/12 suite includes out-of-text seed, 7/8 short-window, repeated-target, altered-register, and wrong-syscall-target refusals.
+- where: tools/scus_94154_recomp.py, tools/resident_recomp.py, tests/crash2_recomp_boundary.cpp, titles/crash2/recomp_seeds.json, CMake crash2_recomp_boundary_check, gitignored generated/crash2/ and scratch/raw/scus-94154-recomp/
+- gap: Port/oracle equality is proven only from entry through the eight call boundaries. The port-side generated syscall effect is separately proven, but the independent oracle cannot expose Cause/EPC or resume syscall execution at EPC+4, so post-syscall equality, later BIOS/hardware boot, frame output, and the remaining 990 emitted bodies are unverified.
+- notes: Generated code remains sacrosanct. Static discovery counts are not execution provenance; only nine addresses are execution-proven. No Crash 1/3 seed or address was reused.
 
 ### CRASH3-01 — select and measure the Crash Bandicoot 3 executable
 - status: re-verified

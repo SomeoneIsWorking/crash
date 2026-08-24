@@ -131,4 +131,25 @@ int runBoundary(int argc, char **argv, std::string_view codeword, OverrideFn cap
   return 1;
 }
 
+template <typename Runtime> class TitleBoundaryRunner {
+public:
+  static int run(int argc, char **argv, std::string_view codeword, OverrideFn generatedEnterCritical) {
+    codeword_ = codeword;
+    generatedEnterCritical_ = generatedEnterCritical;
+    return runBoundary<Runtime>(argc, argv, codeword, captureCall, captureEnterCritical);
+  }
+
+private:
+  static void captureCall(Core *core) {
+    captureCallBoundary(core, codeword_);
+  }
+
+  static void captureEnterCritical(Core *core) {
+    executeEnterCritical(core, codeword_, generatedEnterCritical_);
+  }
+
+  static inline std::string_view codeword_;
+  static inline OverrideFn generatedEnterCritical_ = nullptr;
+};
+
 } // namespace crash::test

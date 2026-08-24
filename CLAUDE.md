@@ -28,6 +28,11 @@ All picture work is RE-driven. Widescreen and interpolation require PC-native gr
 reading game state; do not reconstruct pictures from GTE/OT/GP0 output. Each title must first reach a
 faithful, measurable base before enhancements.
 
+Crash 1, 2, and 3 are direct runtimes and each explicitly reports `guestVramIsPicture=false` because
+none has a measured frame or native picture producer. This is a refusal to claim picture ownership,
+not evidence that presentation works; change it per title only when real frame evidence proves the
+guest VRAM is that title's picture.
+
 Crash 1's framework seam lives in `titles/crash1/core/crash1_runtime.*`. It follows Dusklight's
 composition/owner boundary: the boundary entry point installs one process-lifetime derived runtime,
 then drives only the already-measured generated CPU path. The runtime stays title-owned until
@@ -38,8 +43,10 @@ Crash 2 targets the independently measured North American `SCUS-94154` executabl
 Its title runtime lives in `titles/crash2/core/` and owns the measured boot group through the typed
 `GuestProgramImage` seam, never through `GameConfig`. `game/core/boundary_runtime.*` shares only the
 framework refusal/no-invented-products invariant between title runtimes; it is not evidence of shared
-Crash engine behavior. Crash 2 currently ends at the first crt0 call and must not reuse Crash 1 seeds,
-addresses, or syscall conclusions.
+Crash engine behavior. Crash 2 must not reuse Crash 1 seeds, addresses, or syscall conclusions. Its
+generated path now agrees with the independent CPU at eight
+serial-specific calls through game main `0x80049BD4` and its own `EnterCriticalSection` wrapper
+`0x80049D1C`. The independent CPU then enters `0xBFC00180`; no post-syscall equality or frame exists.
 
 Crash 3 targets the independently measured North American `SCUS-94244` executable `SCUS_942.44`.
 `SYSTEM.CNF` is the identity authority: the retail disc also carries `DRAGON/SPYRO.EXE`, which is a

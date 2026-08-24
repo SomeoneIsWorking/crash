@@ -181,6 +181,7 @@ function(add_resident_recomp_title title tool)
 endfunction()
 
 add_resident_recomp_title(crash1 crash1_recomp.py)
+add_resident_recomp_title(crash2 scus_94154_recomp.py)
 add_resident_recomp_title(crash3 scus_94244_recomp.py)
 add_custom_target(
   crash1_oracle_boot_check

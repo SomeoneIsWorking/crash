@@ -5,8 +5,8 @@ status: holds
 created: 2026-08-21
 tags:
 depends: CMakeLists.txt, psxport.pin, titles/crash1/executable.json, titles/crash1/recomp_seeds.json, tools/crash1_recomp.py, tests/crash1_recomp_boundary.cpp
-reconfirmed: 2026-08-22
-verified_at: 2026-08-22 19:27:17
+reconfirmed: 2026-08-24
+verified_at: 2026-08-24 20:05:16
 ---
 
 ## Claim
@@ -104,3 +104,11 @@ Post-commit default-tree Crash 1 generated/syscall regression passed SELFTEST 12
 ## Re-confirmed 2026-08-22
 
 Post-change authoritative verification: python3 tools/verify.py passed Clang build and CTest 5/5; cached serial-scoped executable/oracle/runtime gates passed as documented on 2026-08-22.
+
+## Re-confirmed 2026-08-24
+
+At recorded psxport d2266f4b, real SCUS_949.00 retained eight generated/oracle call comparisons at 34/34 fields each, separate EnterCriticalSection HLE evidence, and every 12/12 opposite-answer control.
+
+## Re-confirmed 2026-08-24
+
+At fetchable recorded psxport bc8c8897, real SCUS_949.00 retained eight generated/oracle comparisons at 34/34 fields each, separate EnterCriticalSection HLE evidence, and all 12/12 opposite-answer controls.

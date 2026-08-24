@@ -5,8 +5,8 @@ status: holds
 created: 2026-08-22
 tags: crash2,runtime,inheritance,crt0
 depends: CMakeLists.txt, psxport.pin, titles/crash2/core/crash2_runtime.cpp, titles/crash2/executable.json, tools/verify_runtime_image.py
-reconfirmed: 2026-08-22
-verified_at: 2026-08-22 19:27:18
+reconfirmed: 2026-08-24
+verified_at: 2026-08-24 20:05:17
 ---
 
 ## Claim
@@ -32,3 +32,15 @@ Post-commit default-tree Crash2Runtime passed its direct inheritance test and al
 ## Re-confirmed 2026-08-22
 
 Post-change authoritative verification: python3 tools/verify.py passed Clang build and CTest 5/5; cached serial-scoped executable/oracle/runtime gates passed as documented on 2026-08-22.
+
+## Re-confirmed 2026-08-24
+
+Against recorded psxport d2266f4b, the authoritative Clang build and CTest passed 5/5; Crash2Runtime direct inheritance passed, and the real SCUS_941.54 boundary gate independently confirmed tracked game main 0x80049BD4 at oracle call three while rechecking executable identity.
+
+## Re-confirmed 2026-08-24
+
+At recorded psxport d2266f4b, authoritative Clang CTest passed Crash2Runtime direct inheritance; production runtime facts matched cached real SCUS_941.54 at 15/15 including independently observed game main 0x80049BD4, and the altered-global-pointer control produced one named disagreement.
+
+## Re-confirmed 2026-08-24
+
+At fetchable recorded psxport bc8c8897, CTest passed Crash2Runtime direct inheritance and explicit guestVramIsPicture=false; production runtime facts matched cached real SCUS_941.54 at 15/15 with the altered-fact control, and its boundary gate passed SELFTEST 12/12.

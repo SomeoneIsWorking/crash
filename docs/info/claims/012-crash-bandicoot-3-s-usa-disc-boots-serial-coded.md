@@ -5,8 +5,8 @@ status: holds
 created: 2026-08-22
 tags: crash3,identity,oracle
 depends: titles/crash3/executable.json, tools/provision_title.py, CMakeLists.txt
-reconfirmed: 2026-08-22
-verified_at: 2026-08-22 19:27:19
+reconfirmed: 2026-08-24
+verified_at: 2026-08-24 19:46:32
 ---
 
 ## Claim
@@ -28,3 +28,7 @@ At recorded psxport 57a17a14, cached retail SCUS_942.44 matched manifest and exe
 ## Re-confirmed 2026-08-22
 
 Post-change authoritative verification: python3 tools/verify.py passed Clang build and CTest 5/5; cached serial-scoped executable/oracle/runtime gates passed as documented on 2026-08-22.
+
+## Re-confirmed 2026-08-24
+
+At recorded psxport d2266f4b, cached real SCUS_942.44 passed oracle_spike 43/43 and symbolic/independent first-call comparison 6/6 at step 71790 target 0x800112B8; the 10-case provisioning contract still passed, including DRAGON/SPYRO.EXE refusal. No disc was configured for fresh reprovisioning.

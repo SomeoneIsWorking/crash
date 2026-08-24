@@ -28,4 +28,8 @@ const GuestProgramImage *Crash3Runtime::guestProgramImage() const {
   return &programImage_;
 }
 
+bool Crash3Runtime::guestVramIsPicture(const Game &) const {
+  return false;
+}
+
 } // namespace crash3

@@ -5,8 +5,8 @@ status: holds
 created: 2026-08-22
 tags: runtime,inheritance
 depends: titles/crash1/core/crash1_runtime.cpp, titles/crash1/core/crash1_runtime.h, tests/crash1_runtime.cpp, tests/crash1_recomp_boundary.cpp, CMakeLists.txt
-reconfirmed: 2026-08-22
-verified_at: 2026-08-22 19:27:18
+reconfirmed: 2026-08-24
+verified_at: 2026-08-24 20:05:17
 ---
 
 ## Claim
@@ -52,3 +52,11 @@ Post-commit authoritative Clang verifier passed the direct Crash1Runtime inherit
 ## Re-confirmed 2026-08-22
 
 Post-change authoritative verification: python3 tools/verify.py passed Clang build and CTest 5/5; cached serial-scoped executable/oracle/runtime gates passed as documented on 2026-08-22.
+
+## Re-confirmed 2026-08-24
+
+At recorded psxport d2266f4b, CTest passed Crash1Runtime direct inheritance with null legacy views and no invented products; the refactored serial-scoped boundary runner retained real SCUS_949.00 SELFTEST 12/12.
+
+## Re-confirmed 2026-08-24
+
+At fetchable recorded psxport bc8c8897, CTest passed Crash1Runtime direct inheritance with null legacy views, no invented products, and explicit guestVramIsPicture=false; its boundary gate retained SELFTEST 12/12.

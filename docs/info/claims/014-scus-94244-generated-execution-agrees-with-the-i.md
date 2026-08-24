@@ -5,8 +5,8 @@ status: holds
 created: 2026-08-22
 tags: crash3,recomp,oracle,syscall
 depends: tools/resident_recomp.py, tests/crash3_recomp_boundary.cpp, titles/crash3/core/crash3_runtime.cpp, psxport.pin
-reconfirmed: 2026-08-22
-verified_at: 2026-08-22 19:27:19
+reconfirmed: 2026-08-24
+verified_at: 2026-08-24 20:05:17
 ---
 
 ## Claim
@@ -28,3 +28,11 @@ Reconfirmed after all implementation and documentation edits: SCUS-94244 regener
 ## Re-confirmed 2026-08-22
 
 Post-change authoritative verification: python3 tools/verify.py passed Clang build and CTest 5/5; cached serial-scoped executable/oracle/runtime gates passed as documented on 2026-08-22.
+
+## Re-confirmed 2026-08-24
+
+Against recorded psxport d2266f4b, the refactored TitleBoundaryRunner preserved real SCUS_942.44 generation (297 seeds to 986 candidates), eight calls at 34/34 fields each including game main, the separate IRQ 1-to-0 HLE transition, all opposite-answer controls, and SELFTEST 12/12.
+
+## Re-confirmed 2026-08-24
+
+At fetchable recorded psxport bc8c8897, real SCUS_942.44 regenerated 297 seeds to 986 candidates; eight calls agreed 34/34 including game main, the separate IRQ transition passed, and SELFTEST passed 12/12.

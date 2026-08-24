@@ -39,3 +39,6 @@ validation or EPC+4 resume, so no post-syscall equality or later boot is claimed
 
 ### Note (2026-08-22)
 SCUS_942.44 now reaches the same honest class of boundary without borrowing SCUS_949.00 addresses: eight generated/oracle call states agree 34/34 through game main 0x80048AA0 and EnterCriticalSection wrapper 0x80048C38; the independent CPU enters 0xBFC00180 at step 75963. Crash 3 rendering remains blocked on the same missing syscall Cause/EPC validation and EPC+4 oracle resume, not on an A(39h) BIOS return.
+
+### Note (2026-08-22)
+SCUS-94154 now independently reaches the same honest boundary: generated/oracle state agrees 34/34 at eight serial-specific calls through game main 0x80049BD4 and EnterCriticalSection wrapper 0x80049D1C; the oracle vectors to 0xBFC00180 at step 85,898. All three Crash serials are now blocked by missing syscall Cause/EPC validation and EPC+4 resume. psxport d2266f4b adds same-CPU I_STAT/I_MASK MMIO only; it does not remove this syscall blocker.

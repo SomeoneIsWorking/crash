@@ -5,8 +5,8 @@ status: holds
 created: 2026-08-21
 tags:
 depends: CMakeLists.txt, tools/verify.py, tools/psxport_sync.py
-reconfirmed: 2026-08-22
-verified_at: 2026-08-22 19:27:16
+reconfirmed: 2026-08-24
+verified_at: 2026-08-24 20:05:16
 ---
 
 ## Claim
@@ -73,3 +73,11 @@ At recorded psxport 57a17a14, tools/verify.py reconfigured authoritative scratch
 ## Re-confirmed 2026-08-22
 
 Post-change authoritative verification: python3 tools/verify.py passed Clang build and CTest 5/5; cached serial-scoped executable/oracle/runtime gates passed as documented on 2026-08-22.
+
+## Re-confirmed 2026-08-24
+
+At recorded psxport d2266f4b, python3 tools/verify.py reconfigured the authoritative Clang tree, built it, passed CTest 5/5 including direct runtime inheritance and C++ policy, then verified the same built framework SHA against psxport.pin.
+
+## Re-confirmed 2026-08-24
+
+At fetchable recorded psxport bc8c8897, python3 tools/verify.py reconfigured the authoritative Clang tree, built it, passed CTest 5/5 including all three explicit guest-picture policy checks and C++ policy, then matched the built SHA to psxport.pin.

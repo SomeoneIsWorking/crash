@@ -33,8 +33,12 @@ template <typename Runtime> int verifyTitleRuntimeContract(const char *name, boo
     std::fprintf(stderr, "%s installed the wrong GuestProgramImage ownership state\n", name);
     return 1;
   }
+  if (runtime.guestVramIsPicture(*game)) {
+    std::fprintf(stderr, "%s claimed guest VRAM was a picture without a measured frame producer\n", name);
+    return 1;
+  }
 
   runtime.registerOverrides(*game);
-  std::printf("%s: direct derived install; no legacy views or unmeasured runtime products\n", name);
+  std::printf("%s: direct derived install; no legacy views, picture ownership, or unmeasured runtime products\n", name);
   return 0;
 }
