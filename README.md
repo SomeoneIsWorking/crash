@@ -31,6 +31,11 @@ oracle has no BIOS or syscall-return model. There is now a direct, title-owned `
 with no legacy `GameConfig`/`GameHooks` views, but still no runnable port, full oracle boot, native
 producer, widescreen path, or interpolation path.
 
+There is no `run.sh` yet because the repository has no player executable. The `crash_scaffold` CMake
+target is a framework agnosticism smoke, not a playable fallback, and the other executables are tests
+or boundary diagnostics. Once a player product exists, the zero-argument launcher will provision,
+build, and run that product; it will not run CTest or substitute a diagnostic target.
+
 ## Verify the framework scaffold
 
 ```sh
@@ -44,7 +49,8 @@ before running its complete CTest graph and framework pin check. This ordering i
 `ctest --test-dir scratch/build-clang` is only a focused rerun after `tools/verify.py` has refreshed
 the tree. The shared framework checker applies this repository's tracked `clang-format` and
 `clang-tidy` policy and the 1,200-line ownership cap without linting `external/psxport` or generated
-code.
+code. Clang is the authoritative verification choice; top-level CMake does not reject another
+compatible compiler selected for a player build.
 
 ## Provision a measured title
 

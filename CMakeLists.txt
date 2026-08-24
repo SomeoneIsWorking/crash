@@ -1,11 +1,6 @@
 cmake_minimum_required(VERSION 3.24)
 project(crash_port LANGUAGES C CXX)
 
-if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-  message(FATAL_ERROR "Crash C++ must be compiled with clang++; got ${CMAKE_CXX_COMPILER_ID} "
-                      "(${CMAKE_CXX_COMPILER}). Reconfigure with CC=clang CXX=clang++.")
-endif()
-
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
 enable_testing()

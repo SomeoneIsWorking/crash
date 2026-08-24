@@ -18,6 +18,16 @@ documented Clang tree at `scratch/build-clang/` before running its complete CTes
 pin check. A raw `ctest --test-dir scratch/build-clang` is only a post-build focused rerun: CTest does
 not reconfigure CMake and can otherwise execute a stale test graph.
 
+Clang is the maintainer verification toolchain, not a player-facing compiler identity restriction.
+Top-level CMake accepts the compatible compiler selected by the caller; `tools/verify.py` explicitly
+selects Clang for authoritative evidence. Do not add compiler identity allowlists or denylists.
+
+There is no player launcher yet because there is no player executable: `crash_scaffold` depends on
+psxport's agnosticism smoke, and the remaining executables are tests or boundary diagnostics. A future
+zero-argument `run.sh` must launch the Crash trilogy's current player product through a locked Python
+bootstrap. It must never substitute `crash_scaffold`, CTest, or an oracle/boundary runner for that
+product.
+
 **`external/psxport` is NOT a git submodule** (2026-08-16): it is a symlink to the workspace's shared
 framework clone when one exists, or a private clone at this repo's `psxport.pin` on a fresh machine.
 `tools/psxport_sync.py --auto` establishes whichever applies; `psxport_sync.py --bump` records the
