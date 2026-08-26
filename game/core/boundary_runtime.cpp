@@ -9,6 +9,10 @@ namespace crash {
 BoundaryRuntime::BoundaryRuntime(std::string_view logDomain, std::string_view blockedReason)
     : logDomain_(logDomain), blockedReason_(blockedReason) {}
 
+RenderCapabilities BoundaryRuntime::renderCapabilities() const {
+  return RenderCapabilities::interpolatedNative();
+}
+
 void *BoundaryRuntime::createContext(Core &) {
   return nullptr;
 }

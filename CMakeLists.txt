@@ -39,12 +39,71 @@ target_include_directories(crash1_runtime PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/ti
 target_compile_features(crash1_runtime PUBLIC cxx_std_20)
 target_link_libraries(crash1_runtime PUBLIC crash_boundary_runtime)
 
+file(READ "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/executable.json" crash1_manifest_json)
+string(JSON crash1_first_syscall_entry GET "${crash1_manifest_json}" runtime first_syscall_entry)
+string(JSON crash1_first_bios_dispatch_address
+       GET "${crash1_manifest_json}" runtime first_bios_dispatch_address)
+string(JSON crash1_first_bios_dispatch_function
+       GET "${crash1_manifest_json}" runtime first_bios_dispatch_function)
+string(JSON crash1_first_bios_dispatch_return_address
+       GET "${crash1_manifest_json}" runtime first_bios_dispatch_return_address)
+string(JSON crash1_post_get_c0_dispatch_address
+       GET "${crash1_manifest_json}" runtime post_get_c0_dispatch_address)
+string(JSON crash1_post_get_c0_dispatch_function
+       GET "${crash1_manifest_json}" runtime post_get_c0_dispatch_function)
+string(JSON crash1_post_get_c0_dispatch_return_address
+       GET "${crash1_manifest_json}" runtime post_get_c0_dispatch_return_address)
+file(READ "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/bios_contract.json" crash1_bios_contract_json)
+string(JSON crash1_get_c0_table_function
+       GET "${crash1_bios_contract_json}" get_c0_table function)
+string(JSON crash1_c0_exception_handler_slot
+       GET "${crash1_bios_contract_json}" exception_handler table_slot)
+string(JSON crash1_c0_exception_handler_address
+       GET "${crash1_bios_contract_json}" exception_handler retail_address)
+
+add_library(
+  crash1_boot_frontier STATIC
+  "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/core/crash1_boot_frontier.cpp"
+)
+target_compile_definitions(
+  crash1_boot_frontier
+  PRIVATE
+    "CRASH1_FIRST_SYSCALL_ENTRY=${crash1_first_syscall_entry}u"
+    "CRASH1_FIRST_BIOS_DISPATCH_ADDRESS=${crash1_first_bios_dispatch_address}u"
+    "CRASH1_FIRST_BIOS_DISPATCH_FUNCTION=${crash1_first_bios_dispatch_function}u"
+    "CRASH1_FIRST_BIOS_DISPATCH_RETURN_ADDRESS=${crash1_first_bios_dispatch_return_address}u"
+    "CRASH1_POST_GET_C0_DISPATCH_ADDRESS=${crash1_post_get_c0_dispatch_address}u"
+    "CRASH1_POST_GET_C0_DISPATCH_FUNCTION=${crash1_post_get_c0_dispatch_function}u"
+    "CRASH1_POST_GET_C0_DISPATCH_RETURN_ADDRESS=${crash1_post_get_c0_dispatch_return_address}u"
+)
+target_compile_features(crash1_boot_frontier PUBLIC cxx_std_20)
+target_link_libraries(crash1_boot_frontier PUBLIC crash1_runtime)
+
 if(BUILD_TESTING)
   add_executable(crash1_runtime_test "${CMAKE_CURRENT_SOURCE_DIR}/tests/crash1_runtime.cpp")
   target_include_directories(crash1_runtime_test PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/tests")
   target_compile_features(crash1_runtime_test PRIVATE cxx_std_20)
   target_link_libraries(crash1_runtime_test PRIVATE crash1_runtime)
   add_test(NAME crash1_runtime_inheritance COMMAND crash1_runtime_test)
+
+  add_executable(crash1_boot_frontier_test
+                 "${CMAKE_CURRENT_SOURCE_DIR}/tests/crash1_boot_frontier.cpp")
+  target_compile_features(crash1_boot_frontier_test PRIVATE cxx_std_20)
+  target_link_libraries(crash1_boot_frontier_test PRIVATE crash1_boot_frontier)
+  add_test(NAME crash1_boot_frontier COMMAND crash1_boot_frontier_test)
+
+  add_executable(crash1_c0_exception_contract_probe
+                 "${CMAKE_CURRENT_SOURCE_DIR}/tests/crash1_c0_exception_contract.cpp")
+  target_compile_definitions(
+    crash1_c0_exception_contract_probe
+    PRIVATE
+      "CRASH1_GET_C0_TABLE_FUNCTION=${crash1_get_c0_table_function}u"
+      "CRASH1_C0_EXCEPTION_HANDLER_SLOT=${crash1_c0_exception_handler_slot}u"
+      "CRASH1_C0_EXCEPTION_HANDLER_ADDRESS=${crash1_c0_exception_handler_address}u"
+  )
+  target_compile_features(crash1_c0_exception_contract_probe PRIVATE cxx_std_20)
+  target_link_libraries(crash1_c0_exception_contract_probe PRIVATE crash1_runtime)
+  add_test(NAME crash1_c0_exception_contract COMMAND crash1_c0_exception_contract_probe)
 
   add_executable(crash1_runtime_facts "${CMAKE_CURRENT_SOURCE_DIR}/tests/crash1_runtime_facts.cpp")
   target_include_directories(crash1_runtime_facts PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/tests")
@@ -218,8 +277,6 @@ if(BUILD_TESTING)
 endif()
 
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/generated/crash1/rec_sources.cmake")
-  file(READ "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/executable.json" crash1_manifest_json)
-  string(JSON crash1_first_syscall_entry GET "${crash1_manifest_json}" runtime first_syscall_entry)
   set(crash1_generated "${CMAKE_CURRENT_SOURCE_DIR}/generated/crash1")
   include("${crash1_generated}/rec_sources.cmake")
   set(crash1_generated_sources)
@@ -243,14 +300,11 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/generated/crash1/rec_sources.cmake")
       "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/core"
       "${crash1_generated}"
   )
-  target_compile_definitions(
-    crash1_port PRIVATE "CRASH1_FIRST_SYSCALL_ENTRY=${crash1_first_syscall_entry}u"
-  )
   target_compile_features(crash1_port PRIVATE cxx_std_20)
   target_compile_options(
     crash1_port PRIVATE -O1 -foptimize-sibling-calls -fno-strict-aliasing -fwrapv
   )
-  target_link_libraries(crash1_port PRIVATE crash1_runtime)
+  target_link_libraries(crash1_port PRIVATE crash1_boot_frontier)
   set_target_properties(
     crash1_port
     PROPERTIES

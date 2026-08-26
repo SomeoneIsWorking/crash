@@ -10,8 +10,8 @@ The repository is one engine lineage with title-specific integration under `titl
 - `titles/crash3/`
 
 The shipping contract covers all three games. Crash 2 and Crash 3 are not optional follow-ups, but
-their presence in this repository must not be read as implementation status; the codemap records the
-measured frontier for each serial-identified title.
+their presence in this repository must not be read as implementation status; `docs/project-state.md`
+records factual capability coverage and `docs/re-frontier.md` the measured binary frontier.
 
 Current status: a current-frontier Crash 1 product plus verified North American disc/executable identities for Crash 1
 (`SCUS-94900`), Crash 2 (`SCUS-94154`), and Crash 3 (`SCUS-94244`). Crash 2 and Crash 3 each have a
@@ -19,7 +19,7 @@ symbolic crt0 decode agreeing 6/6 with the independent CPU oracle at the first r
 derived runtime's typed executable facts agree 15/15 with its retail bytes. Crash 3's `SYSTEM.CNF`
 selection is explicit because its disc also contains the unrelated bootable-looking
 `DRAGON/SPYRO.EXE`. The clean Clang/CTest/real-data gates and all title regressions use recorded
-psxport `8611d756`. Crash 1 has 653 emitted static candidates. Its generated path agrees with the independent oracle on all 34
+psxport `8611d756`. Against current psxport `54af32cb`, Crash 1 has 666 emitted static candidates. Its generated path agrees with the independent oracle on all 34
 CPU-state fields at the first eight executed calls. Nine addresses in the candidate set have
 execution provenance: eight generated bodies execute before the eighth observed target. The eighth
 target is the real `addiu $a0, 1; syscall 0` wrapper for `EnterCriticalSection`; the controlled port
@@ -28,12 +28,17 @@ disables delivery. The independent and shipping CPUs also agree on syscall Cause
 and the following 34/34 BIOS B dispatch state; Crash 1 reaches B(56h), with `t1=0x56` and
 `ra=0x800431B8`. Crash 3 independently emits 986 candidates from `SCUS_942.44`; its first eight
 calls also agree 34/34, including tracked game main `0x80048AA0` and its own syscall wrapper
-`0x80048C38`, then agrees 34/34 at its first post-return B0 dispatch. The real `crash1_port` product owns that measured
-execution path: it loads `SCUS_949.00`, starts at retail crt0, reaches the generated syscall wrapper,
-performs the verified shipping HLE transition, and exits. The focused harness has advanced beyond it,
-but the product has not yet been wired to continue to the proven B(56h) boundary. There is still no
-executed BIOS B call, rendered frame, native producer, widescreen path, interpolation
-path, or Crash 2/3 product.
+`0x80048C38`, then agrees 34/34 at its first post-return B0 dispatch. Retail Crash 1 disassembly proves
+that B(56h) is followed by a C0 slot `+0x18` read, a fourteen-word copy, and A(44h) with
+`ra=0x800431E8`. The real `crash1_port` product is now composed to permit B(56h) through shipping HLE
+and stop at that A(44h) pre-HLE boundary. A focused Clang build and 14/14 hermetic composition checks
+prove the shipping wiring; a serialized product execution is still required before claiming runtime
+reach. PSX-SPX grounds the consumed C0 slot 6 as C(06h) ExceptionHandler at `0x00000C80`; clean
+psxport `99a42aa3` and the Crash consumer CTest satisfy that contract. The real ordered oracle applies
+the syscall and B(56h) returns, seeds the slot, and completes the fourteen-word copy, but stops at local
+wrapper `0x8004323C` before its non-link A(44h) tail dispatch. Issue #8 owns exact post-model target
+capture. There is still no independently compared A(44h) state, rendered frame, native producer,
+widescreen path, interpolation path, or Crash 2/3 product.
 
 ## Run the current product
 
@@ -61,10 +66,11 @@ Missing native dependencies are refused with the exact Homebrew, APT, DNF, or su
 install command. Caller-selected `CC`/`CXX` values pass through; the launcher prefers Clang when it is
 available but does not whitelist or blacklist compiler identities.
 
-The current product executes the retail program only through the measured `EnterCriticalSection`
-transition and then exits successfully. The shipping/oracle boundary harness continues to B(56h), but
-that proven continuation is not yet wired into the product. It is not playable and does not render
-a window or frame. Crash 2 and Crash 3 remain measured integrations without player products.
+The current product is composed to execute the retail program through the measured `EnterCriticalSection`
+transition, allow B(56h) through shipping HLE, and stop before the following A(44h) HLE mutation. The
+shipping/oracle boundary harness proves only the pre-B(56h) state 34/34; serialized product execution and
+post-B(56h) equality remain outstanding. It is not playable and does not render a window or frame. Crash
+2 and Crash 3 remain measured integrations without player products.
 
 ## Verify the project
 
@@ -153,8 +159,9 @@ measured generated wrapper, checks `EnterCriticalSection` changes IRQ state `1 -
 validates Cause `0x20` and the title-specific EPC against the independent CPU, pops the Status mode
 stack once, resumes at EPC+4, and compares the next dynamic dispatch 34/34. Crash 1 reaches PC `0xB0`
 with `t1=0x56` and `ra=0x800431B8`, identifying BIOS B(56h). A different syscall target and wrong
-selector both refuse before resume. Executing the B0 HLE, hardware, and later boot remain unverified.
-The emitter's 115 static seeds and 653 emitted candidates are discovery
+selector both refuse before resume. The manifest-backed B(56h) PC, function, and return address agree
+with the independent CPU, and an altered function refuses. Executing the B0 HLE, hardware, and later
+boot remain unverified. The emitter's 115 static seeds and 666 emitted candidates are discovery
 denominators, not claims that every candidate is executable code.
 
 The Crash 3 target uses only `SCUS-94244` artifacts and `titles/crash3/recomp_seeds.json`. Its eight

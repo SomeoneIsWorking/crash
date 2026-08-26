@@ -11,6 +11,7 @@ namespace crash {
 // refusal invariant and the absence of unmeasured runtime products.
 class BoundaryRuntime : public GameRuntime {
 public:
+  RenderCapabilities renderCapabilities() const final;
   void *createContext(Core &core) final;
   void destroyContext(void *context) final;
   void registerOverrides(Game &game) final;

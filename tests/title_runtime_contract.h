@@ -37,8 +37,16 @@ template <typename Runtime> int verifyTitleRuntimeContract(const char *name, boo
     std::fprintf(stderr, "%s claimed guest VRAM was a picture without a measured frame producer\n", name);
     return 1;
   }
+  const RenderCapabilities capabilities = runtime.renderCapabilities();
+  if (capabilities.defaultPath != RenderPath::Native || !capabilities.nativeRenderPath ||
+      !capabilities.temporalInterpolation || capabilities.playerPathCount() != 2) {
+    std::fprintf(stderr, "%s did not declare the Crash lineage native/interpolation product target\n", name);
+    return 1;
+  }
 
   runtime.registerOverrides(*game);
-  std::printf("%s: direct derived install; no legacy views, picture ownership, or unmeasured runtime products\n", name);
+  std::printf("%s: direct derived install; native/interpolation target; no legacy views, picture ownership, or "
+              "unmeasured runtime products\n",
+              name);
   return 0;
 }

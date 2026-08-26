@@ -1,5 +1,6 @@
 #include "crash1_port.h"
 
+#include "crash1_boot_frontier.h"
 #include "crash1_runtime.h"
 #include "enter_critical_frontier.h"
 #include "rec_decls.h"
@@ -16,23 +17,29 @@ namespace {
 constexpr std::string_view kCodeword = "SCUS-94900";
 constexpr const char *kDefaultExecutable = "scratch/bin/crash1/SCUS_949.00";
 
-#ifndef CRASH1_FIRST_SYSCALL_ENTRY
-#error "CRASH1_FIRST_SYSCALL_ENTRY must be generated from titles/crash1/executable.json"
-#endif
-
-void stopAtFirstMeasuredSyscall(Core *core) {
+void resumeFromFirstMeasuredSyscall(Core *core) {
   const crash::EnterCriticalResult result = crash::runEnterCriticalFrontier(*core, kCodeword, gen_func_8003E1F8);
   if (!result.accepted) {
     lucent::error("crash1-boot", "{}", result.detail);
     std::exit(2);
   }
   lucent::info("crash1-boot",
-               "{} at 0x{:08X}; IRQ {} -> {}. Later boot remains blocked on independent "
-               "Cause/EPC validation and syscall resume.",
+               "{} at 0x{:08X}; IRQ {} -> {}. Resuming toward the measured B(56h) boundary.",
                result.detail,
                result.observation.boundary,
                result.observation.irqBefore,
                result.observation.irqAfter);
+}
+
+void stopAfterFirstMeasuredBiosDispatch(Core *core) {
+  const BiosDispatchResult result = checkPostGetC0Dispatch(core->pc, core->r[9], core->r[31]);
+  if (!result.accepted) {
+    lucent::error("crash1-boot", "{}", result.detail);
+    std::exit(2);
+  }
+  lucent::info("crash1-boot",
+               "{}. B(56h) executed, but serialized A(44h) register/RAM equality and later boot remain unverified.",
+               result.detail);
   std::exit(EXIT_SUCCESS);
 }
 
@@ -49,14 +56,8 @@ int runPort(int argc, char **argv) {
     lucent::error("crash1-boot", "Crash1Runtime supplies no measured guest program image");
     return 2;
   }
-  return crash::runResidentProgram({
-      .runtime = runtime,
-      .codeword = kCodeword,
-      .executable = kDefaultExecutable,
-      .entry = image->crt0Entry,
-      .boundary = CRASH1_FIRST_SYSCALL_ENTRY,
-      .boundaryHandler = stopAtFirstMeasuredSyscall,
-  });
+  return crash::runResidentProgram(makeBootFrontierProgram(
+      runtime, kDefaultExecutable, resumeFromFirstMeasuredSyscall, stopAfterFirstMeasuredBiosDispatch));
 }
 
 } // namespace crash1

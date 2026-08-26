@@ -92,6 +92,8 @@ REGISTER_NAMES = (
     "lo",
     "hi",
 )
+
+
 class Refused(RuntimeError):
     """The requested evidence cannot support a comparison."""
 
@@ -198,7 +200,9 @@ def run(
         raise Refused(f"could not execute {command[0]}: {exc}") from exc
 
 
-def require_executable(path: pathlib.Path, spec: TitleSpec) -> verify_executable.Measurement:
+def require_executable(
+    path: pathlib.Path, spec: TitleSpec
+) -> verify_executable.Measurement:
     manifest = verify_executable.load_manifest(spec.manifest)
     failures = verify_executable.check(manifest, path, False)
     if failures:
@@ -356,13 +360,19 @@ def parse_call_boundary(text: str, ordinal: int) -> CallBoundary:
 
 
 def parse_text_exit(text: str) -> tuple[int, int]:
-    matches = [match for line in text.splitlines() if (match := TEXT_EXIT_RE.match(line))]
+    matches = [
+        match for line in text.splitlines() if (match := TEXT_EXIT_RE.match(line))
+    ]
     if len(matches) != 1:
-        raise Refused(f"oracle trace has {len(matches)} mapped-text exit boundaries, expected 1")
+        raise Refused(
+            f"oracle trace has {len(matches)} mapped-text exit boundaries, expected 1"
+        )
     return int(matches[0].group("step")), int(matches[0].group("pc"), 16)
 
 
-def parse_modeled_syscall_return(text: str) -> tuple[SyscallException, ModeledSyscallReturn]:
+def parse_modeled_syscall_return(
+    text: str,
+) -> tuple[SyscallException, ModeledSyscallReturn]:
     exceptions = list(SYSCALL_EXCEPTION_RE.finditer(text))
     returns = list(MODELED_SYSCALL_RETURN_RE.finditer(text))
     if len(exceptions) != 1 or len(returns) != 1:
@@ -387,7 +397,9 @@ def parse_modeled_syscall_return(text: str) -> tuple[SyscallException, ModeledSy
         and match.group("tag") == "POST-RETURN-CALL-BOUNDARY"
     ]
     if len(post_headers) != 1 or post_headers[0].group("step") is None:
-        raise Refused("oracle modeled syscall trace has no unique post-return call step")
+        raise Refused(
+            "oracle modeled syscall trace has no unique post-return call step"
+        )
     modeled = ModeledSyscallReturn(
         int(return_match.group("selector"), 16),
         int(return_match.group("resume"), 16),
@@ -451,7 +463,9 @@ def parse_enter_critical(text: str, spec: TitleSpec) -> EnterCriticalBoundary:
         or cause is None
         or epc is None
     ):
-        raise Refused("port runner omitted the complete EnterCriticalSection boundary block")
+        raise Refused(
+            "port runner omitted the complete EnterCriticalSection boundary block"
+        )
     return EnterCriticalBoundary(
         int(header.group("boundary"), 16),
         int(header.group("selector"), 16),
@@ -659,8 +673,38 @@ def require_tracked_call(
             f"disagrees with oracle target 0x{observed:08X}"
         )
     print(
-        f"PASS {codeword}: {label} call {ordinal} reached tracked entry "
-        f"0x{entry:08X}"
+        f"PASS {codeword}: {label} call {ordinal} reached tracked entry 0x{entry:08X}"
+    )
+
+
+def require_tracked_bios_dispatch(
+    runtime: dict[str, object], modeled: ModeledSyscallReturn, spec: TitleSpec
+) -> None:
+    keys = (
+        "first_bios_dispatch_address",
+        "first_bios_dispatch_function",
+        "first_bios_dispatch_return_address",
+    )
+    try:
+        tracked = tuple(int(str(runtime[key]), 0) for key in keys)
+    except (KeyError, TypeError, ValueError) as exc:
+        raise Refused(
+            "tracked first BIOS dispatch must declare address, function, and return address"
+        ) from exc
+    observed = (
+        modeled.next_call.state.pc,
+        modeled.next_call.state.registers["t1"],
+        modeled.next_call.state.registers["ra"],
+    )
+    if tracked != observed:
+        raise Refused(
+            "tracked first BIOS dispatch disagrees with the independent CPU: "
+            f"tracked pc=0x{tracked[0]:08X} function=0x{tracked[1]:08X} ra=0x{tracked[2]:08X}; "
+            f"oracle pc=0x{observed[0]:08X} function=0x{observed[1]:08X} ra=0x{observed[2]:08X}"
+        )
+    print(
+        f"PASS {spec.codeword}: tracked first BIOS dispatch agrees at "
+        f"pc=0x{tracked[0]:08X}, function=0x{tracked[1]:02X}, ra=0x{tracked[2]:08X}"
     )
 
 
@@ -814,6 +858,28 @@ def check_enter_critical_boundary(
         f"pop resumes at 0x{modeled.resume:08X}"
     )
 
+    manifest = verify_executable.load_manifest(spec.manifest)
+    runtime = manifest.get("runtime", {})
+    if not isinstance(runtime, dict):
+        raise Refused("manifest runtime facts must be an object")
+    require_tracked_bios_dispatch(runtime, modeled, spec)
+    altered_runtime = dict(runtime)
+    altered_runtime["first_bios_dispatch_function"] = "0x00000057"
+    try:
+        require_tracked_bios_dispatch(altered_runtime, modeled, spec)
+    except Refused as exc:
+        if "disagrees with the independent CPU" not in str(exc):
+            raise Refused(
+                "altered tracked BIOS dispatch named the wrong cause"
+            ) from exc
+    else:
+        raise Refused(
+            "tracked first BIOS dispatch accepted an altered function selector"
+        )
+    print(
+        "PASS negative tracked BIOS dispatch: altered function selector disagreed by name"
+    )
+
     resumed_transition, resumed_port = capture_port_after_enter_critical(
         executable,
         runner,
@@ -832,7 +898,9 @@ def check_enter_critical_boundary(
         resumed_transition.cause_after != exception.cause
         or resumed_transition.epc_after != exception.epc
     ):
-        raise Refused("resumed shipping run did not retain the proven syscall Cause/EPC record")
+        raise Refused(
+            "resumed shipping run did not retain the proven syscall Cause/EPC record"
+        )
     print(
         "PASS post-syscall boundary: independent and shipping CPUs agree "
         f"{1 + len(REGISTER_NAMES)}/{1 + len(REGISTER_NAMES)} at call target "
@@ -884,7 +952,9 @@ def check_enter_critical_boundary(
     )
     if wrong_selector.returncode != 2 or "# MODELED-SYSCALL-RETURN" in wrong_text:
         raise Refused("real oracle accepted the wrong EnterCriticalSection selector")
-    print("PASS negative independent syscall return: wrong selector refused before resume")
+    print(
+        "PASS negative independent syscall return: wrong selector refused before resume"
+    )
 
 
 def selftest(
@@ -935,7 +1005,9 @@ def selftest(
             raise Refused("altered tracked frontier named the wrong cause") from exc
     else:
         raise Refused("tracked first-syscall comparison accepted an altered entry")
-    print("PASS negative tracked frontier: altered first-syscall entry disagreed by name")
+    print(
+        "PASS negative tracked frontier: altered first-syscall entry disagreed by name"
+    )
 
     check_enter_critical_boundary(
         executable,
@@ -1005,7 +1077,7 @@ def selftest(
     print(
         "PASS negative comparison: one altered port register produced one named mismatch"
     )
-    print("SELFTEST 16/16")
+    print("SELFTEST 18/18")
     return True
 
 
@@ -1040,4 +1112,6 @@ def main(spec: TitleSpec) -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit("resident_recomp.py is a shared implementation; use a serial-scoped title entry point")
+    raise SystemExit(
+        "resident_recomp.py is a shared implementation; use a serial-scoped title entry point"
+    )

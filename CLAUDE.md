@@ -7,7 +7,8 @@ belongs in `game/`; title-specific seams, executable facts, and assets belong in
 The repository product is complete only when all three title integrations run: Crash Bandicoot,
 Crash Bandicoot 2, and Crash Bandicoot 3. A runnable Crash 1 integration alone does not satisfy that
 contract. This is product scope, not evidence that Crash 2 or Crash 3 works today; current measured
-coverage is tracked in `docs/codemap.md` and `docs/re-frontier.md`.
+coverage is tracked in `docs/project-state.md`, ownership in `docs/codemap.md`, and ordered binary
+evidence in `docs/re-frontier.md`.
 
 Read `external/psxport/CLAUDE.md` and `external/psxport/docs/workspace/PROTOCOL.md` before work.
 Generated code is sacrosanct. Never commit discs, extracted executables, `generated/`, `.env`, or
@@ -28,10 +29,16 @@ title with a real product executable. Its slim shell shim enters the frozen uv e
 substrate, builds `crash1_port`, and launches that exact product. The launcher never runs
 `crash_scaffold`, CTest, an oracle, or a boundary diagnostic. `--prepare-only` exercises the same
 provision/build route without starting the product. The executable begins the real retail program at
-crt0 and reaches the independently verified `EnterCriticalSection` boundary; it still exits there even
-though the focused shipping/oracle harness now proves Cause/EPC, resumes at EPC+4, and agrees at the
-following B(56h) dispatch. Integrating that proven continuation is the first honest blocker. This is a real current-frontier
-product, not a claim that Crash 1 renders a frame or that Crash 2/3 have product targets.
+crt0. Its shipping composition now treats the independently verified `EnterCriticalSection` wrapper as
+a returning transition, permits B(56h) through shipping HLE, and stops at the retail-proven following
+A(44h) pre-HLE dispatch. A focused Clang build and hermetic product-composition test prove that wiring;
+a serialized product execution is still required before claiming runtime reach. The differential proof
+still ends at B(56h) before HLE. PSX-SPX grounds Crash's immediate C0 slot 6 consumer as C(06h)
+ExceptionHandler at `0x00000C80`, and clean psxport `99a42aa3` plus the Crash consumer CTest now satisfy
+that table contract. The real ordered oracle completes the fourteen-word patch but stops at Crash's
+local wrapper before its non-link A(44h) tail dispatch; issue #8 owns exact post-model target capture.
+This is a real current-frontier product, not a claim that Crash 1 renders a frame or that Crash 2/3
+have product targets.
 
 **`external/psxport` is NOT a git submodule** (2026-08-16): it is a symlink to the workspace's shared
 framework clone when one exists, or a private clone at this repo's `psxport.pin` on a fresh machine.
@@ -46,10 +53,14 @@ faithful, measurable base before enhancements.
 Crash 1, 2, and 3 are direct runtimes and each explicitly reports `guestVramIsPicture=false` because
 none has a measured frame or native picture producer. This is a refusal to claim picture ownership,
 not evidence that presentation works; change it per title only when real frame evidence proves the
-guest VRAM is that title's picture.
+guest VRAM is that title's picture. Their common `BoundaryRuntime` declares
+`RenderCapabilities::interpolatedNative()` because native rendering plus temporal interpolation is the
+required product target for the full Crash trilogy; that policy declaration does not invent the
+still-missing native producers or interpolation state.
 
 Crash 1's framework seam lives in `titles/crash1/core/crash1_runtime.*`, and its product composition
-lives in `titles/crash1/core/crash1_port.*`. It follows Dusklight's composition/owner boundary:
+lives in `titles/crash1/core/crash1_port.*`; `crash1_boot_frontier.*` owns its measured two-stage boot
+boundary. It follows Dusklight's composition/owner boundary:
 `game/core/resident_program.*` owns the reusable generated-program setup, while
 `game/core/enter_critical_frontier.*` owns the measured syscall transition used by both the product
 and differential harness. The runtime stays title-owned until cross-title RE proves shared ownership;
@@ -79,6 +90,11 @@ identity/header evidence lives in `titles/crash1/executable.json` and is compare
 `tools/verify_executable.py`. Current execution reaches the real `EnterCriticalSection` syscall wrapper:
 the `crash1_port` product and focused harness share the port-side generated wrapper/HLE transition.
 The focused gate now validates Cause/EPC, resumes both CPUs at EPC+4, and agrees 34/34 at B(56h), with
-`t1=0x56` and `ra=0x800431B8`. It does not execute the B0 HLE. The product is runnable only to its
-explicitly reported syscall boundary and has not yet integrated the proven continuation; it is not a
-playable or rendered game.
+`t1=0x56` and `ra=0x800431B8`. It does not execute the B0 HLE. Retail disassembly proves the subsequent
+C0 `+0x18` read, fourteen-word copy, and A(44h) tail dispatch with `ra=0x800431E8`; the product is now
+composed to stop at that A(44h) boundary after B(56h). The focused product builds and its 14/14
+composition test passes, but a serialized product run has not been made and post-B(56h) state is not
+independently compared at A(44h). PSX-SPX identifies the slot value as `0x00000C80`; psxport `99a42aa3`
+now publishes it without a Crash-local override. The ordered oracle proves the copy completes, then
+captures local wrapper `0x8004323C` before its non-link tail dispatch, so A(44h) equality remains
+missing. It is not a playable or rendered game.

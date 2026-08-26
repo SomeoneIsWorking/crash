@@ -18,7 +18,13 @@
     "game_main_entry": "0x8003E0C0",
     "game_main_call_ordinal": 3,
     "first_syscall_entry": "0x8003E1F8",
-    "first_syscall_call_ordinal": 8
+    "first_syscall_call_ordinal": 8,
+    "first_bios_dispatch_address": "0x000000B0",
+    "first_bios_dispatch_function": "0x00000056",
+    "first_bios_dispatch_return_address": "0x800431B8",
+    "post_get_c0_dispatch_address": "0x000000A0",
+    "post_get_c0_dispatch_function": "0x00000044",
+    "post_get_c0_dispatch_return_address": "0x800431E8"
   },
   "region_markers": [
     "Sony Computer Entertainment Inc. for North America area",

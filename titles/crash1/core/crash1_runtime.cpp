@@ -20,9 +20,8 @@ const GuestProgramImage Crash1Runtime::programImage_{
 
 Crash1Runtime::Crash1Runtime()
     : BoundaryRuntime("crash1-runtime",
-                      "native boot is unavailable: the independent oracle currently stops at Crash 1's "
-                      "EnterCriticalSection syscall exception; a validated post-syscall resume model is "
-                      "required before later boot") {}
+                      "native boot is unavailable: Crash 1 is verified through its first B(56h) pre-HLE "
+                      "dispatch; its C0-table effect and the following A(44h) state remain unverified") {}
 
 const GuestProgramImage *Crash1Runtime::guestProgramImage() const {
   return &programImage_;
