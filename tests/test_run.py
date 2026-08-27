@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import io
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -68,6 +69,11 @@ class LauncherTests(unittest.TestCase):
         (self.root / "external/psxport/cmake").mkdir(parents=True)
         (self.root / "external/psxport/cmake/psxport.cmake").write_text(
             "# fixture\n", encoding="utf-8"
+        )
+        fixture_policy = self.root / "external/psxport/tools/port/launch_environment.py"
+        fixture_policy.parent.mkdir(parents=True)
+        shutil.copyfile(
+            ROOT / "external/psxport/tools/port/launch_environment.py", fixture_policy
         )
 
     def tearDown(self) -> None:
@@ -134,6 +140,32 @@ class LauncherTests(unittest.TestCase):
         ]
         self.assertIn("discdump", build_commands[0])
         self.assertIn("crash1_port", build_commands[-1])
+
+    def test_default_player_exec_strips_agent_policy_from_ambient_environment(self) -> None:
+        host = FakeHost()
+        poisoned = {
+            "PATH": os.environ.get("PATH", ""),
+            "PSXPORT_VK_HEADLESS": "1",
+            "PSXPORT_NOAUDIO": "1",
+            "PSXPORT_NOPACE": "1",
+            "PSXPORT_NOWINDOW": "1",
+            "KEEP_ME": "preserved",
+        }
+
+        code, _, stderr = self.invoke(host, environment=poisoned)
+        launch_environment = host.commands[-1][1]["env"]
+
+        self.assertEqual(code, 0)
+        self.assertEqual(stderr, "")
+        self.assertEqual(launch_environment["PSXPORT_VK_WINDOW"], "1")
+        self.assertEqual(launch_environment["KEEP_ME"], "preserved")
+        for agent_key in (
+            "PSXPORT_VK_HEADLESS",
+            "PSXPORT_NOAUDIO",
+            "PSXPORT_NOPACE",
+            "PSXPORT_NOWINDOW",
+        ):
+            self.assertNotIn(agent_key, launch_environment)
 
     def test_prepare_only_never_launches(self) -> None:
         host = FakeHost()

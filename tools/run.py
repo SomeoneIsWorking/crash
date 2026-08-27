@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import os
 import platform
+import runpy
 import shutil
 import subprocess
 import sys
@@ -189,6 +190,22 @@ def configure_command(
     ]
 
 
+def player_launch_environment(
+    framework: Path, environment: Mapping[str, str]
+) -> dict[str, str]:
+    """Apply psxport's shared policy at the final product-exec boundary."""
+    policy_path = framework / "tools/port/launch_environment.py"
+    if not policy_path.is_file():
+        raise LauncherFailure(
+            f"psxport checkout is missing shipping launch policy: {policy_path}"
+        )
+    policy = runpy.run_path(str(policy_path))
+    apply_policy = policy.get("player_environment")
+    if not callable(apply_policy):
+        raise LauncherFailure(f"invalid psxport shipping launch policy: {policy_path}")
+    return apply_policy(environment)
+
+
 def parse_args(argv: Sequence[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("disc", nargs="?", help="path to the user's Crash Bandicoot USA CHD")
@@ -320,7 +337,13 @@ def run_launcher(
 
     print("[run] launching Crash Bandicoot 1 at its measured boot frontier…", file=stdout)
     try:
-        result = machine.run([str(root / PRODUCT)], cwd=root, env=environment, check=False)
+        launch_environment = player_launch_environment(framework, environment)
+        result = machine.run(
+            [str(root / PRODUCT)], cwd=root, env=launch_environment, check=False
+        )
+    except LauncherFailure as exc:
+        print(f"[run] error: {exc}", file=stderr)
+        return 1
     except OSError as exc:
         print(f"[run] error: launch failed: {exc}", file=stderr)
         return 1
