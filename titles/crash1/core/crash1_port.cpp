@@ -1,63 +1,65 @@
 #include "crash1_port.h"
 
-#include "crash1_boot_frontier.h"
+#include "core.h"
 #include "crash1_runtime.h"
-#include "enter_critical_frontier.h"
-#include "rec_decls.h"
+#include "game.h"
 #include "resident_program.h"
 
 #include <lucent/log.h>
 
+#include <cstdio>
 #include <cstdlib>
-#include <string_view>
+#include <cstring>
+#include <memory>
+
+extern "C" {
+void mdec_init();
+void spu_init();
+void watchdog_init();
+}
+
+void gte_init();
+void load_exe(const char *path, Core *core);
+void native_boot_run(Core *core);
 
 namespace crash1 {
 namespace {
 
-constexpr std::string_view kCodeword = "SCUS-94900";
 constexpr const char *kDefaultExecutable = "scratch/bin/crash1/SCUS_949.00";
-
-void resumeFromFirstMeasuredSyscall(Core *core) {
-  const crash::EnterCriticalResult result = crash::runEnterCriticalFrontier(*core, kCodeword, gen_func_8003E1F8);
-  if (!result.accepted) {
-    lucent::error("crash1-boot", "{}", result.detail);
-    std::exit(2);
-  }
-  lucent::info("crash1-boot",
-               "{} at 0x{:08X}; IRQ {} -> {}. Resuming toward the measured B(56h) boundary.",
-               result.detail,
-               result.observation.boundary,
-               result.observation.irqBefore,
-               result.observation.irqAfter);
-}
-
-void stopAfterFirstMeasuredBiosDispatch(Core *core) {
-  const BiosDispatchResult result = checkPostGetC0Dispatch(core->pc, core->r[9], core->r[31]);
-  if (!result.accepted) {
-    lucent::error("crash1-boot", "{}", result.detail);
-    std::exit(2);
-  }
-  lucent::info("crash1-boot",
-               "{}. B(56h) executed, but serialized A(44h) register/RAM equality and later boot remain unverified.",
-               result.detail);
-  std::exit(EXIT_SUCCESS);
-}
 
 } // namespace
 
 int runPort(int argc, char **argv) {
+  if (argc == 2 && (std::strcmp(argv[1], "--help") == 0 || std::strcmp(argv[1], "-h") == 0)) {
+    std::printf("Usage: %s [-h|--help]\n", argv[0]);
+    std::puts("Run Crash Bandicoot through the host-owned native frame loop.");
+    return EXIT_SUCCESS;
+  }
   if (argc != 1) {
     lucent::error("crash1-boot", "usage: {}", argv[0]);
     return 2;
   }
   static Crash1Runtime runtime;
-  const GuestProgramImage *image = runtime.guestProgramImage();
-  if (image == nullptr) {
-    lucent::error("crash1-boot", "Crash1Runtime supplies no measured guest program image");
-    return 2;
-  }
-  return crash::runResidentProgram(makeBootFrontierProgram(
-      runtime, kDefaultExecutable, resumeFromFirstMeasuredSyscall, stopAfterFirstMeasuredBiosDispatch));
+  crash::installResidentRuntime(runtime);
+
+  auto game = std::make_unique<Game>();
+  game->disc.env_key = "PSXPORT_CRASH1_DISC";
+  Core *const core = &game->core;
+
+  watchdog_init();
+  load_exe(kDefaultExecutable, core);
+  gte_init();
+  mdec_init();
+  spu_init();
+  game->spu_audio.init();
+  game->gpu.gpu_native_init();
+  game->pad.overridesInit();
+
+  runtime.registerOverrides(*game);
+  lucent::info("crash1-boot", "entering the host-owned Crash 1 boot and frame loop");
+  native_boot_run(core);
+  lucent::info("crash1-boot", "Crash 1 native loop returned");
+  return EXIT_SUCCESS;
 }
 
 } // namespace crash1

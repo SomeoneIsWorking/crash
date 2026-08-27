@@ -29,15 +29,98 @@ set(PSXPORT_BUILD_SMOKE ON CACHE BOOL "Build the framework agnosticism smoke" FO
 add_subdirectory("${PSXPORT_DIR}" psxport_build)
 add_custom_target(crash_scaffold DEPENDS psxport_smoke)
 
+function(configure_title_vsync target title)
+  file(READ "${CMAKE_CURRENT_SOURCE_DIR}/titles/${title}/executable.json" title_vsync_manifest)
+  string(JSON title_vsync_entry GET "${title_vsync_manifest}" runtime vsync entry)
+  string(JSON title_vsync_end GET "${title_vsync_manifest}" runtime vsync end)
+  target_compile_definitions(
+    ${target}
+    PRIVATE
+      "CRASH_TITLE_VSYNC_ENTRY=${title_vsync_entry}u"
+      "CRASH_TITLE_VSYNC_END=${title_vsync_end}u"
+  )
+endfunction()
+
+function(configure_crash1_native_contract target)
+  file(READ "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/executable.json" crash1_contract_manifest)
+  foreach(fact
+          "CRASH1_STATIC_CONSTRUCTORS_ENTRY;runtime;native_boot;static_constructors;entry"
+          "CRASH1_USE_CD_ADDRESS;runtime;native_boot;use_cd_address"
+          "CRASH1_INIT_ENTRY;runtime;native_boot;init;entry"
+          "CRASH1_CD_INITIALIZE_ENTRY;runtime;native_boot;cd_initialize;entry"
+          "CRASH1_CD_INITIALIZE_END;runtime;native_boot;cd_initialize;end"
+          "CRASH1_DISC_INDEX_ENTRY;runtime;native_boot;disc_index;entry"
+          "CRASH1_DISC_INDEX_END;runtime;native_boot;disc_index;end"
+          "CRASH1_CD_CONTROL_ENTRY;runtime;native_boot;cd_control;entry"
+          "CRASH1_CD_CONTROL_END;runtime;native_boot;cd_control;end"
+          "CRASH1_CD_CONTROL_F_ENTRY;runtime;native_boot;cd_control_f;entry"
+          "CRASH1_CD_CONTROL_F_END;runtime;native_boot;cd_control_f;end"
+          "CRASH1_CD_SYNC_WRAPPER_ENTRY;runtime;native_boot;cd_sync_wrapper;entry"
+          "CRASH1_CD_SYNC_WRAPPER_END;runtime;native_boot;cd_sync_wrapper;end"
+          "CRASH1_CD_SYNC_ENTRY;runtime;native_boot;cd_sync;entry"
+          "CRASH1_CD_SYNC_END;runtime;native_boot;cd_sync;end"
+          "CRASH1_CD_READ_ENTRY;runtime;native_boot;cd_read;entry"
+          "CRASH1_CD_READ_END;runtime;native_boot;cd_read;end"
+          "CRASH1_CD_READ_SYNC_ENTRY;runtime;native_boot;cd_read_sync;entry"
+          "CRASH1_CD_READ_SYNC_END;runtime;native_boot;cd_read_sync;end"
+          "CRASH1_CALLBACK_INITIALIZE_ENTRY;runtime;native_boot;callback_initialize;entry"
+          "CRASH1_CALLBACK_INITIALIZE_END;runtime;native_boot;callback_initialize;end"
+          "CRASH1_GPU_WATCHDOG_START_ENTRY;runtime;native_boot;gpu_watchdog_start;entry"
+          "CRASH1_GPU_WATCHDOG_START_END;runtime;native_boot;gpu_watchdog_start;end"
+          "CRASH1_GPU_WATCHDOG_CHECK_ENTRY;runtime;native_boot;gpu_watchdog_check;entry"
+          "CRASH1_GPU_WATCHDOG_CHECK_END;runtime;native_boot;gpu_watchdog_check;end"
+          "CRASH1_CORE_LOOP_ENTRY;runtime;native_frame;core_loop;entry"
+          "CRASH1_CORE_LOOP_END;runtime;native_frame;core_loop;end"
+          "CRASH1_FRAME_ITERATION_ENTRY;runtime;native_frame;iteration;entry"
+          "CRASH1_FRAME_ITERATION_END;runtime;native_frame;iteration;end"
+          "CRASH1_FRAME_TRANSITION_ENTRY;runtime;native_frame;transition;entry"
+          "CRASH1_FRAME_TRANSITION_END;runtime;native_frame;transition;end"
+          "CRASH1_GPU_UPDATE_ENTRY;runtime;native_frame;gpu_update;entry"
+          "CRASH1_GPU_UPDATE_END;runtime;native_frame;gpu_update;end"
+          "CRASH1_FIRST_VSYNC;runtime;native_frame;first_vsync"
+          "CRASH1_AFTER_FIRST_VSYNC;runtime;native_frame;after_first_vsync"
+          "CRASH1_SECOND_VSYNC;runtime;native_frame;second_vsync"
+          "CRASH1_AFTER_VSYNC;runtime;native_frame;after_vsync"
+          "CRASH1_DONE_ADDRESS;runtime;native_frame;done;address"
+          "CRASH1_TICKS_ELAPSED_ADDRESS;runtime;native_frame;ticks_elapsed_address"
+          "CRASH1_DISPLAY_CONTEXT_ADDRESS;runtime;native_frame;display_context_address"
+          "CRASH1_ROOT_COUNTER_INCREMENT;runtime;native_frame;root_counter_increment"
+          "CRASH1_SET_ROOT_COUNTER;runtime;native_frame;set_root_counter"
+          "CRASH1_START_ROOT_COUNTER;runtime;native_frame;start_root_counter"
+          "CRASH1_STOP_ROOT_COUNTER;runtime;native_frame;stop_root_counter")
+    list(POP_FRONT fact definition)
+    string(JSON value GET "${crash1_contract_manifest}" ${fact})
+    target_compile_definitions(${target} PRIVATE "${definition}=${value}u")
+  endforeach()
+endfunction()
+
 add_library(crash_boundary_runtime STATIC "${CMAKE_CURRENT_SOURCE_DIR}/game/core/boundary_runtime.cpp")
 target_include_directories(crash_boundary_runtime PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/game/core")
 target_compile_features(crash_boundary_runtime PUBLIC cxx_std_20)
 target_link_libraries(crash_boundary_runtime PUBLIC psxport)
 
-add_library(crash1_runtime STATIC "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/core/crash1_runtime.cpp")
+add_library(
+  crash_native_frame_contract STATIC
+  "${CMAKE_CURRENT_SOURCE_DIR}/game/core/native_frame_loop_contract.cpp"
+)
+target_include_directories(crash_native_frame_contract PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/game/core")
+target_compile_features(crash_native_frame_contract PUBLIC cxx_std_20)
+target_link_libraries(crash_native_frame_contract PUBLIC psxport)
+
+add_library(
+  crash1_runtime STATIC
+  "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/core/crash1_runtime.cpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/core/crash1_callback_boot.cpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/core/crash1_cd_boot.cpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/core/crash1_disc_index_io.cpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/core/crash1_frame_driver.cpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/core/crash1_gpu_watchdog.cpp"
+)
 target_include_directories(crash1_runtime PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/core")
 target_compile_features(crash1_runtime PUBLIC cxx_std_20)
-target_link_libraries(crash1_runtime PUBLIC crash_boundary_runtime)
+target_link_libraries(crash1_runtime PUBLIC crash_boundary_runtime crash_native_frame_contract)
+configure_title_vsync(crash1_runtime crash1)
+configure_crash1_native_contract(crash1_runtime)
 
 file(READ "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/executable.json" crash1_manifest_json)
 string(JSON crash1_first_syscall_entry GET "${crash1_manifest_json}" runtime first_syscall_entry)
@@ -86,6 +169,30 @@ if(BUILD_TESTING)
   target_link_libraries(crash1_runtime_test PRIVATE crash1_runtime)
   add_test(NAME crash1_runtime_inheritance COMMAND crash1_runtime_test)
 
+  add_executable(crash1_cd_boot_test "${CMAKE_CURRENT_SOURCE_DIR}/tests/crash1_cd_boot.cpp")
+  target_compile_features(crash1_cd_boot_test PRIVATE cxx_std_20)
+  target_link_libraries(crash1_cd_boot_test PRIVATE crash1_runtime)
+  add_test(NAME crash1_cd_boot COMMAND crash1_cd_boot_test)
+
+  add_executable(crash1_disc_index_io_test
+                 "${CMAKE_CURRENT_SOURCE_DIR}/tests/crash1_disc_index_io.cpp")
+  target_include_directories(crash1_disc_index_io_test PRIVATE "${PSXPORT_DIR}/tests")
+  target_compile_features(crash1_disc_index_io_test PRIVATE cxx_std_20)
+  target_link_libraries(crash1_disc_index_io_test PRIVATE crash1_runtime)
+  add_test(NAME crash1_disc_index_io COMMAND crash1_disc_index_io_test)
+
+  add_executable(crash1_callback_boot_test
+                 "${CMAKE_CURRENT_SOURCE_DIR}/tests/crash1_callback_boot.cpp")
+  target_compile_features(crash1_callback_boot_test PRIVATE cxx_std_20)
+  target_link_libraries(crash1_callback_boot_test PRIVATE crash1_runtime)
+  add_test(NAME crash1_callback_boot COMMAND crash1_callback_boot_test)
+
+  add_executable(crash1_gpu_watchdog_test
+                 "${CMAKE_CURRENT_SOURCE_DIR}/tests/crash1_gpu_watchdog.cpp")
+  target_compile_features(crash1_gpu_watchdog_test PRIVATE cxx_std_20)
+  target_link_libraries(crash1_gpu_watchdog_test PRIVATE crash1_runtime)
+  add_test(NAME crash1_gpu_watchdog COMMAND crash1_gpu_watchdog_test)
+
   add_executable(crash1_boot_frontier_test
                  "${CMAKE_CURRENT_SOURCE_DIR}/tests/crash1_boot_frontier.cpp")
   target_compile_features(crash1_boot_frontier_test PRIVATE cxx_std_20)
@@ -118,12 +225,16 @@ function(add_crt0_boundary_title title)
   set(title_generated "${CMAKE_CURRENT_SOURCE_DIR}/generated/${title}")
   set(title_exe "${title_cache}/${title_executable}")
 
-  add_library(${title}_runtime STATIC
-              "${CMAKE_CURRENT_SOURCE_DIR}/titles/${title}/core/${title}_runtime.cpp")
+  add_library(
+    ${title}_runtime STATIC
+    "${CMAKE_CURRENT_SOURCE_DIR}/titles/${title}/core/${title}_runtime.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/titles/${title}/core/${title}_frame_driver.cpp"
+  )
   target_include_directories(${title}_runtime
                              PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/titles/${title}/core")
   target_compile_features(${title}_runtime PUBLIC cxx_std_20)
-  target_link_libraries(${title}_runtime PUBLIC crash_boundary_runtime)
+  target_link_libraries(${title}_runtime PUBLIC crash_boundary_runtime crash_native_frame_contract)
+  configure_title_vsync(${title}_runtime ${title})
   set_target_properties(
     ${title}_runtime
     PROPERTIES CRASH_TITLE_CACHE "${title_cache}" CRASH_TITLE_GENERATED "${title_generated}"
@@ -168,6 +279,13 @@ add_crt0_boundary_title(crash2)
 add_crt0_boundary_title(crash3)
 
 if(BUILD_TESTING)
+  add_executable(crash_native_frame_contract_test
+                 "${CMAKE_CURRENT_SOURCE_DIR}/tests/native_frame_loop_contract.cpp")
+  target_compile_features(crash_native_frame_contract_test PRIVATE cxx_std_20)
+  target_link_libraries(crash_native_frame_contract_test
+                        PRIVATE crash1_runtime crash2_runtime crash3_runtime)
+  add_test(NAME crash_native_frame_contract COMMAND crash_native_frame_contract_test)
+
   add_test(
     NAME crash_cpp_policy
     COMMAND
@@ -311,6 +429,12 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/generated/crash1/rec_sources.cmake")
       ENABLE_EXPORTS ON
       RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/scratch/bin"
   )
+  if(BUILD_TESTING)
+    add_test(NAME crash1_product_help COMMAND $<TARGET_FILE:crash1_port> --help)
+    set_tests_properties(crash1_product_help PROPERTIES PASS_REGULAR_EXPRESSION "Usage:")
+    add_test(NAME crash1_product_help_short COMMAND $<TARGET_FILE:crash1_port> -h)
+    set_tests_properties(crash1_product_help_short PROPERTIES PASS_REGULAR_EXPRESSION "Usage:")
+  endif()
 else()
   message(
     STATUS

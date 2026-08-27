@@ -26,6 +26,12 @@ struct ResidentProgram {
   RecOverrideFn transitionHandler{};
 };
 
+// Install one title runtime together with this target's generated resident substrate. Direct
+// products use this before constructing Game; finite boundary tools use it through
+// runResidentProgram. Keeping the registry construction here prevents the shipping loop and the
+// differential frontier from acquiring separate generated-code seams.
+void installResidentRuntime(GameRuntime &runtime);
+
 // Install the title runtime and this target's generated resident substrate, load the verified
 // executable, and dispatch from its real crt0 entry. A GeneratedEntry boundary intercepts a known
 // shard body; DynamicDispatch observes the call before an override, shard, or BIOS/HLE leaf owns it.

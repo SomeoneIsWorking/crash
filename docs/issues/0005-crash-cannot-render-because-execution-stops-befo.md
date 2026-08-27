@@ -1,40 +1,35 @@
 ---
 id: 5
-title: Crash cannot render because execution stops before BIOS boot
+title: Crash 1 has no game-owned native renderer
 status: open
-symptom: The Crash 1 product is composed through B(56h) to the following pre-HLE A(44h) boundary, without verified C0-table state, a frame loop, camera state, or a native graphics producer
-tags: crash1,rendering,boot,blocked
+symptom: A diagnostic real-disc run reaches 120 host frame fences and observes guest primitives, but earns zero native producer rows and has no visually inspected compatibility frame
 state_items: S005,S006,S007,S009
+tags: crash1,rendering,native,producers
 created: 2026-08-22
-updated: 2026-08-26
+updated: 2026-08-27
 ---
 
 ## Root cause
 
-The focused harness validates Cause `0x20` and EPC `0x8003E1FC`, resumes both CPUs at `0x8003E200`,
-and agrees 34/34 at B(56h) (`pc=0xB0`, `t1=0x56`, `ra=0x800431B8`). Retail disassembly then proves
-that Crash consumes the B(56h) result with `lw v0,0x18(v0)`, copies fourteen words, and tail-dispatches
-to A(44h) with `ra=0x800431E8`. The product is now composed to allow B(56h) through shipping HLE and
-stop before A(44h); its focused Clang build and 14/14 composition test pass, but serialized execution
-is still outstanding.
-
-The C0 table defect from issue #7 is resolved in psxport `99a42aa3`: retail BIOS evidence and the
-shipping-HLE consumer CTest agree slot 6 is writable C(06h) exception handler `0x00000C80`. The real
-ordered oracle completes Crash's fourteen-word patch, then stops at local wrapper `0x8004323C` before
-its non-link A(44h) tail dispatch (issue #8). No frame loop, camera state, or game-code graphics
-submitter has been reached.
+Crash 1's native host loop can execute the generated CoreLoop and reconcile frame fences, but that
+timing owner is not a graphics owner. The diagnostic 120-frame run observed 125,680 primitive records
+while the native producer database remained empty: zero native rows, zero claims, and zero spans
+joined to a native producer. Camera state, pre-GTE object transforms, and game-code graphics submitters
+remain unidentified, so no grounded native renderer, widescreen projection, or interpolation path
+exists.
 
 ## What was tried / dead ends
 
-Static emission produced 666 candidates, but only nine addresses have execution provenance. That
-count cannot substitute for executing the boot spine, and neither a placeholder picture nor
-reconstruction from post-projection OT/GTE output would establish game-owned rendering.
+Static candidate counts and guest primitive counts are not native-producer coverage. Neither a
+placeholder picture nor reconstruction from post-projection OT/GTE output would establish game-owned
+rendering.
 
 ## Proper next step
 
-Resolve issue #7 in the shared BIOS HLE and chained oracle, compare A(44h), then continue the execution
-spine to the first frame loop. Camera and graphics-submitter RE begins only after the upstream path is
-real.
+First reproduce the 120-frame result in a fully isolated run and capture a compatibility-renderer leg
+for visual inspection. Then identify camera state and graphics submitters before GTE submission,
+instrument those title-owned functions, and earn native producer rows against the same build. Only
+owned projection and previous/current transform state can ground widescreen and interpolation.
 
 ### Note (2026-08-22)
 The first text exit is now identified exactly. `SCUS_949.00` call eight targets `0x8003E1F8`
@@ -78,3 +73,9 @@ pass. No game was launched. PSX-SPX grounds slot 6 at `+0x18` as C(06h) Exceptio
 real oracle applies the syscall/B56 returns and C0 seed and completes the patch copy, but its generic
 first-call capture stops at local wrapper `0x8004323C`. Issue #8 owns the exact post-model A(44h)
 capture needed for the next measurable boundary.
+
+### Note (2026-08-27)
+Issues #10 and #11 are resolved. Against pinned psxport `3c342ec3`, the isolated product read the exact
+NSD-selected payload, crossed retail page decompression, reconciled 120/120 frame fences, and produced
+visually inspected compatibility captures of the SCEA Presents splash without guest VSync. The run
+earned no native producer rows; it advances the loop frontier without advancing native rendering.

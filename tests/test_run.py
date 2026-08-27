@@ -204,6 +204,23 @@ class LauncherTests(unittest.TestCase):
         self.assertIn("version = 1", (ROOT / "uv.lock").read_text())
         self.assertTrue(os.access(ROOT / "run.sh", os.X_OK))
 
+    def test_help_exits_before_host_or_disc_discovery(self) -> None:
+        for flag in ("-h", "--help"):
+            with self.subTest(flag=flag):
+                result = subprocess.run(
+                    [sys.executable, str(ROOT / "bootstrap.py"), flag],
+                    cwd=self.root,
+                    env={"PATH": ""},
+                    check=False,
+                    capture_output=True,
+                    text=True,
+                )
+
+                self.assertEqual(result.returncode, 0)
+                self.assertIn("usage:", result.stdout.lower())
+                self.assertIn("Crash Bandicoot USA CHD", result.stdout)
+                self.assertEqual(result.stderr, "")
+
 
 if __name__ == "__main__":
     unittest.main()

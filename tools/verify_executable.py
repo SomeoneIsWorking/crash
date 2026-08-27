@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Compare a title's tracked executable identity with a real PS-X EXE.
+"""Compare a title's tracked executable and VSync facts with a real PS-X EXE.
 
 Exit 0 means every declared fact matched, exit 1 means the image contradicted the manifest, and exit
-2 means no valid comparison was possible. This is an identity/header gate, not a boot gate.
+2 means no valid comparison was possible. This is an executable-facts gate, not a boot gate.
 """
 
 from __future__ import annotations
@@ -47,6 +47,22 @@ class Measurement:
     stack_address: int
     stack_offset: int
     markers: tuple[str, ...]
+    vsync_body_sha256: str
+
+
+@dataclass(frozen=True)
+class BodyRange:
+    path: str
+    begin: int
+    end: int
+    body_sha256: str
+
+
+@dataclass(frozen=True)
+class AddressLoad:
+    path: str
+    entry: int
+    address: int
 
 
 def parse_hex(value: object, field: str) -> int:
@@ -80,7 +96,149 @@ def load_manifest(path: pathlib.Path) -> dict[str, object]:
     return manifest
 
 
-def measure(path: pathlib.Path, markers: list[str]) -> Measurement:
+def vsync_range(manifest: dict[str, object]) -> tuple[int, int, str]:
+    runtime = manifest.get("runtime")
+    if not isinstance(runtime, dict):
+        raise Refused("manifest field runtime must be an object")
+    vsync = runtime.get("vsync")
+    if not isinstance(vsync, dict):
+        raise Refused("manifest field runtime.vsync must be an object")
+    begin = parse_hex(vsync.get("entry"), "runtime.vsync.entry")
+    end = parse_hex(vsync.get("end"), "runtime.vsync.end")
+    body_sha256 = vsync.get("body_sha256")
+    if begin == 0 or begin >= end:
+        raise Refused(f"invalid runtime.vsync range [0x{begin:08X},0x{end:08X})")
+    if not isinstance(body_sha256, str) or len(body_sha256) != 64:
+        raise Refused(
+            "manifest field runtime.vsync.body_sha256 must be a SHA-256 string"
+        )
+    try:
+        int(body_sha256, 16)
+    except ValueError as exc:
+        raise Refused(
+            "manifest field runtime.vsync.body_sha256 is not hexadecimal"
+        ) from exc
+    return begin, end, body_sha256
+
+
+def runtime_body_ranges(manifest: dict[str, object]) -> tuple[BodyRange, ...]:
+    runtime = manifest.get("runtime")
+    if not isinstance(runtime, dict):
+        raise Refused("manifest field runtime must be an object")
+    found: list[BodyRange] = []
+
+    def visit(value: object, path: str) -> None:
+        if not isinstance(value, dict):
+            return
+        if {"entry", "end", "body_sha256"} <= value.keys():
+            if path == "runtime.vsync":
+                return
+            begin = parse_hex(value.get("entry"), f"{path}.entry")
+            end = parse_hex(value.get("end"), f"{path}.end")
+            digest = value.get("body_sha256")
+            if begin == 0 or begin >= end:
+                raise Refused(f"invalid {path} range [0x{begin:08X},0x{end:08X})")
+            if not isinstance(digest, str) or len(digest) != 64:
+                raise Refused(
+                    f"manifest field {path}.body_sha256 must be a SHA-256 string"
+                )
+            try:
+                int(digest, 16)
+            except ValueError as exc:
+                raise Refused(
+                    f"manifest field {path}.body_sha256 is not hexadecimal"
+                ) from exc
+            found.append(BodyRange(path, begin, end, digest))
+            return
+        for key, child in value.items():
+            visit(child, f"{path}.{key}")
+
+    visit(runtime, "runtime")
+    return tuple(sorted(found, key=lambda item: item.path))
+
+
+def runtime_address_loads(manifest: dict[str, object]) -> tuple[AddressLoad, ...]:
+    runtime = manifest.get("runtime")
+    if not isinstance(runtime, dict):
+        raise Refused("manifest field runtime must be an object")
+    found: list[AddressLoad] = []
+
+    def visit(value: object, path: str) -> None:
+        if not isinstance(value, dict):
+            return
+        if {"address", "load_entry"} <= value.keys():
+            found.append(
+                AddressLoad(
+                    path,
+                    parse_hex(value.get("load_entry"), f"{path}.load_entry"),
+                    parse_hex(value.get("address"), f"{path}.address"),
+                )
+            )
+            return
+        for key, child in value.items():
+            visit(child, f"{path}.{key}")
+
+    visit(runtime, "runtime")
+    return tuple(sorted(found, key=lambda item: item.path))
+
+
+def measure_runtime_address_loads(
+    path: pathlib.Path, manifest: dict[str, object]
+) -> dict[str, int]:
+    try:
+        data = path.read_bytes()
+        image = psexe.load(str(path))
+    except (OSError, ValueError) as exc:
+        raise Refused(f"cannot read a valid executable from {path}: {exc}") from exc
+    measured: dict[str, int] = {}
+    for load in runtime_address_loads(manifest):
+        if not (image.load <= load.entry and load.entry + 8 <= image.text_end):
+            raise Refused(
+                f"{load.path}.load_entry 0x{load.entry:08X} lies outside executable text "
+                f"[0x{image.load:08X},0x{image.text_end:08X})"
+            )
+        file_begin = 0x800 + (load.entry - image.load)
+        if file_begin + 8 > len(data):
+            raise Refused(f"{load.path}.load_entry is not backed by executable file bytes")
+        lui = int.from_bytes(data[file_begin : file_begin + 4], "little")
+        load_word = int.from_bytes(data[file_begin + 4 : file_begin + 8], "little")
+        register = (lui >> 16) & 0x1F
+        if lui >> 26 != 0x0F or load_word >> 26 != 0x23:
+            raise Refused(f"{load.path}.load_entry is not a LUI/LW address load")
+        if ((load_word >> 21) & 0x1F) != register or ((load_word >> 16) & 0x1F) != register:
+            raise Refused(f"{load.path}.load_entry LUI/LW does not use one register")
+        lower = load_word & 0xFFFF
+        signed_lower = lower if lower < 0x8000 else lower - 0x10000
+        measured[load.path] = (((lui & 0xFFFF) << 16) + signed_lower) & 0xFFFFFFFF
+    return measured
+
+
+def measure_runtime_bodies(
+    path: pathlib.Path, manifest: dict[str, object]
+) -> dict[str, str]:
+    try:
+        data = path.read_bytes()
+        image = psexe.load(str(path))
+    except (OSError, ValueError) as exc:
+        raise Refused(f"cannot read a valid executable from {path}: {exc}") from exc
+    measured: dict[str, str] = {}
+    for body in runtime_body_ranges(manifest):
+        if not image.load <= body.begin < body.end <= image.text_end:
+            raise Refused(
+                f"{body.path} [0x{body.begin:08X},0x{body.end:08X}) lies outside "
+                f"executable text [0x{image.load:08X},0x{image.text_end:08X})"
+            )
+        file_begin = 0x800 + (body.begin - image.load)
+        file_end = 0x800 + (body.end - image.load)
+        if file_end > len(data):
+            raise Refused(f"{body.path} range is not backed by executable file bytes")
+        measured[body.path] = hashlib.sha256(data[file_begin:file_end]).hexdigest()
+    return measured
+
+
+def measure(
+    path: pathlib.Path, markers: list[str], vsync_begin: int, vsync_end: int
+) -> Measurement:
     try:
         data = path.read_bytes()
         image = psexe.load(str(path))
@@ -91,6 +249,15 @@ def measure(path: pathlib.Path, markers: list[str]) -> Measurement:
             f"invalid PS-X EXE range: entry=0x{image.entry:08X}, "
             f"text=[0x{image.load:08X},0x{image.text_end:08X})"
         )
+    if not image.load <= vsync_begin < vsync_end <= image.text_end:
+        raise Refused(
+            f"runtime.vsync [0x{vsync_begin:08X},0x{vsync_end:08X}) lies outside "
+            f"executable text [0x{image.load:08X},0x{image.text_end:08X})"
+        )
+    vsync_file_begin = 0x800 + (vsync_begin - image.load)
+    vsync_file_end = 0x800 + (vsync_end - image.load)
+    if vsync_file_end > len(data):
+        raise Refused("runtime.vsync range is not backed by executable file bytes")
     found = tuple(marker for marker in markers if marker.encode("ascii") in data)
     return Measurement(
         path.name,
@@ -104,7 +271,18 @@ def measure(path: pathlib.Path, markers: list[str]) -> Measurement:
         image.sp_base,
         image.sp_off,
         found,
+        hashlib.sha256(data[vsync_file_begin:vsync_file_end]).hexdigest(),
     )
+
+
+def measure_manifest(path: pathlib.Path, manifest: dict[str, object]) -> Measurement:
+    markers = manifest.get("region_markers")
+    if not isinstance(markers, list) or not all(
+        isinstance(marker, str) for marker in markers
+    ):
+        raise Refused("manifest field region_markers must be a string list")
+    vsync_begin, vsync_end, _ = vsync_range(manifest)
+    return measure(path, markers, vsync_begin, vsync_end)
 
 
 def expected(manifest: dict[str, object]) -> dict[str, object]:
@@ -118,6 +296,7 @@ def expected(manifest: dict[str, object]) -> dict[str, object]:
         or not all(isinstance(item, str) for item in markers)
     ):
         raise Refused("manifest field region_markers must be a non-empty string list")
+    _, _, vsync_body_sha256 = vsync_range(manifest)
     return {
         "name": manifest["executable"],
         "size": manifest["file_size"],
@@ -130,6 +309,7 @@ def expected(manifest: dict[str, object]) -> dict[str, object]:
         "stack_address": parse_hex(header.get("stack_address"), "header.stack_address"),
         "stack_offset": parse_hex(header.get("stack_offset"), "header.stack_offset"),
         "markers": tuple(markers),
+        "vsync_body_sha256": vsync_body_sha256,
     }
 
 
@@ -139,7 +319,8 @@ def check(
     markers = manifest["region_markers"]
     if not isinstance(markers, list):
         raise Refused("manifest field region_markers must be a list")
-    measured = measure(path, markers)
+    vsync_begin, vsync_end, _ = vsync_range(manifest)
+    measured = measure_manifest(path, manifest)
     want = expected(manifest)
     actual = vars(measured)
     failures = [
@@ -147,6 +328,22 @@ def check(
         for field, value in want.items()
         if value != actual[field]
     ]
+    runtime_bodies = runtime_body_ranges(manifest)
+    measured_bodies = measure_runtime_bodies(path, manifest)
+    failures.extend(
+        f"runtime_body_sha256:{body.path}: manifest={body.body_sha256!r}, "
+        f"executable={measured_bodies[body.path]!r}"
+        for body in runtime_bodies
+        if body.body_sha256 != measured_bodies[body.path]
+    )
+    address_loads = runtime_address_loads(manifest)
+    measured_address_loads = measure_runtime_address_loads(path, manifest)
+    failures.extend(
+        f"runtime_address_load:{load.path}: manifest=0x{load.address:08X}, "
+        f"executable=0x{measured_address_loads[load.path]:08X}"
+        for load in address_loads
+        if load.address != measured_address_loads[load.path]
+    )
     if verbose:
         print(
             f"measured {measured.name}: {measured.size} bytes, sha1={measured.sha1}, "
@@ -159,16 +356,32 @@ def check(
             f"stack=0x{measured.stack_address + measured.stack_offset:08X}"
         )
         print(f"region markers: {len(measured.markers)}/{len(markers)} found")
+        print(
+            f"VSync: [0x{vsync_begin:08X},0x{vsync_end:08X}) "
+            f"body_sha256={measured.vsync_body_sha256}"
+        )
+        for body in runtime_bodies:
+            print(
+                f"{body.path}: [0x{body.begin:08X},0x{body.end:08X}) "
+                f"body_sha256={measured_bodies[body.path]}"
+            )
+        for load in address_loads:
+            print(
+                f"{load.path}: load_entry=0x{load.entry:08X} "
+                f"address=0x{measured_address_loads[load.path]:08X}"
+            )
         if failures:
             for failure in failures:
                 print(f"MISMATCH: {failure}")
         else:
             print(
-                f"MATCH: 11/11 facts agree for {manifest['title']} ({manifest['region']})"
+                f"MATCH: {12 + len(runtime_bodies) + len(address_loads)}/"
+                f"{12 + len(runtime_bodies) + len(address_loads)} facts agree "
+                f"for {manifest['title']} ({manifest['region']})"
             )
         print(
-            "blind spot: identity/header only; this does not prove disc provenance, boot, gameplay, "
-            "overlays, or any native implementation"
+            "blind spot: executable facts only; this does not prove disc provenance, boot, gameplay, "
+            "VSync callers, overlays, or any native implementation"
         )
     return failures
 
@@ -182,10 +395,66 @@ def selftest(manifest: dict[str, object], executable: pathlib.Path) -> bool:
         )
     )
 
+    bodies = runtime_body_ranges(manifest)
+    if bodies:
+        wrong_body = copy.deepcopy(manifest)
+        body_path = bodies[0].path.split(".")[1:]
+        body_fact: object = wrong_body["runtime"]
+        for key in body_path:
+            assert isinstance(body_fact, dict)
+            body_fact = body_fact[key]
+        assert isinstance(body_fact, dict)
+        body_fact["entry"] = f"0x{bodies[0].begin + 4:08X}"
+        results.append(
+            (
+                "wrong native runtime entry is rejected by its executable-body fingerprint",
+                any(
+                    failure.startswith(f"runtime_body_sha256:{bodies[0].path}:")
+                    for failure in check(wrong_body, executable, False)
+                ),
+            )
+        )
+
+    address_loads = runtime_address_loads(manifest)
+    if address_loads:
+        wrong_load = copy.deepcopy(manifest)
+        load_path = address_loads[0].path.split(".")[1:]
+        load_fact: object = wrong_load["runtime"]
+        for key in load_path:
+            assert isinstance(load_fact, dict)
+            load_fact = load_fact[key]
+        assert isinstance(load_fact, dict)
+        load_fact["address"] = f"0x{address_loads[0].address ^ 0x00010000:08X}"
+        results.append(
+            (
+                "wrong runtime address is rejected by its executable load site",
+                any(
+                    failure.startswith(f"runtime_address_load:{address_loads[0].path}:")
+                    for failure in check(wrong_load, executable, False)
+                ),
+            )
+        )
+
     wrong = copy.deepcopy(manifest)
     wrong["sha1"] = "0" * 40
     results.append(
         ("wrong shipping hash is rejected", bool(check(wrong, executable, False)))
+    )
+
+    wrong_vsync = copy.deepcopy(manifest)
+    wrong_runtime = wrong_vsync["runtime"]
+    assert isinstance(wrong_runtime, dict)
+    wrong_vsync_fact = wrong_runtime["vsync"]
+    assert isinstance(wrong_vsync_fact, dict)
+    wrong_vsync_fact["entry"] = f"0x{vsync_range(manifest)[0] + 4:08X}"
+    results.append(
+        (
+            "wrong VSync entry is rejected by the executable-body fingerprint",
+            any(
+                failure.startswith("vsync_body_sha256:")
+                for failure in check(wrong_vsync, executable, False)
+            ),
+        )
     )
 
     scratch = ROOT / "scratch"
@@ -199,6 +468,46 @@ def selftest(manifest: dict[str, object], executable: pathlib.Path) -> bool:
         fixture.write_bytes(data)
         results.append(
             ("mutated executable is rejected", bool(check(manifest, fixture, False)))
+        )
+
+        image = psexe.load(str(executable))
+        if bodies:
+            body = bodies[0]
+            body_offset = 0x800 + (body.begin - image.load)
+            body_data = bytearray(executable.read_bytes())
+            body_data[body_offset] ^= 1
+            body_fixture = pathlib.Path(directory) / f"body-{executable.name}"
+            body_fixture.write_bytes(body_data)
+            body_manifest = copy.deepcopy(manifest)
+            body_manifest["sha1"] = hashlib.sha1(body_data).hexdigest()
+            body_manifest["sha256"] = hashlib.sha256(body_data).hexdigest()
+            results.append(
+                (
+                    "mutated native runtime body is rejected independently of whole-file identity",
+                    any(
+                        failure.startswith(f"runtime_body_sha256:{body.path}:")
+                        for failure in check(body_manifest, body_fixture, False)
+                    ),
+                )
+            )
+
+        vsync_begin, _, _ = vsync_range(manifest)
+        vsync_offset = 0x800 + (vsync_begin - image.load)
+        vsync_data = bytearray(executable.read_bytes())
+        vsync_data[vsync_offset] ^= 1
+        vsync_fixture = pathlib.Path(directory) / f"vsync-{executable.name}"
+        vsync_fixture.write_bytes(vsync_data)
+        mutated_manifest = copy.deepcopy(manifest)
+        mutated_manifest["sha1"] = hashlib.sha1(vsync_data).hexdigest()
+        mutated_manifest["sha256"] = hashlib.sha256(vsync_data).hexdigest()
+        results.append(
+            (
+                "mutated VSync body is rejected independently of whole-file identity",
+                any(
+                    failure.startswith("vsync_body_sha256:")
+                    for failure in check(mutated_manifest, vsync_fixture, False)
+                ),
+            )
         )
 
         malformed = pathlib.Path(directory) / "malformed.exe"

@@ -1,5 +1,10 @@
 #include "crash2_runtime.h"
 
+#include "crash2_frame_driver.h"
+#include "platform_hle.h"
+
+#include <memory>
+
 namespace crash2 {
 
 const GuestProgramImage Crash2Runtime::programImage_{
@@ -18,6 +23,8 @@ const GuestProgramImage Crash2Runtime::programImage_{
     .stackBias = {true, -8},
 };
 
+const PlatformHlePlan Crash2Runtime::platformPlan_ = crash::makeNativeFramePlatformPlan(Crash2FrameDriver::contract());
+
 Crash2Runtime::Crash2Runtime()
     : BoundaryRuntime("crash2-runtime",
                       "native boot is unavailable: Crash 2 execution has been independently verified "
@@ -28,8 +35,20 @@ const GuestProgramImage *Crash2Runtime::guestProgramImage() const {
   return &programImage_;
 }
 
+const PlatformHlePlan *Crash2Runtime::platformHlePlan() const {
+  return &platformPlan_;
+}
+
 bool Crash2Runtime::guestVramIsPicture(const Game &) const {
   return false;
+}
+
+std::unique_ptr<FrameDriver> Crash2Runtime::createFrameDriver(Game &) {
+  return std::make_unique<Crash2FrameDriver>();
+}
+
+const crash::NativeFrameLoopContract &Crash2Runtime::nativeFrameLoopContract() const {
+  return Crash2FrameDriver::contract();
 }
 
 } // namespace crash2

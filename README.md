@@ -16,10 +16,15 @@ records factual capability coverage and `docs/re-frontier.md` the measured binar
 Current status: a current-frontier Crash 1 product plus verified North American disc/executable identities for Crash 1
 (`SCUS-94900`), Crash 2 (`SCUS-94154`), and Crash 3 (`SCUS-94244`). Crash 2 and Crash 3 each have a
 symbolic crt0 decode agreeing 6/6 with the independent CPU oracle at the first real call, and each
-derived runtime's typed executable facts agree 15/15 with its retail bytes. Crash 3's `SYSTEM.CNF`
+derived runtime's typed executable/frame-contract facts agree 20/20 with its retail bytes and manifest.
+The three distinct VSync bodies are fingerprinted from the real executables and bound only to
+psxport's fatal native-loop trap; every title creates a host-owned driver, but all three currently
+refuse frame stepping because no frame boundary is proven. Crash 3's `SYSTEM.CNF`
 selection is explicit because its disc also contains the unrelated bootable-looking
-`DRAGON/SPYRO.EXE`. The clean Clang/CTest/real-data gates and all title regressions use recorded
-psxport `8611d756`. Against current psxport `54af32cb`, Crash 1 has 666 emitted static candidates. Its generated path agrees with the independent oracle on all 34
+`DRAGON/SPYRO.EXE`. The last landed clean Clang/CTest/real-data gates and all title regressions use
+recorded psxport `8611d756`; the fatal-VSync contract is verified against the current shared
+framework integration batch and still requires the operator's clean framework landing and pin bump.
+Against current psxport `54af32cb`, Crash 1 has 666 emitted static candidates. Its generated path agrees with the independent oracle on all 34
 CPU-state fields at the first eight executed calls. Nine addresses in the candidate set have
 execution provenance: eight generated bodies execute before the eighth observed target. The eighth
 target is the real `addiu $a0, 1; syscall 0` wrapper for `EnterCriticalSection`; the controlled port
@@ -103,8 +108,8 @@ The disc argument may instead come from the title key (`PSXPORT_CRASH1_DISC` or
 `PSXPORT_CRASH2_DISC` or `PSXPORT_CRASH3_DISC`), `PSXPORT_DISC`, the same keys in the gitignored
 `.env`, or one `*.chd` drop-in at the repository root, in that order. A configured missing path and
 multiple drop-ins are refused. The shared implementation publishes into the matching
-`scratch/bin/<title>/` only after `SYSTEM.CNF` selects that title's serial-coded executable and all 11
-tracked executable facts match. For Crash 3 this deliberately ignores the disc's bundled
+`scratch/bin/<title>/` only after `SYSTEM.CNF` selects that title's serial-coded executable and all 12
+tracked executable and VSync-body facts match. For Crash 3 this deliberately ignores the disc's bundled
 `DRAGON/SPYRO.EXE`; presence is not selection.
 
 After `tools/verify.py` refreshes the authoritative tree, a focused policy/provisioning rerun is:
@@ -130,8 +135,9 @@ PSXPORT_CRASH3_DISC=/path/to/Crash-Bandicoot-Warped-USA.chd \
   cmake --build scratch/build-clang --target crash3_oracle_boot_check
 ```
 
-Each target verifies only that title's crt0 call boundary. Crash 2 and Crash 3 also compare all 15
-typed runtime image facts against the executable and prove an altered fact disagrees. Neither target
+Each target verifies only that title's crt0 call boundary. Crash 2 and Crash 3 also compare all 20
+typed runtime image and native-frame-contract facts against the executable and prove an altered fact
+disagrees. Neither target
 claims a full oracle boot. CMake reserves independent `generated/<title>/` namespaces. These oracle
 targets are evidence tools and are never part of the player launch route.
 

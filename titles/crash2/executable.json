@@ -18,7 +18,12 @@
     "game_main_entry": "0x80049BD4",
     "game_main_call_ordinal": 3,
     "first_syscall_entry": "0x80049D1C",
-    "first_syscall_call_ordinal": 8
+    "first_syscall_call_ordinal": 8,
+    "vsync": {
+      "entry": "0x8004A484",
+      "end": "0x8004A5CC",
+      "body_sha256": "25097695f5ebd26728662b7989487b139e140ccf2129a14df10b30a003865b4e"
+    }
   },
   "region_markers": [
     "Sony Computer Entertainment Inc. for North America area",

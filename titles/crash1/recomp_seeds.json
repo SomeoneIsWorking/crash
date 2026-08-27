@@ -7,7 +7,17 @@
 // can make a successful emission decode the wrong function boundaries.
 {
   "main": [],
-  "main_reentry": [],
+  // Binary-backed host-frame split points. Each is a genuine mid-function continuation, not a new
+  // guest function: the native driver enters one finite CoreLoop iteration, returns at its retail
+  // back-edge, and replaces only the two VSync waits while retaining every generated super.
+  "main_reentry": [
+    "0x80012030",
+    "0x80012510",
+    "0x800170F4",
+    "0x800170FC",
+    "0x80017124",
+    "0x8001712C"
+  ],
   "overlay_bases": {},
   "overlay_base_patterns": [],
   "overlay_seeds": {}

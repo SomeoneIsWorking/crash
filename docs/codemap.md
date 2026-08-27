@@ -18,9 +18,12 @@ until cross-title binary evidence proves common ownership.
 | Executable identity | Measure and reject serial/header/hash disagreement | `titles/<title>/executable.json`, `tools/verify_executable.py` | `verify_executable.py` CLI | `titles/crash1/README.md` | Title facts stay in title manifests; generic validation has one shared implementation |
 | Disc provisioning | Follow SYSTEM.CNF, select one serial, verify it, and publish to the title cache | `tools/provision_title.py` | `provision_title.py` CLI | `README.md` | Precedence, extraction, and verification policy stays in this one tool |
 | Boundary runtime policy | Direct `GameRuntime` ownership, the trilogy-wide native/interpolation product target, and refusal of unearned picture/native-boot claims | `game/core/boundary_runtime.*`, `titles/<title>/core/<title>_runtime.*` | `BoundaryRuntime::renderCapabilities` and title runtime constructor | `CLAUDE.md` | Framework-facing invariants and the user-required trilogy capability profile stay in `game/core/`; measured title behavior stays title-local |
+| Native frame-loop contract | Define host ownership, typed guest-VSync range, readiness, and one common refusal operation | `game/core/native_frame_loop_contract.*`, `game/core/refusing_frame_driver.h` | `NativeFrameLoopContract`, `RefusingFrameDriver` | `docs/issues/0009-guest-vsync-was-not-a-fatal-native-loop-contract.md` | The host shell only invokes one title driver; it never wraps title pad/audio/render/present services or answers guest VSync |
+| Title frame drivers | Own each title's exact measured VSync address and, once RE permits, its complete pad/audio/simulation/render/presentation order | `titles/<title>/core/<title>_frame_driver.*` | title `FrameDriver::stepFrame` | `docs/re-frontier.md` | Drivers remain title-local until cross-title correspondence proves shared engine semantics; a missing boundary aborts instead of executing guest VSync |
 | Resident program execution | Install runtime/registry, load an executable, apply transitions, and stop at an exact boundary | `game/core/resident_program.*` | `runResidentProgram` | `CLAUDE.md` | Generic generated-program mechanics stay here; title addresses and semantics do not |
 | EnterCriticalSection frontier | Validate and execute the measured generated syscall wrapper as a returning transition | `game/core/enter_critical_frontier.*` | `runEnterCriticalFrontier` | `docs/re-frontier.md` | Shared only because all three serials independently prove the same syscall contract |
-| Crash 1 boot composition | Own the measured syscall → B(56h) → A(44h) product spine | `titles/crash1/core/crash1_boot_frontier.*`, `titles/crash1/core/crash1_port.*` | `crash1::runPort` | `titles/crash1/README.md` | Further Crash 1 BIOS/frame boundaries stay title-local until evidence proves a narrower or cross-title owner |
+| Crash 1 boot composition | Compose the direct product from its resident substrate, native platform services, title boot hook, and host-owned frame shell; retain the old syscall → B(56h) → A(44h) path as a focused frontier diagnostic | `titles/crash1/core/crash1_port.*`, `titles/crash1/core/crash1_boot_frontier.*`, `game/core/resident_program.*` | `crash1::runPort` | `titles/crash1/README.md` | Product composition invokes owners but does not absorb their behavior; Crash 1 addresses remain title-local |
+| Crash 1 native boot services | Own retail libcd software-state initialization, synchronous disc-index command/data I/O, callback/event/pad initialization, and the GPU command-queue watchdog without entering guest display waits | `titles/crash1/core/crash1_cd_boot.*`, `titles/crash1/core/crash1_disc_index_io.*`, `titles/crash1/core/crash1_callback_boot.*`, `titles/crash1/core/crash1_gpu_watchdog.*` | `Crash1Runtime::registerOverrides` | `docs/re-frontier.md` | Keep each measured generated body alive behind its runtime override; route stock-libcd wrappers through shared command/data owners, preserve state-producing calls, and consume the host-owned field counter directly instead of answering or calling guest VSync |
 | Crash 1 BIOS consumer contract | Record retail C0 facts and verify the shipping framework table through the production HLE seam | `titles/crash1/bios_contract.json`, `tests/crash1_c0_exception_contract.cpp` | CTest `crash1_c0_exception_contract` | `docs/issues/0007-crash-patches-address-zero-because-the-native-c0.md` | Crash owns the observed consumer and patch range; BIOS table semantics and exact post-model oracle capture belong in psxport |
 | Crash 2 integration | Own SCUS-94154 facts and title runtime seam | `titles/crash2/` | `Crash2Runtime` | `docs/re-frontier.md` | Do not reuse Crash 1 addresses or seeds |
 | Crash 3 integration | Own SCUS-94244 facts, disc selection, and runtime seam | `titles/crash3/` | `Crash3Runtime` | `docs/re-frontier.md` | Ignore unrelated executables on the disc; SYSTEM.CNF and serial identity own selection |
@@ -36,17 +39,17 @@ until cross-title binary evidence proves common ownership.
 ## Annotated source tree
 
 ```text
-game/  —  312 lines, 6 files
-└─ core/  312 lines  6 files  [.cpp .h]
-titles/  —  387 lines, 11 files
-├─ crash1/  277 lines  7 files  [.cpp .h]
-│  └─ core/  272 lines  6 files
-├─ crash2/  55 lines  2 files  [.cpp .h]
-│  └─ core/  55 lines  2 files
-└─ crash3/  55 lines  2 files  [.cpp .h]
-│  └─ core/  55 lines  2 files
-tools/  —  2,585 lines, 10 files
-tests/  —  873 lines, 16 files
+game/  —  426 lines, 9 files
+├─ core/  426 lines  9 files  [.h .cpp]
+titles/  —  588 lines, 17 files
+├─ crash1/  344 lines  9 files  [.cpp .h]
+│  ├─ core/  339 lines  8 files
+├─ crash2/  122 lines  4 files  [.cpp .h]
+│  ├─ core/  122 lines  4 files
+├─ crash3/  122 lines  4 files  [.cpp .h]
+│  ├─ core/  122 lines  4 files
+tools/  —  2,676 lines, 10 files
+tests/  —  1,034 lines, 17 files
 ```
 
 Generated with `codemap.py tree game titles tools tests --depth 2`; generated code and vendored
@@ -57,6 +60,8 @@ framework sources are deliberately outside first-party ownership counts.
 | Responsibility | Owner |
 |---|---|
 | A new serial-specific address or BIOS fact | That title's executable manifest and boot-frontier module |
+| A title's libetc VSync entry/body extent | That title's executable manifest and frame-driver contract |
+| Native frame-loop orchestration | The title frame driver; the host entry point only composes and invokes it |
 | A retail BIOS table semantic required by a title | psxport; the title records only its consumer contract and evidence |
 | A reusable generated-program transition mechanism | `game/core/resident_program.*` |
 | A cross-title engine behavior | `game/`, only after SHARED-01 evidence |

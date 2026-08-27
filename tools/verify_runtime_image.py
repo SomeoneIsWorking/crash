@@ -50,8 +50,8 @@ def parse_runtime_facts(text: str) -> dict[str, int]:
             raise Refused(
                 f"runtime fact {name!r} is not an integer: {value!r}"
             ) from exc
-    if "runtime facts: 15 field(s)" not in text:
-        raise Refused("runtime facts tool omitted its 15-field denominator")
+    if "runtime facts: 20 field(s)" not in text:
+        raise Refused("runtime facts tool omitted its 20-field denominator")
     return facts
 
 
@@ -63,6 +63,7 @@ def expected_facts(
     if not isinstance(runtime, dict):
         raise Refused("manifest runtime facts must be an object")
     game_main = int(str(runtime.get("game_main_entry", "0")), 0)
+    vsync_begin, vsync_end, _ = verify_executable.vsync_range(manifest)
     text_begin = int(want["text_address"])
     text_end = text_begin + int(want["text_size"])
     return {
@@ -97,6 +98,11 @@ def expected_facts(
         "resident_end": text_end & 0x1FFFFFFF,
         "stack_bias_declared": 1,
         "stack_bias": capture(r"\bbias (-?[0-9]+)", extractor_output, "stack bias"),
+        "vsync_begin": vsync_begin,
+        "vsync_end": vsync_end,
+        "platform_vsync": vsync_begin,
+        "platform_window_begin": vsync_begin,
+        "platform_window_end": vsync_end,
     }
 
 

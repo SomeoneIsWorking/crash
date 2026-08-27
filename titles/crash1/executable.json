@@ -24,7 +24,121 @@
     "first_bios_dispatch_return_address": "0x800431B8",
     "post_get_c0_dispatch_address": "0x000000A0",
     "post_get_c0_dispatch_function": "0x00000044",
-    "post_get_c0_dispatch_return_address": "0x800431E8"
+    "post_get_c0_dispatch_return_address": "0x800431E8",
+    "vsync": {
+      "entry": "0x8003E4F0",
+      "end": "0x8003E638",
+      "body_sha256": "915c96a114984906cdf7e9db7a82f361d9a716a593f5f8afead14b9f45edb8c7"
+    },
+    "native_boot": {
+      "c_main": {
+        "entry": "0x80011D88",
+        "end": "0x80011DD0",
+        "body_sha256": "9291f128ba877c4a6c721b3592c2f820d733be75ea1762421a372f9fc3157d6d"
+      },
+      "static_constructors": {
+        "entry": "0x8003E0C0",
+        "end": "0x8003E120",
+        "body_sha256": "c2ac1d39b778c1db99fdeb6c59432d0573265fc962f2f588ac234b9628a8bbf1"
+      },
+      "use_cd_address": "0x80056410",
+      "init": {
+        "entry": "0x8001652C",
+        "end": "0x8001668C",
+        "body_sha256": "c89cc07740fbd3c377b5dfaeff889722efe73cd90e872bd8b65e29a1065f96d7"
+      },
+      "cd_initialize": {
+        "entry": "0x80044E8C",
+        "end": "0x8004519C",
+        "body_sha256": "324b9740be681b9a59bf593f716ff83190c4a66a41200655f9861893ae4f4492"
+      },
+      "disc_index": {
+        "entry": "0x8002F8C4",
+        "end": "0x8002FD30",
+        "body_sha256": "a6c2f1f6da4eb367c0302ebdab8d2ac09f7660d4266e74db02b9a1b95b1d8c99"
+      },
+      "cd_control": {
+        "entry": "0x80043520",
+        "end": "0x80043668",
+        "body_sha256": "85e8a778583ce35579a6b12ab3a78a197fbdfdea9ba2a359e0b7f68f11e25f0b"
+      },
+      "cd_control_f": {
+        "entry": "0x80043668",
+        "end": "0x80043984",
+        "body_sha256": "6ea487267989422129fbd71c1fca52e7ea4dec9666a9bb871965d9b48eccdde6"
+      },
+      "cd_sync_wrapper": {
+        "entry": "0x80043498",
+        "end": "0x800434B8",
+        "body_sha256": "9bca8d5f5fb62f11c456910ea661acc0a91a7c9818e3eae173657b7a3b79ee76"
+      },
+      "cd_sync": {
+        "entry": "0x800440EC",
+        "end": "0x80044370",
+        "body_sha256": "54e814a746debdbcec8b75a5725aca3c691fb5ec220b23932d8f45feb05054af"
+      },
+      "cd_read": {
+        "entry": "0x800439A4",
+        "end": "0x80043A24",
+        "body_sha256": "81b3a35adfe4c0bb3910b49ab6b51e29af8c3ea551abb74bc6c674bb450d2cc2"
+      },
+      "cd_read_sync": {
+        "entry": "0x80043984",
+        "end": "0x800439A4",
+        "body_sha256": "bee80a79c612d3799fc45d22ddfe29217b474b22a79aee9c1b9fd886735f941d"
+      },
+      "callback_initialize": {
+        "entry": "0x8003CB9C",
+        "end": "0x8003CD3C",
+        "body_sha256": "09ed430a53363e1319406ef1f58cd32f70629ddb433c8ca62bd8fcb250d4b467"
+      },
+      "gpu_watchdog_start": {
+        "entry": "0x80042864",
+        "end": "0x80042898",
+        "body_sha256": "45add9a2f73fa7f54b05a9e34b79ae4f52da997588d6b94284cd74183ab8cf56"
+      },
+      "gpu_watchdog_check": {
+        "entry": "0x80042898",
+        "end": "0x80042A04",
+        "body_sha256": "fe2b7bf9a393232084b985c0dcd0a069a383adb188d74893b237403589c29838"
+      }
+    },
+    "native_frame": {
+      "core_loop": {
+        "entry": "0x80011FC4",
+        "end": "0x80012560",
+        "body_sha256": "d0057f2df7147e47117adf30a7340c57aa81dbff8bd72f908974502ecc668d63"
+      },
+      "iteration": {
+        "entry": "0x80012030",
+        "end": "0x80012510",
+        "body_sha256": "a5d08a312ae2a19570abba8450bd7c91d8e35368da6016b9e9d5643dfb5b03a8"
+      },
+      "transition": {
+        "entry": "0x80012510",
+        "end": "0x80012560",
+        "body_sha256": "2404b4ae04d34a06e1f93df89bd09fa92a74911333da53969c759a16bcf8ad7f"
+      },
+      "done": {
+        "address": "0x80056428",
+        "load_entry": "0x80012510"
+      },
+      "gpu_update": {
+        "entry": "0x80016E5C",
+        "end": "0x800172E8",
+        "body_sha256": "eee93c0a31827c34da153caea6ca19691ae4ad5f17730577da4389a1f711ed9b"
+      },
+      "first_vsync": "0x800170F4",
+      "after_first_vsync": "0x800170FC",
+      "second_vsync": "0x80017124",
+      "after_vsync": "0x8001712C",
+      "ticks_elapsed_address": "0x80034520",
+      "display_context_address": "0x80058404",
+      "root_counter_increment": "0x80034504",
+      "set_root_counter": "0x8003E298",
+      "start_root_counter": "0x8003E370",
+      "stop_root_counter": "0x8003E3A4"
+    }
   },
   "region_markers": [
     "Sony Computer Entertainment Inc. for North America area",

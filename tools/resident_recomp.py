@@ -210,7 +210,7 @@ def require_executable(
             "retail executable contradicts the tracked identity:\n"
             + "\n".join(failures)
         )
-    return verify_executable.measure(path, list(manifest["region_markers"]))
+    return verify_executable.measure_manifest(path, manifest)
 
 
 def invoke_emitter(

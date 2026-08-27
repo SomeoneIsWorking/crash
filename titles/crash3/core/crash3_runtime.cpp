@@ -1,5 +1,10 @@
 #include "crash3_runtime.h"
 
+#include "crash3_frame_driver.h"
+#include "platform_hle.h"
+
+#include <memory>
+
 namespace crash3 {
 
 const GuestProgramImage Crash3Runtime::programImage_{
@@ -18,6 +23,8 @@ const GuestProgramImage Crash3Runtime::programImage_{
     .stackBias = {true, -8},
 };
 
+const PlatformHlePlan Crash3Runtime::platformPlan_ = crash::makeNativeFramePlatformPlan(Crash3FrameDriver::contract());
+
 Crash3Runtime::Crash3Runtime()
     : BoundaryRuntime("crash3-runtime",
                       "native boot is unavailable: SCUS-94244 generated execution reaches its "
@@ -28,8 +35,20 @@ const GuestProgramImage *Crash3Runtime::guestProgramImage() const {
   return &programImage_;
 }
 
+const PlatformHlePlan *Crash3Runtime::platformHlePlan() const {
+  return &platformPlan_;
+}
+
 bool Crash3Runtime::guestVramIsPicture(const Game &) const {
   return false;
+}
+
+std::unique_ptr<FrameDriver> Crash3Runtime::createFrameDriver(Game &) {
+  return std::make_unique<Crash3FrameDriver>();
+}
+
+const crash::NativeFrameLoopContract &Crash3Runtime::nativeFrameLoopContract() const {
+  return Crash3FrameDriver::contract();
 }
 
 } // namespace crash3

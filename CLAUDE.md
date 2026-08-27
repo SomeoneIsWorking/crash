@@ -38,7 +38,8 @@ ExceptionHandler at `0x00000C80`, and clean psxport `99a42aa3` plus the Crash co
 that table contract. The real ordered oracle completes the fourteen-word patch but stops at Crash's
 local wrapper before its non-link A(44h) tail dispatch; issue #8 owns exact post-model target capture.
 This is a real current-frontier product, not a claim that Crash 1 renders a frame or that Crash 2/3
-have product targets.
+have product targets. Because this resident route bypasses psxport's shared native bootstrap, it
+initializes and requires the platform HLE contract itself before generated dispatch.
 
 **`external/psxport` is NOT a git submodule** (2026-08-16): it is a symlink to the workspace's shared
 framework clone when one exists, or a private clone at this repo's `psxport.pin` on a fresh machine.
@@ -53,17 +54,28 @@ faithful, measurable base before enhancements.
 Crash 1, 2, and 3 are direct runtimes and each explicitly reports `guestVramIsPicture=false` because
 none has a measured frame or native picture producer. This is a refusal to claim picture ownership,
 not evidence that presentation works; change it per title only when real frame evidence proves the
-guest VRAM is that title's picture. Their common `BoundaryRuntime` declares
+guest VRAM is that title's picture. Each title creates a non-null, title-owned `FrameDriver`, records
+its distinct measured libetc VSync body, and binds that entry to psxport's sole fatal trap. All three
+drivers currently abort `stepFrame`: Crash 1 owns only the finite crt0-to-A(44h) composition, while
+Crash 2 and Crash 3 have no shipping product. A driver object establishes host ownership; it does not
+invent a runnable frame. Their common `BoundaryRuntime` declares
 `RenderCapabilities::interpolatedNative()` because native rendering plus temporal interpolation is the
 required product target for the full Crash trilogy; that policy declaration does not invent the
 still-missing native producers or interpolation state.
+
+The host-loop structure follows Dusklight's current `m_Do_main.cpp` boundary: the outer host owns the
+loop and invokes one complete game step; the title-owned step owns its exact input, audio, simulation,
+rendering, and presentation order. Crash's host shell must not wrap those services around
+`FrameDriver::stepFrame`, and a ready driver must commit exactly one presentation or an independently
+measured unpresented fence. Unlike Dusklight, these PSX titles must never call guest VSync even to query
+time; any mode is a fatal ownership violation.
 
 Crash 1's framework seam lives in `titles/crash1/core/crash1_runtime.*`, and its product composition
 lives in `titles/crash1/core/crash1_port.*`; `crash1_boot_frontier.*` owns its measured two-stage boot
 boundary. It follows Dusklight's composition/owner boundary:
 `game/core/resident_program.*` owns the reusable generated-program setup, while
 `game/core/enter_critical_frontier.*` owns the measured syscall transition used by both the product
-and differential harness. The runtime stays title-owned until cross-title RE proves shared ownership;
+and differential harness. The runtime and frame driver stay title-owned until cross-title RE proves shared ownership;
 the shared modules encode framework execution mechanics, not inferred Crash engine behavior. There
 are still no legacy `GameConfig`/`GameHooks` views or a native-boot bypass.
 
@@ -86,7 +98,8 @@ the independent CPU at eight call boundaries through game main `0x80048AA0` and 
 agree 34/34; the B0 HLE and rendered frame do not yet execute.
 
 Crash 1 targets the North American NTSC-U release (`SCUS-94900`, executable `SCUS_949.00`). The exact
-identity/header evidence lives in `titles/crash1/executable.json` and is compared to the real bytes by
+identity, header, and VSync-body evidence lives in `titles/crash1/executable.json` and is compared to
+the real bytes by
 `tools/verify_executable.py`. Current execution reaches the real `EnterCriticalSection` syscall wrapper:
 the `crash1_port` product and focused harness share the port-side generated wrapper/HLE transition.
 The focused gate now validates Cause/EPC, resumes both CPUs at EPC+4, and agrees 34/34 at B(56h), with

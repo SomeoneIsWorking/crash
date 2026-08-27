@@ -111,6 +111,55 @@ Statuses: ✅ `re-verified` · 🟡 `re-partial` · 🔬 `in-progress` · ⬜ `t
 - gap: Equality is proven from the executable entry through the first post-syscall B(56h) dispatch boundary. Product composition extends to A(44h), but no serialized run has yet proven it reaches that boundary. The ordered real oracle now preserves CPU/RAM through the syscall, B(56h), C0 seed, and fourteen-word copy, but its first-post-model-call policy captures intermediate local wrapper `0x8004323C` with `ra=0x800431E8`. That wrapper tail-dispatches A(44h) via non-link `jr`, and modeled returns cannot currently combine with exact target capture. The A(44h) register file and fourteen destination words therefore lack an independent comparison (issue #8). Of 666 emitted candidates, eight bodies execute and one further candidate is observed as a call target without executing its body; 657 candidates lack execution provenance. Static table discovery also emits data-like fragments (issue #3), so neither the 115-seed nor 666-candidate count is a correctness denominator.
 - notes: Generated code is sacrosanct. C0 slot 6 is fixed in the shared framework, not overridden by Crash. Extend the shared oracle to preserve the ordered chain through the exact A(44h) target and refuse intervening hardware; do not restart at the local wrapper. Run the product serially only after the independent boundary exists. This is neither a rendered frame nor a playable-game claim. Both legacy views remain null. Keep explicit title seed additions empty until a real fail-fast indirect miss supplies an address and rationale; never copy another game's set.
 
+### CRASH1-VSYNC — identify and make guest VSync fatal
+- status: re-verified
+- deps: CRASH1-01
+- evidence: Verified SCUS_949.00 contains canonical libetc VSync at `[0x8003E4F0,0x8003E638)`. The tracked body SHA-256 is `915c96a114984906cdf7e9db7a82f361d9a716a593f5f8afead14b9f45edb8c7`; generated call routing preserves the body behind the runtime override seam. The executable gate passes 6/6 including altered entry/body controls, runtime facts agree 20/20, and the product-contract gate proves frame step, VSync(-1), VSync(0), and trap replacement all abort. The Crash 1 resident product rebuild proves its custom route initializes and requires the contract before generated dispatch.
+- where: `titles/crash1/executable.json`, `titles/crash1/core/crash1_frame_driver.*`, `Crash1Runtime::platformHlePlan`
+- gap: The fatal boundary is complete; the title still lacks a runnable frame step (`CRASH1-FRAME`).
+- notes: Every mode, including VSync(-1) queries, is forbidden. The host advances its own clock and never calls this leaf.
+
+### CRASH2-VSYNC — identify and make guest VSync fatal
+- status: re-verified
+- deps: CRASH2-01
+- evidence: Verified SCUS_941.54 contains canonical libetc VSync at `[0x8004A484,0x8004A5CC)`. The tracked body SHA-256 is `25097695f5ebd26728662b7989487b139e140ccf2129a14df10b30a003865b4e`. The executable gate passes 6/6 including altered entry/body controls, runtime facts agree 20/20, and the product-contract gate proves frame step, VSync(-1), VSync(0), and trap replacement all abort.
+- where: `titles/crash2/executable.json`, `titles/crash2/core/crash2_frame_driver.*`, `Crash2Runtime::platformHlePlan`
+- gap: The fatal boundary is complete; the title still lacks a product and runnable frame step (`CRASH2-FRAME`).
+- notes: The address is a Crash 2 fact; neither Crash 1 nor Crash 3 addresses are reusable.
+
+### CRASH3-VSYNC — identify and make guest VSync fatal
+- status: re-verified
+- deps: CRASH3-01
+- evidence: Verified SCUS_942.44 contains canonical libetc VSync at `[0x8004B2A8,0x8004B3F0)`. The tracked body SHA-256 is `9de0bd51589e40ceb1c85119f26f3a0ab8ffd90e8435df340c529444e8a52e80`. The executable gate passes 6/6 including altered entry/body controls, runtime facts agree 20/20, and the product-contract gate proves frame step, VSync(-1), VSync(0), and trap replacement all abort.
+- where: `titles/crash3/executable.json`, `titles/crash3/core/crash3_frame_driver.*`, `Crash3Runtime::platformHlePlan`
+- gap: The fatal boundary is complete; the title still lacks a product and runnable frame step (`CRASH3-FRAME`).
+- notes: The address is a Crash 3 fact; neither Crash 1 nor Crash 2 addresses are reusable.
+
+### CRASH1-FRAME — recover one complete native-owned frame step
+- status: re-verified
+- deps: CRASH1-04, CRASH1-VSYNC
+- evidence: Verified SCUS_949.00 identifies CoreLoop `[0x80011FC4,0x80012560)`, its next-iteration entry `0x80012030`, GpuUpdate `[0x80016E5C,0x800172E8)`, two display waits at `0x800170F4` and `0x80017124`, and its CNT2 increment event `0x80034504`. `Crash1FrameDriver` enters only through the host shell, services pad/audio and the measured counter clock, resumes the two exact post-wait continuations, and commits one presentation fence. Real headless product launches reached three earlier boot-time guest-VSync callers and made each fatal rather than answering it. Ghidra identifies the first two as libcd initialization `[0x80044E8C,0x8004519C)` and callback/event/pad initialization `[0x8003CB9C,0x8003CD3C)`; title-local runtime owners retain both generated bodies, preserve the state-producing initialization, and issue no guest VSync. The third caller `[0x80042864,0x80042A04)` is the GPU command-queue watchdog: its native owner reads the host-owned compatibility field counter directly and retains both the poll deadline and timeout recovery. Focused Clang tests exercise all three production transitions; their touched sources pass clang-tidy and `crash1_port` rebuilds with them.
+- evidence: Ghidra identifies the next startup chain as disc-index reader `[0x8002F8C4,0x8002FD30)` calling stock-libcd CdControl `[0x80043520,0x80043668)`, CdControlF `[0x80043668,0x80043984)`, CdRead `[0x800439A4,0x80043A24)`, CdReadSync `[0x80043984,0x800439A4)`, and the CdSync wrapper/body at `0x80043498`/`0x800440EC`. A serialized real-disc run proved reads stayed sequential after the NSD because only CdControl, not the page loader's CdControlF, updated the native head. Extracted NSD entry 6 requires LBA 51468 while guest RAM came from LBA 51376/NSF offset 34. `crash1_disc_index_io.*` now authenticates and binds CdControlF through a no-result ABI adapter to psxport's existing synchronous command owner, preserving every generated body. An isolated rerun then read LBA 51468 and delivered the exact extracted entry-6 payload, SHA-256 `ec3f010049a1b98cf0561ce1163c45992ca4b10bcdeb5bd792df46aaad22c937`; the retail decompressor advanced through later pages. Static inspection of the next refusal found the manifest's done flag transposed as `0x80036428`; the authenticated transition LUI/LW pair loads `0x80056428`. The corrected manifest records both address and load site, and the executable gate decodes and cross-checks that relationship. Against pinned psxport `3c342ec3`, a fully isolated PSX-render run reconciled 120/120 host frame fences through frame 119, returned normally, and emitted no guest-VSync, fatal, error, or watchdog-timeout line. Presented frames 30, 60, and 119 were visually inspected as the centered SCEA Presents splash. The focused Clang test proves Setloc and stale-result-pointer isolation; clang-tidy is clean and the product links.
+- where: `titles/crash1/core/crash1_frame_driver.*`, `titles/crash1/core/crash1_cd_boot.*`, `titles/crash1/core/crash1_disc_index_io.*`, `titles/crash1/core/crash1_callback_boot.*`, `titles/crash1/core/crash1_gpu_watchdog.*`, `titles/crash1/core/crash1_runtime.*`, `titles/crash1/core/crash1_port.*`
+- gap: The native-owned frame-step objective is verified for 120 consecutive intro frames. Gameplay progression remains unverified, and native graphics producers, widescreen, and interpolation remain separate ungrounded frontiers.
+- notes: The host shell invokes only this driver. The boot owners are not fake VSync answers: the libcd owner keeps the host controller and reproduces measured library state, the callback owner preserves 21 non-delay calls and removes four hardware-settle delays owned by the host, and the GPU watchdog reads `Timing::vblank` without dispatching the guest leaf. The stable-source page candidate is not in the product; CdControlF fixes the upstream seek instead.
+
+### CRASH2-FRAME — recover one complete native-owned frame step
+- status: todo
+- deps: CRASH2-04, CRASH2-VSYNC
+- evidence: The title runtime owns a refusing driver and no shipping product.
+- where: `titles/crash2/core/crash2_frame_driver.*`
+- gap: Continue the title-specific boot spine before assigning any frame semantics.
+- notes: Do not borrow Crash 1's loop boundary merely because the titles share an engine lineage.
+
+### CRASH3-FRAME — recover one complete native-owned frame step
+- status: todo
+- deps: CRASH3-04, CRASH3-VSYNC
+- evidence: The title runtime owns a refusing driver and no shipping product.
+- where: `titles/crash3/core/crash3_frame_driver.*`
+- gap: Continue the title-specific boot spine before assigning any frame semantics.
+- notes: Do not borrow Crash 1 or Crash 2 loop boundaries.
+
 ### SHARED-01 — prove cross-title shared-engine ownership
 - status: todo
 - deps: CRASH1-04, CRASH2-01, CRASH3-01
@@ -121,11 +170,11 @@ Statuses: ✅ `re-verified` · 🟡 `re-partial` · 🔬 `in-progress` · ⬜ `t
 
 ### CRASH1-05 — identify camera state and graphics submitters
 - status: todo
-- deps: CRASH1-04
+- deps: CRASH1-FRAME
 - evidence:
 - where: `titles/crash1/`, eventually `game/render/` only where SHARED-01 proves ownership
 - gap: Camera state and game-code submitters are unknown; no native producer exists.
-- notes: Resolve from game state before GTE submission, never from GTE/OT/GP0 output. The boot spine has not reached a frame-producing loop, so this work cannot start honestly yet.
+- notes: Resolve from game state before GTE submission, never from GTE/OT/GP0 output. The isolated compatibility run reached only the static SCEA splash; extend and drive it before choosing representative gameplay submitters.
 
 ### CRASH1-06 — owned widescreen and interpolation paths
 - status: todo
@@ -133,4 +182,4 @@ Statuses: ✅ `re-verified` · 🟡 `re-partial` · 🔬 `in-progress` · ⬜ `t
 - evidence:
 - where: not assigned
 - gap: Widescreen lacks an owned camera/projection producer. Interpolation lacks an authoritative simulation tick plus owned previous/current camera and object-transform producers. No native renderer submission owner exists to consume either result.
-- notes: Enhancements must remain off during faithful/oracle verification. The next measurable prerequisite is an independently compared post-B(56h) A(44h) state, then continued boot to the first frame-producing loop.
+- notes: Enhancements must remain off during faithful/oracle verification. The immediate prerequisite is a driven compatibility run reaching gameplay, followed by camera and pre-GTE submitter ownership.

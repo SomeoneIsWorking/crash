@@ -2,6 +2,7 @@
 
 #include "game.h"
 #include "game_runtime.h"
+#include "native_frame_loop_contract.h"
 #include "overlay_table.h"
 #include "rec_decls.h"
 
@@ -37,6 +38,11 @@ void observeDynamicBoundary(Core *core, std::uint64_t, std::uint32_t guestPc, vo
 }
 
 } // namespace
+
+void installResidentRuntime(GameRuntime &runtime) {
+  psxport_install_game(runtime);
+  psxport_install_recomp(&kResidentRecomp);
+}
 
 int runResidentProgram(const ResidentProgram &program) {
   if (program.executable == nullptr || *program.executable == '\0' || program.boundaryHandler == nullptr) {
@@ -77,10 +83,12 @@ int runResidentProgram(const ResidentProgram &program) {
     return 2;
   }
 
-  psxport_install_game(program.runtime);
-  psxport_install_recomp(&kResidentRecomp);
+  installResidentRuntime(program.runtime);
   auto game = std::make_unique<Game>();
   Core *core = &game->core;
+  // Resident boundary products bypass psxport's dc_boot_init, so they must install and require the
+  // same native-frame-loop VSync contract explicitly before any generated guest dispatch.
+  crash::initializeNativeFrameLoopContract(*game);
   DynamicBoundaryObservation dynamicBoundary{&program};
   load_exe(program.executable, core);
   if (program.transitionBoundary != 0) {

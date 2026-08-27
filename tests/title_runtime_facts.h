@@ -1,5 +1,7 @@
 #pragma once
 
+#include "platform_hle.h"
+
 #include <cstdio>
 
 template <typename Runtime> int writeTitleRuntimeFacts(const char *runtimeName) {
@@ -7,6 +9,12 @@ template <typename Runtime> int writeTitleRuntimeFacts(const char *runtimeName) 
   const GuestProgramImage *image = runtime.guestProgramImage();
   if (image == nullptr) {
     std::fprintf(stderr, "REFUSED: %s supplies no GuestProgramImage\n", runtimeName);
+    return 2;
+  }
+  const auto &frame = runtime.nativeFrameLoopContract();
+  const PlatformHlePlan *platform = runtime.platformHlePlan();
+  if (platform == nullptr) {
+    std::fprintf(stderr, "REFUSED: %s supplies no PlatformHlePlan\n", runtimeName);
     return 2;
   }
 
@@ -25,6 +33,11 @@ template <typename Runtime> int writeTitleRuntimeFacts(const char *runtimeName) 
   std::printf("resident_end=0x%08X\n", image->residentText.end);
   std::printf("stack_bias_declared=%u\n", image->stackBias.declared ? 1u : 0u);
   std::printf("stack_bias=%d\n", image->stackBias.bytes);
-  std::puts("runtime facts: 15 field(s)");
+  std::printf("vsync_begin=0x%08X\n", frame.guestVSync.begin);
+  std::printf("vsync_end=0x%08X\n", frame.guestVSync.end);
+  std::printf("platform_vsync=0x%08X\n", platform->vsyncAddress);
+  std::printf("platform_window_begin=0x%08X\n", platform->windowLo[0]);
+  std::printf("platform_window_end=0x%08X\n", platform->windowHi[0]);
+  std::puts("runtime facts: 20 field(s)");
   return 0;
 }
