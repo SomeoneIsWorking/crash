@@ -1,12 +1,12 @@
 ---
 id: 3
-title: static seed scan emits data-like resident fragments
-status: open
+title: Static seed scan emitted data-like resident fragments
+status: wontfix
 symptom: Crash 1 emission includes candidate functions whose generated bodies decode embedded text/data as instructions
 tags: crash1,recompiler,discovery
 state_items: S003
 created: 2026-08-21
-updated: 2026-08-26
+updated: 2026-09-04
 ---
 
 ## Observation
@@ -32,10 +32,9 @@ prevent treating the whole substrate or static discovery count as verified. Curr
 candidate addresses have execution provenance—eight emitted bodies execute, and one further candidate
 is observed as a call target without executing its body.
 
-## Proper next investigation
+## Disposition
 
-The independent CPU and shipping path now agree through the first pre-HLE B(56h) dispatch; that does
-not establish provenance for the rest of the static candidate set. Make the shared emitter distinguish
-each mixed-table entry's executable provenance instead of accepting every target because the run as a
-whole looks like code. This repository must not patch or delete generated fragments locally, and
-explicit title seeds remain empty until an actual indirect execution miss proves an address.
+The runtime Lightrec migration removes static function discovery from the product instead of refining
+this heuristic. Preserve the measured false-positive fact as a warning about the old evidence, but do
+not change, regenerate, build, or run the emitter. The static corpus and this discovery mechanism are
+deleted only after representative gameplay authorizes removal of the old route.

@@ -1,22 +1,21 @@
 ---
 id: 5
 title: Crash 1 has no game-owned native renderer
-status: open
-symptom: A diagnostic real-disc run reaches 120 host frame fences and observes guest primitives, but earns zero native producer rows and has no visually inspected compatibility frame
-state_items: S005,S006,S007,S009
+status: investigating
+symptom: The preserved compatibility path reaches the 3D menu and grounded pre-GTE submitters, but no native/Lightrec gameplay run or game-owned primitive producer exists
+state_items: S005,S006,S007,S009,S011
 tags: crash1,rendering,native,producers
 created: 2026-08-22
-updated: 2026-08-27
+updated: 2026-09-04
 ---
 
 ## Root cause
 
-Crash 1's native host loop can execute the generated CoreLoop and reconcile frame fences, but that
-timing owner is not a graphics owner. The diagnostic 120-frame run observed 125,680 primitive records
-while the native producer database remained empty: zero native rows, zero claims, and zero spans
-joined to a native producer. Camera state, pre-GTE object transforms, and game-code graphics submitters
-remain unidentified, so no grounded native renderer, widescreen projection, or interpolation path
-exists.
+Crash 1's host loop and compatibility presentation are not graphics ownership. Later evidence reached
+the 3D menu and grounded the camera/publication chain at `GfxUpdateMatrices 0x80017A14` plus the
+object-level pre-GTE submitter `GoolObjectTransform 0x8001DE78`, but no game-owned producer emits
+typed native primitives and no representative gameplay run identifies live world/object inputs.
+Therefore no grounded native renderer, widescreen projection, or interpolation path exists.
 
 ## What was tried / dead ends
 
@@ -26,10 +25,11 @@ rendering.
 
 ## Proper next step
 
-First reproduce the 120-frame result in a fully isolated run and capture a compatibility-renderer leg
-for visual inspection. Then identify camera state and graphics submitters before GTE submission,
-instrument those title-owned functions, and earn native producer rows against the same build. Only
-owned projection and previous/current transform state can ground widescreen and interpolation.
+First reproduce the current menu/PadRead frontier through the native/Lightrec product and enter
+representative gameplay. Then capture live pre-GTE camera, world, object, material, and ordering
+inputs at the grounded title-owned functions and implement the smallest native producer. Compare its
+scoped override with a Lightrec original call. Do not rerun the static product. Only owned projection
+and previous/current transform state can ground widescreen and interpolation.
 
 ### Note (2026-08-22)
 The first text exit is now identified exactly. `SCUS_949.00` call eight targets `0x8003E1F8`
@@ -79,3 +79,6 @@ Issues #10 and #11 are resolved. Against pinned psxport `3c342ec3`, the isolated
 NSD-selected payload, crossed retail page decompression, reconciled 120/120 frame fences, and produced
 visually inspected compatibility captures of the SCEA Presents splash without guest VSync. The run
 earned no native producer rows; it advances the loop frontier without advancing native rendering.
+
+### Note (2026-08-27)
+Static retail/Ghidra plus address-aligned Crash reference source identify the pre-projection ownership chain. CoreLoop calls GfxUpdateMatrices at 0x80017A14, which consumes cam_trans 0x80057864, cam_rot 0x80057870, screen_proj 0x800578D0, and the current zone before calling GfxLoadWorlds 0x8001922C. GoolObjectTransform 0x8001DE78..0x8001E3D4 is the first object-level submitter: it receives a gool_object, selects the authored animation type/frame and assets, and sends vertex animations through GfxTransformSvtx 0x80018964 or GfxTransformCvtx 0x80018A40 before GTE projection. This grounds the candidate seam without deriving pictures from GTE, OT, or GP0. It is not yet an executed native producer; the native/Lightrec gameplay path must prove these functions execute and capture their live pre-GTE inputs.

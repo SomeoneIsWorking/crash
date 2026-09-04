@@ -6,7 +6,9 @@ Stable product intent for the Crash engine-lineage repository. Factual coverage 
 ## G001 — playable faithful Crash trilogy ports
 
 Deliver native PC products for the North American releases of Crash Bandicoot, Crash Bandicoot 2,
-and Crash Bandicoot 3 that execute each verified retail program through owned host integration.
+and Crash Bandicoot 3. Title-owned native subsystems cooperate with psxport's pinned Lightrec
+executor, which translates every remaining guest instruction on demand from the user's verified
+retail executable.
 
 Why it matters: the repository represents one engine lineage, so a Crash 1-only executable is not the
 trilogy product.
@@ -16,17 +18,24 @@ Success conditions:
 - each title has a serial-verified, asset-safe provisioning path and shipping executable;
 - each product reaches sustained gameplay with working presentation, input, audio, saves, and timing;
 - `run.sh` launches the current intended product from a fresh clone with documented native dependencies,
-  `uv`, and user-supplied game data.
+  `uv`, and user-supplied game data;
+- the gameplay executables contain neither generated guest code nor an interpreter/fallback, and
+  link/selector checks prove that separation;
+- native overrides and override-bypassing original calls execute through one image-aware runtime
+  dispatcher with explicit bounded exits and executable-memory invalidation.
 
 Constraints and non-goals:
 
-- generated recompiler output is derived from user-supplied executables and is never hand-edited or
-  committed;
+- no build, install, provisioning, or launch step emits or compiles guest code ahead of time;
+- an interpreter may be built only as a separate test/diagnostic oracle and is absent from every
+  gameplay product;
+- the old static path remains migration evidence only until representative gameplay authorizes its
+  complete removal; it is not regenerated, rebuilt, run, or retained as a compatibility mode;
 - title addresses and behavior remain title-owned until direct cross-title evidence proves a shared
   engine owner;
 - CTR and Crash Bash are separate engines and are not part of this repository's product.
 
-Related state: S001, S002, S003, S004, S008, S009.
+Related state: S001, S002, S003, S004, S008, S009, S011.
 
 ## G002 — owned widescreen, interpolation, and native rendering
 
