@@ -50,7 +50,7 @@ struct NativeFrameLoopContract {
 [[nodiscard]] PlatformHlePlan makeNativeFramePlatformPlan(const NativeFrameLoopContract &contract);
 
 // Direct product routes that do not enter psxport's standard bootstrap call this exact seam before
-// any generated dispatch. It installs the framework-owned fatal trap and proves it is present.
+// guest execution. It installs and verifies the framework-owned typed VSync boundary.
 void initializeNativeFrameLoopContract(Game &game);
 
 } // namespace crash

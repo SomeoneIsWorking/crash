@@ -16,10 +16,10 @@ struct Program {
 using MainDispatch = void (*)(Core *, std::uint32_t);
 
 const Program &program();
-void registerOverrides();
+void registerOverrides(Core &core);
 
 // GPU queue timeout bookkeeping uses the host-owned display counter directly. These are public so
-// the focused test exercises the production state transitions with an injectable generated dispatcher.
+// the focused test exercises the production state transitions with an injectable guest dispatcher.
 void start(Core &core);
 void check(Core &core, MainDispatch dispatch);
 

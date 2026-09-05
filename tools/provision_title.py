@@ -141,14 +141,11 @@ def find_discdump(
             raise Refused(f"configured discdump is not executable: {path}")
         return path.resolve()
 
-    build_dirs = (root / "scratch" / "build-clang", root / "build")
-    build_dir = next(
-        (path for path in build_dirs if (path / "CMakeCache.txt").is_file()), None
-    )
-    if build_dir is None:
+    build_dir = root / "build" / "verify"
+    if not (build_dir / "CMakeCache.txt").is_file():
         raise Refused(
-            "no configured Crash build; configure scratch/build-clang with the README's Clang "
-            "command before provisioning"
+            "no configured Crash build; run the documented verifier or configure build/verify "
+            "before provisioning"
         )
 
     result = subprocess.run(

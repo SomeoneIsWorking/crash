@@ -4,22 +4,22 @@ This repository targets one native PC product per title, with title-owned native
 psxport's pinned Lightrec integration executing every remaining retail instruction at runtime.
 Read `docs/migration.md`, `docs/project-state.md`, `docs/codemap.md`, and `docs/re-frontier.md` before
 implementation. The workspace rules in `../AGENTS.md` and framework-consumer rules in
-`external/psxport/AGENTS.md` also apply, except that their old static-recompiler guidance is
-superseded by the portfolio migration authority in `../../shared/jit-common/docs/migration.md`.
+`external/psxport/AGENTS.md` also apply at the shared runtime boundary.
 
 ## Execution contract
 
 - The gameplay products consume the user's identity-verified executable directly through the
   per-`Core` psxport-Lightrec executor. They never emit, compile, link, or select generated guest
   source.
-- An interpreter may exist only in a separately built test/diagnostic target. Product link and
-  selector checks must prove that no interpreter or fallback is present.
+- No full-game interpreter or player-selectable interpreter mode may exist. Lightrec remains the
+  mandatory gameplay backend; its internal, bounded block fallback is allowed only for explicit
+  backend reasons and must remain measured rather than becoming a second execution engine.
 - Native overrides are keyed by complete runtime image identity and guest address. Their original
   calls re-enter retail code through the executor; do not retain generated `super` bodies.
 - Frame suspension, host work, interrupts, exceptions, and title exit use explicit bounded executor
   exits. C++ unwinding through JIT frames is forbidden.
-- Do not regenerate, build, or run the static product. Its existing evidence and artifacts remain
-  migration evidence only until the representative-gameplay deletion gate in `docs/migration.md`.
+- The static translator, generated corpus, dispatch adapters, seed inputs, and static-only tests are
+  deleted. Do not reintroduce them; retained measurements in `docs/re-frontier.md` are evidence only.
 
 ## Current title discipline
 

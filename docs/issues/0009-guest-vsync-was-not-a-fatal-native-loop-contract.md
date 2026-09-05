@@ -6,7 +6,7 @@ symptom: Direct Crash runtimes could reach retail VSync without a host-owned Fra
 state_items: S003,S004,S008,S010
 tags: crash1,crash2,crash3,frame-loop,vsync,ownership
 created: 2026-08-27
-updated: 2026-08-27
+updated: 2026-09-04
 ---
 
 ## Root cause
@@ -50,3 +50,10 @@ does not yet prove a completed frame.
 
 ### Note (2026-08-27)
 The complete configured Clang CTest graph passed 9/9 after the product rebuild, including the boot/C0 contracts, all three runtimes, native frame/VSync death contract, C++ policy, provisioning, and launcher tests.
+
+### Migration note (2026-09-04)
+
+The Lightrec migration replaces the earlier fatal stop with psxport's typed `FrameBoundary`. Crash 1
+consumes that result, performs host field work, and resumes at the measured guest return address;
+Crash 2 and Crash 3 retain refusing frame drivers. The prior abort evidence above is historical and
+must not be read as the current runtime contract.

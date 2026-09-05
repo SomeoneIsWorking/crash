@@ -19,8 +19,7 @@ struct Program {
 const Program &program();
 
 // Bind Crash's measured stock-libcd wrappers to the framework's synchronous command/data owners.
-// The generated bodies remain present for differential and A/B work.
-void registerOverrides();
+void registerOverrides(Core &core);
 
 // Production override bodies, exposed so focused tests exercise the shipping route.
 void applyControl(Core *core);

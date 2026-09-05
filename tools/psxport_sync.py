@@ -43,7 +43,7 @@ import sys
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 LINK = os.path.join(REPO, "external", "psxport")
 PIN = os.path.join(REPO, "psxport.pin")
-DEFAULT_BUILD = os.path.join(REPO, "scratch", "build-clang")
+DEFAULT_BUILD = os.path.join(REPO, "build", "verify")
 DEFAULT_URL = "https://github.com/SomeoneIsWorking/psxport.git"
 
 # Where a shared clone lives, in preference order. $PSX wins so a differently-laid-out workspace works.
@@ -117,8 +117,8 @@ def head_of(path):
 
 
 def dirty(path):
-    out, rc = git(["status", "--porcelain"], path)
-    return bool(out) if rc == 0 else False
+    out, _ = git(["status", "--porcelain"], path, check=True)
+    return bool(out)
 
 
 def report(args):
@@ -195,7 +195,7 @@ def do_clone(args):
         if rc != 0:
             print("[psxport] REFUSED: clone failed.")
             return 2
-    git(["fetch", "origin"], LINK)
+    git(["fetch", "origin"], LINK, check=True)
     _, rc = git(["checkout", pin], LINK)
     if rc != 0:
         print(f"[psxport] REFUSED: pin {pin} is not reachable in {url}. A fresh clone of this repo "
@@ -203,8 +203,8 @@ def do_clone(args):
         return 1
     # Nested vendor submodules are psxport's own; init them non-recursively, because beetle carries a
     # URL-less nested gitlink that makes --recursive fail outright.
-    git(["submodule", "update", "--init", "vendor/beetle-psx", "vendor/lucent"], LINK)
-    git(["submodule", "update", "--init", "deps/libchdr"], os.path.join(LINK, "vendor", "beetle-psx"))
+    git(["submodule", "update", "--init", "vendor/beetle-psx", "vendor/lucent"], LINK, check=True)
+    git(["submodule", "update", "--init", "deps/libchdr"], os.path.join(LINK, "vendor", "beetle-psx"), check=True)
     print(f"[psxport] external/psxport cloned at pin {pin}")
     return 0
 
@@ -253,10 +253,15 @@ def do_check(args):
     built = read_resolved(args.build_dir)
     if not built:
         resolved = os.path.join(args.build_dir, "psxport_resolved.txt")
-        print(f"[psxport] check: no {resolved} — this tree has not been configured, so "
-              f"there is nothing to compare the pin against. Asserting nothing (pin {pin[:8]}).")
-        return 0
+        print(f"[psxport] REFUSED: missing {resolved}; configure the verification tree "
+              "before checking its dependency provenance.")
+        return 2
     bdir, bsha = built
+    current = head_of(bdir)
+    if current != bsha or dirty(bdir):
+        print(f"[psxport] check FAILED — framework {bdir} is dirty or changed since configure "
+              f"(configured {bsha}, current {current}).")
+        return 1
     if bsha == pin:
         print(f"[psxport] check OK — built against {bsha[:8]}, which is the recorded pin.")
         return 0
@@ -281,7 +286,7 @@ def main():
     ap.add_argument(
         "--build-dir",
         default=DEFAULT_BUILD,
-        help="configured build tree whose psxport provenance is checked (default: scratch/build-clang)",
+        help="configured build tree whose psxport provenance is checked (default: build/verify)",
     )
     args = ap.parse_args()
     if args.link:  return do_link(args)

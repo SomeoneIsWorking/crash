@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Provision, build, and launch Crash 1 at the repository's current honest boot frontier."""
+"""Provision, build, and launch the Crash 1 native/Lightrec product."""
 
 from __future__ import annotations
 
@@ -15,10 +15,9 @@ from pathlib import Path
 from typing import TextIO
 
 ROOT = Path(__file__).resolve().parents[1]
-BUILD = Path("scratch/build-player")
+BUILD = Path("build/player")
 EXECUTABLE = Path("scratch/bin/crash1/SCUS_949.00")
-GENERATED = Path("generated/crash1")
-PRODUCT = Path("scratch/bin/crash1_port")
+PRODUCT = BUILD / "crash1_port"
 
 
 class LauncherFailure(RuntimeError):
@@ -59,6 +58,7 @@ def package_command(host: Host, package: str) -> str | None:
         return {
             "cmake": "brew install cmake",
             "git": "xcode-select --install",
+            "ninja": "brew install ninja",
             "pkg-config": "brew install pkg-config",
             "sdl3": "brew install sdl3",
         }[package]
@@ -66,6 +66,7 @@ def package_command(host: Host, package: str) -> str | None:
         return {
             "cmake": "winget install Kitware.CMake",
             "git": "winget install Git.Git",
+            "ninja": "winget install Ninja-build.Ninja",
             "pkg-config": "vcpkg install pkgconf",
             "sdl3": "vcpkg install sdl3",
         }[package]
@@ -76,6 +77,7 @@ def package_command(host: Host, package: str) -> str | None:
         return {
             "cmake": "sudo dnf install cmake",
             "git": "sudo dnf install git",
+            "ninja": "sudo dnf install ninja-build",
             "pkg-config": "sudo dnf install pkgconf-pkg-config",
             "sdl3": "sudo dnf install SDL3-devel",
         }[package]
@@ -83,6 +85,7 @@ def package_command(host: Host, package: str) -> str | None:
         return {
             "cmake": "sudo apt install cmake",
             "git": "sudo apt install git",
+            "ninja": "sudo apt install ninja-build",
             "pkg-config": "sudo apt install pkg-config",
             "sdl3": "sudo apt install libsdl3-dev",
         }[package]
@@ -182,12 +185,33 @@ def configure_command(
         ".",
         "-B",
         str(BUILD),
+        "-G",
+        "Ninja",
         "-DCMAKE_BUILD_TYPE=Release",
         "-DBUILD_TESTING=OFF",
         f"-DPSXPORT_DIR={framework}",
         f"-DPython3_EXECUTABLE={python_executable}",
         *compiler_options,
     ]
+
+
+def runtime_build_arguments(framework: Path, environment: Mapping[str, str]) -> list[str]:
+    """Use the framework's dependency resolution for both player and verifier builds."""
+    project = framework / "tools/project.py"
+    if not project.is_file():
+        raise LauncherFailure(f"psxport checkout is missing build policy: {project}")
+    sys.path.insert(0, str(project.parent))
+    try:
+        policy = runpy.run_path(str(project))
+    finally:
+        sys.path.pop(0)
+    try:
+        return [
+            *policy["lightrec_cmake_definitions"](environment),
+            *policy["lightning_cmake_definitions"](environment),
+        ]
+    except policy["ToolError"] as exc:
+        raise LauncherFailure(str(exc)) from exc
 
 
 def player_launch_environment(
@@ -233,6 +257,7 @@ def run_launcher(
         options = parse_args(argv)
         require_tool(machine, "cmake")
         require_tool(machine, "git")
+        require_tool(machine, "ninja")
         require_tool(machine, "pkg-config")
         run_stage(
             machine,
@@ -263,6 +288,7 @@ def run_launcher(
         compiler_options = compiler_arguments(machine, environment)
         jobs = cpu_jobs(machine, root=root)
         configure = configure_command(python_executable, framework, compiler_options)
+        configure.extend(runtime_build_arguments(framework, environment))
         run_stage(
             machine,
             configure,
@@ -299,29 +325,6 @@ def run_launcher(
         )
         run_stage(
             machine,
-            [
-                python_executable,
-                "-B",
-                "tools/crash1_recomp.py",
-                "--emit",
-                "--exe",
-                str(EXECUTABLE),
-                "--output",
-                str(GENERATED),
-            ],
-            "Crash 1 resident substrate generation failed",
-            root=root,
-            environment=provision_environment,
-        )
-        run_stage(
-            machine,
-            configure,
-            "CMake reconfigure did not publish crash1_port",
-            root=root,
-            environment=environment,
-        )
-        run_stage(
-            machine,
             ["cmake", "--build", str(BUILD), "--parallel", jobs, "--target", "crash1_port"],
             "Crash 1 product build failed",
             root=root,
@@ -332,10 +335,10 @@ def run_launcher(
         return 1
 
     if options.prepare_only:
-        print("[run] Crash 1 product is built at its measured boot frontier.", file=stdout)
+        print("[run] Crash 1 native/Lightrec product is built.", file=stdout)
         return 0
 
-    print("[run] launching Crash Bandicoot 1 at its measured boot frontier…", file=stdout)
+    print("[run] launching Crash Bandicoot 1 through Lightrec…", file=stdout)
     try:
         launch_environment = player_launch_environment(framework, environment)
         result = machine.run(

@@ -39,17 +39,15 @@ public:
 
 private:
   static void finishFrameIteration(Core *core);
-  static void deliverFirstDisplayField(Core *core);
-  static void deliverSecondDisplayField(Core *core);
   static void setRootCounterSuper(Core *core);
   static void startRootCounterSuper(Core *core);
   static void stopRootCounterSuper(Core *core);
   static Crash1FrameDriver &from(Core &core);
 
-  void deliverDisplayField(Core &core, std::uint32_t continuation);
+  void deliverDisplayField(Core &core);
   void serviceRootCounter(Core &core, std::uint64_t throughCpuTick);
   void resetRootCounterClock(const Core &core);
-  void runRecompiledSuper(Core &core, std::uint32_t address, void (*overrideFn)(Core *));
+  void callOriginal(Core &core, std::uint32_t address);
 
   Game &game_;
   std::uint32_t completedFrames_{};
@@ -59,6 +57,7 @@ private:
   bool enteredCoreLoop_{};
   bool rootCounterConfigured_{};
   bool rootCounterRunning_{};
+  bool frameCompleted_{};
 };
 
 } // namespace crash1

@@ -3,6 +3,7 @@
 #include "core.h"
 #include "game.h"
 #include "game_iface.h"
+#include "image_identity.h"
 #include "native_frame_loop_contract.h"
 #include "platform_hle.h"
 
@@ -56,7 +57,7 @@ int verifyTitleRuntimeContract(const char *name,
   if (platform == nullptr || platform->vsyncAddress != frame.guestVSync.begin ||
       platform->windowLo[0] != frame.guestVSync.begin || platform->windowHi[0] != frame.guestVSync.end ||
       platform->bindingCount != 0) {
-    std::fprintf(stderr, "%s did not bind its measured VSync leaf to the sole framework fatal trap\n", name);
+    std::fprintf(stderr, "%s did not bind its measured VSync leaf to the framework frame boundary\n", name);
     return 1;
   }
   const RenderCapabilities capabilities = runtime.renderCapabilities();
@@ -66,8 +67,11 @@ int verifyTitleRuntimeContract(const char *name,
     return 1;
   }
 
-  runtime.registerOverrides(*game);
-  std::printf("%s: direct derived install; host FrameDriver + fatal VSync contract; native/interpolation target; "
+  if (expectProgramImage) {
+    game->core.imageCatalog().activate(name, runtime.guestProgramImage()->residentText, 1u);
+    runtime.registerOverrides(*game);
+  }
+  std::printf("%s: direct derived install; host FrameDriver + typed VSync contract; native/interpolation target; "
               "%s\n",
               name,
               expectRunnableFrame ? "measured runnable frame seam" : "explicit non-runnable frontier");

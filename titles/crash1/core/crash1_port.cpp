@@ -3,11 +3,10 @@
 #include "core.h"
 #include "crash1_runtime.h"
 #include "game.h"
-#include "resident_program.h"
+#include "lightrec_executor.h"
 
 #include <lucent/log.h>
 
-#include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <memory>
@@ -31,8 +30,8 @@ constexpr const char *kDefaultExecutable = "scratch/bin/crash1/SCUS_949.00";
 
 int runPort(int argc, char **argv) {
   if (argc == 2 && (std::strcmp(argv[1], "--help") == 0 || std::strcmp(argv[1], "-h") == 0)) {
-    std::printf("Usage: %s [-h|--help]\n", argv[0]);
-    std::puts("Run Crash Bandicoot through the host-owned native frame loop.");
+    lucent::info("crash1", "Usage: {} [-h|--help]", argv[0]);
+    lucent::info("crash1", "Run Crash Bandicoot through the host-owned native/Lightrec frame loop.");
     return EXIT_SUCCESS;
   }
   if (argc != 1) {
@@ -40,7 +39,7 @@ int runPort(int argc, char **argv) {
     return 2;
   }
   static Crash1Runtime runtime;
-  crash::installResidentRuntime(runtime);
+  psxport_install_game(runtime);
 
   auto game = std::make_unique<Game>();
   game->disc.env_key = "PSXPORT_CRASH1_DISC";
@@ -48,6 +47,10 @@ int runPort(int argc, char **argv) {
 
   watchdog_init();
   load_exe(kDefaultExecutable, core);
+  if (!core->lightrecExecutor().available()) {
+    lucent::error("crash1-boot", "psxport was built without its Lightrec dynarec backend");
+    return 2;
+  }
   gte_init();
   mdec_init();
   spu_init();

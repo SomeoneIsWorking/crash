@@ -2,8 +2,7 @@
 
 Native PC ports of the North American Crash Bandicoot trilogy, built on
 [psxport](https://github.com/SomeoneIsWorking/psxport). Each product combines title-owned native
-subsystems with psxport's pinned Lightrec executor for every retail instruction that remains guest
-owned.
+subsystems with psxport's pinned Lightrec executor for the retail code that remains guest owned.
 
 The repository is one engine lineage with title-specific integration under `titles/crash1/`,
 `titles/crash2/`, and `titles/crash3/`. Crash Bandicoot is the active title; Crash 2 and Crash 3 do
@@ -29,15 +28,15 @@ product and do not prove gameplay, a native renderer, widescreen, or interpolati
 ## Product and migration contract
 
 The target `run.sh` path provisions the user's disc, validates its exact title identity, builds the
-native/Lightrec product, and launches it without offline guest-code emission. A player build neither
-links nor selects an interpreter. The interpreter is a separately built diagnostic oracle only.
+native/Lightrec product, and launches it without offline guest-code emission. There is no full-game
+interpreter or player-selectable interpreter mode. Lightrec may use only its bounded, measured
+per-block fallback for explicit backend reasons; the independent interpreter remains a separately
+built diagnostic oracle.
 
-The current launcher still belongs to the retired static pipeline and is not a supported migration
-command. Do not run it, regenerate its corpus, or collect new static-product evidence. Follow
-`docs/migration.md`: first wire the authenticated Crash 1 image and existing native owners through
-the psxport executor, then reproduce the current menu/PadRead frontier, then prove representative
-interactive gameplay. Only that final gameplay gate authorizes removal of the static generator,
-corpus, dispatcher, seeds, and generated-symbol tests.
+The launcher now targets the native/Lightrec composition. The former translator, generated corpus,
+static dispatcher, seed inputs, and generated-symbol tests were removed before integration. Follow
+`docs/migration.md`: finish the shared executor boundary, reproduce the current menu/PadRead
+frontier, then prove representative interactive gameplay.
 
 The game media, extracted executable, traces, and runtime cache remain untracked. Player media
 resolution remains explicit argument, title/generic environment or `.env`, then one unambiguous
@@ -52,3 +51,20 @@ decorates presentation only. These enhancements remain off during faithful oracl
 
 See `docs/project-state.md` for factual coverage, `docs/project-goals.md` for completion conditions,
 `docs/codemap.md` for ownership, and `docs/re-frontier.md` for the preserved evidence chain.
+
+## Verification
+
+Maintainers select Clang and run the locked verifier explicitly; `run.sh` remains the player
+launcher and never runs tests:
+
+```sh
+CC=clang CXX=clang++ uv run --frozen python tools/verify.py
+```
+
+For explicitly provisioned runtime dependencies, set `PSXPORT_LIGHTREC_DIR` to the maintained
+Lightrec checkout and `PSXPORT_LIGHTNING_PREFIX` to the maintained GNU Lightning install prefix.
+The player launcher and verifier use the same shared dependency validation and CMake arguments.
+
+Hosted CI exercises the real asset-free native/Lightrec boundary on Linux x86-64. Windows x86-64,
+Apple Silicon macOS, and Android arm64-v8a remain explicit missing host qualifications rather than
+platform-named policy checks; see the host qualification details in `docs/project-state.md`.

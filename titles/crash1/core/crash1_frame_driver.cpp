@@ -1,10 +1,12 @@
 #include "crash1_frame_driver.h"
 
 #include "core.h"
+#include "crash1_bios_pad_input.h"
+#include "dynarec_dispatch.h"
 #include "emulated_time.h"
+#include "execution_control.h"
 #include "field_rate.h"
 #include "game.h"
-#include "recomp_iface.h"
 
 #include <cstdlib>
 #include <lucent/log.h>
@@ -61,23 +63,6 @@ static_assert(kProgram.gpuUpdate.contains(kProgram.afterFirstVSync));
 static_assert(kProgram.gpuUpdate.contains(kProgram.secondVSync));
 static_assert(kProgram.gpuUpdate.contains(kProgram.afterVSync));
 
-const RecompRegistry &requireRecompiledProgram() {
-  const RecompRegistry *registry = psxport_recomp();
-  if (registry == nullptr || registry->main_dispatch == nullptr || registry->rec_func_index == nullptr ||
-      registry->shard_set_override == nullptr) {
-    lucent::error("crash1-frame", "Crash 1 has no installed resident recompiler registry");
-    std::abort();
-  }
-  return *registry;
-}
-
-void requireEntry(const RecompRegistry &registry, std::uint32_t address, const char *owner) {
-  if (registry.rec_func_index(address) < 0) {
-    lucent::error("crash1-frame", "{} entry 0x{:08X} is absent from the generated substrate", owner, address);
-    std::abort();
-  }
-}
-
 } // namespace
 
 Crash1FrameDriver::Crash1FrameDriver(Game &game) : game_(game) {}
@@ -98,36 +83,26 @@ Crash1FrameDriver &Crash1FrameDriver::from(Core &core) {
   return static_cast<Crash1FrameDriver &>(*core.game->frameDriver);
 }
 
-void Crash1FrameDriver::installOverrides(Game &) {
-  const RecompRegistry &registry = requireRecompiledProgram();
+void Crash1FrameDriver::installOverrides(Game &game) {
   const struct Binding {
     std::uint32_t address;
-    RecOverrideFn function;
+    psx::cpu::NativeFunction function;
     const char *owner;
   } bindings[]{
       {kProgram.transition.begin, finishFrameIteration, "CoreLoop transition"},
-      {kProgram.firstVSync, deliverFirstDisplayField, "first GpuUpdate VSync"},
-      {kProgram.secondVSync, deliverSecondDisplayField, "second GpuUpdate VSync"},
       {kProgram.setRootCounter, setRootCounterSuper, "SetRCnt"},
       {kProgram.startRootCounter, startRootCounterSuper, "StartRCnt"},
       {kProgram.stopRootCounter, stopRootCounterSuper, "StopRCnt"},
   };
   for (const Binding &binding : bindings) {
-    requireEntry(registry, binding.address, binding.owner);
-    registry.shard_set_override(binding.address, binding.function);
+    if (!crash::dynarec::installOverride(game.core, binding.address, binding.owner, binding.function)) {
+      std::abort();
+    }
   }
-  requireEntry(registry, kProgram.coreLoop.begin, "CoreLoop");
-  requireEntry(registry, kProgram.iteration.begin, "CoreLoop iteration");
-  requireEntry(registry, kProgram.afterFirstVSync, "first VSync continuation");
-  requireEntry(registry, kProgram.afterVSync, "GpuUpdate post-VSync super");
-  requireEntry(registry, kProgram.rootCounterIncrement, "root-counter event super");
 }
 
-void Crash1FrameDriver::runRecompiledSuper(Core &core, std::uint32_t address, void (*overrideFn)(Core *)) {
-  const RecompRegistry &registry = requireRecompiledProgram();
-  registry.shard_set_override(address, nullptr);
-  registry.main_dispatch(&core, address);
-  registry.shard_set_override(address, overrideFn);
+void Crash1FrameDriver::callOriginal(Core &core, std::uint32_t address) {
+  crash::dynarec::requireGuestReturn(crash::dynarec::callOriginal(core, address), "Crash 1 original call");
 }
 
 void Crash1FrameDriver::resetRootCounterClock(const Core &core) {
@@ -138,10 +113,10 @@ void Crash1FrameDriver::serviceRootCounter(Core &core, std::uint64_t throughCpuT
   if (!rootCounterConfigured_ || !rootCounterRunning_) {
     return;
   }
-  const RecompRegistry &registry = requireRecompiledProgram();
   while (nextRootCounterTick_ <= throughCpuTick) {
     const R3000 interrupted = static_cast<const R3000 &>(core);
-    registry.main_dispatch(&core, kProgram.rootCounterIncrement);
+    crash::dynarec::requireGuestReturn(crash::dynarec::callGuest(core, kProgram.rootCounterIncrement),
+                                       "Crash 1 root-counter callback");
     static_cast<R3000 &>(core) = interrupted;
     nextRootCounterTick_ += kRootCounterCpuTicks;
   }
@@ -151,7 +126,7 @@ void Crash1FrameDriver::setRootCounterSuper(Core *core) {
   Crash1FrameDriver &driver = from(*core);
   const std::uint32_t spec = core->r[4];
   const std::uint32_t target = core->r[5];
-  driver.runRecompiledSuper(*core, kProgram.setRootCounter, setRootCounterSuper);
+  driver.callOriginal(*core, kProgram.setRootCounter);
   if (spec == kRootCounterSpec && target == kRootCounterTarget) {
     driver.rootCounterConfigured_ = true;
     driver.resetRootCounterClock(*core);
@@ -161,7 +136,7 @@ void Crash1FrameDriver::setRootCounterSuper(Core *core) {
 void Crash1FrameDriver::startRootCounterSuper(Core *core) {
   Crash1FrameDriver &driver = from(*core);
   const std::uint32_t spec = core->r[4];
-  driver.runRecompiledSuper(*core, kProgram.startRootCounter, startRootCounterSuper);
+  driver.callOriginal(*core, kProgram.startRootCounter);
   if (spec == kRootCounterSpec) {
     if (!driver.rootCounterConfigured_) {
       lucent::error("crash1-frame", "StartRCnt(CNT2) preceded the measured SetRCnt(CNT2,0x1000) setup");
@@ -179,10 +154,10 @@ void Crash1FrameDriver::stopRootCounterSuper(Core *core) {
     driver.serviceRootCounter(*core, core->game->timing.emulatedCpuTicks());
     driver.rootCounterRunning_ = false;
   }
-  driver.runRecompiledSuper(*core, kProgram.stopRootCounter, stopRootCounterSuper);
+  driver.callOriginal(*core, kProgram.stopRootCounter);
 }
 
-void Crash1FrameDriver::deliverDisplayField(Core &core, std::uint32_t continuation) {
+void Crash1FrameDriver::deliverDisplayField(Core &core) {
   if (!rootCounterConfigured_ || !rootCounterRunning_) {
     lucent::error("crash1-frame", "GpuUpdate reached its display wait before Crash 1 CNT2 was configured and started");
     std::abort();
@@ -198,24 +173,11 @@ void Crash1FrameDriver::deliverDisplayField(Core &core, std::uint32_t continuati
   const std::uint64_t displayBoundary =
       waitBaseCpuTick_ + display_field_cpu_ticks(deliveredFields_, 1u, FIELD_RATE_NTSC_MILLIHZ);
   serviceRootCounter(core, displayBoundary);
-  if (game_.diff_mode) {
-    game_.spu_audio.frameLogic();
-  } else {
-    game_.spu_audio.frame();
-  }
-  core.r[31] = continuation;
-  requireRecompiledProgram().main_dispatch(&core, continuation);
-}
-
-void Crash1FrameDriver::deliverFirstDisplayField(Core *core) {
-  from(*core).deliverDisplayField(*core, kProgram.afterFirstVSync);
-}
-
-void Crash1FrameDriver::deliverSecondDisplayField(Core *core) {
-  from(*core).deliverDisplayField(*core, kProgram.afterVSync);
+  game_.spu_audio.frame();
 }
 
 void Crash1FrameDriver::finishFrameIteration(Core *core) {
+  Crash1FrameDriver &driver = from(*core);
   if (core->r[31] != kProgram.transition.begin) {
     lucent::error("crash1-frame",
                   "CoreLoop transition reached with ra=0x{:08X}; expected retail GpuUpdate return 0x{:08X}",
@@ -223,6 +185,8 @@ void Crash1FrameDriver::finishFrameIteration(Core *core) {
                   kProgram.transition.begin);
     std::abort();
   }
+  driver.frameCompleted_ = true;
+  psx::cpu::requestExecutionExit(*core, psx::cpu::ExecutionExitReason::FrameBoundary);
 }
 
 void Crash1FrameDriver::stepFrame(Core &core, std::uint32_t frame) {
@@ -236,21 +200,44 @@ void Crash1FrameDriver::stepFrame(Core &core, std::uint32_t frame) {
     std::abort();
   }
 
-  installOverrides(game_);
   serviceRootCounter(core, game_.timing.emulatedCpuTicks());
   game_.timing.logicFrame = frame;
   game_.timing.frameTick();
   core.rsub.otAttr.beginLogicFrame(frame);
   game_.pad.serviceFrame();
+  bios_pad_input::publishPrimary(core, game_.pad.buttons);
   deliveredFields_ = 0;
+  frameCompleted_ = false;
 
-  const RecompRegistry &registry = requireRecompiledProgram();
+  psx::cpu::ExecutionResult result;
   if (!enteredCoreLoop_) {
     core.r[4] = 25u;
-    registry.main_dispatch(&core, kProgram.coreLoop.begin);
+    result = crash::dynarec::executeTurn(core, kProgram.coreLoop.begin);
     enteredCoreLoop_ = true;
   } else {
-    registry.main_dispatch(&core, kProgram.iteration.begin);
+    result = crash::dynarec::executeTurn(core, kProgram.iteration.begin);
+  }
+  while (!frameCompleted_ && result.reason == psx::cpu::ExecutionExitReason::FrameBoundary) {
+    if (result.guestPc != kContract.guestVSync.begin ||
+        (core.r[31] != kProgram.afterFirstVSync && core.r[31] != kProgram.afterVSync)) {
+      lucent::error("crash1-frame",
+                    "frame {} reached an unexpected boundary at 0x{:08X} with ra=0x{:08X}",
+                    frame,
+                    result.guestPc,
+                    core.r[31]);
+      std::abort();
+    }
+    const std::uint32_t continuation = core.r[31];
+    deliverDisplayField(core);
+    result = crash::dynarec::executeTurn(core, continuation);
+  }
+  if (!frameCompleted_ || result.reason != psx::cpu::ExecutionExitReason::FrameBoundary) {
+    lucent::error("crash1-frame",
+                  "frame {} left guest execution at 0x{:08X} with {} instead of the measured frame boundary",
+                  frame,
+                  result.guestPc,
+                  psx::cpu::executionExitName(result.reason));
+    std::abort();
   }
 
   if (core.mem_r32(kProgram.doneAddress) != 0) {

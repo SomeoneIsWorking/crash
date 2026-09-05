@@ -11,22 +11,20 @@ import argparse
 import copy
 import hashlib
 import json
-import os
 import pathlib
 import sys
 import tempfile
 from dataclasses import dataclass
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-PSXPORT = pathlib.Path(os.environ.get("PSXPORT_DIR", ROOT / "external" / "psxport"))
-RECOMP_TOOLS = PSXPORT / "tools" / "recomp"
-sys.path.insert(0, str(RECOMP_TOOLS))
+PSXPORT = ROOT / "external" / "psxport"
+sys.path.insert(0, str(PSXPORT))
 try:
-    import psexe
+    from tools.formats import psx_exe
 except ImportError as exc:
     raise SystemExit(
-        f"REFUSED: cannot import psxport's PS-X EXE loader from {RECOMP_TOOLS}; "
-        "run tools/psxport_sync.py --auto or set PSXPORT_DIR"
+        f"REFUSED: cannot import psxport's PS-X EXE loader from {PSXPORT}; "
+        "run tools/psxport_sync.py --auto"
     ) from exc
 
 
@@ -187,7 +185,7 @@ def measure_runtime_address_loads(
 ) -> dict[str, int]:
     try:
         data = path.read_bytes()
-        image = psexe.load(str(path))
+        image = psx_exe.load(str(path))
     except (OSError, ValueError) as exc:
         raise Refused(f"cannot read a valid executable from {path}: {exc}") from exc
     measured: dict[str, int] = {}
@@ -218,7 +216,7 @@ def measure_runtime_bodies(
 ) -> dict[str, str]:
     try:
         data = path.read_bytes()
-        image = psexe.load(str(path))
+        image = psx_exe.load(str(path))
     except (OSError, ValueError) as exc:
         raise Refused(f"cannot read a valid executable from {path}: {exc}") from exc
     measured: dict[str, str] = {}
@@ -241,7 +239,7 @@ def measure(
 ) -> Measurement:
     try:
         data = path.read_bytes()
-        image = psexe.load(str(path))
+        image = psx_exe.load(str(path))
     except (OSError, ValueError) as exc:
         raise Refused(f"cannot read a valid executable from {path}: {exc}") from exc
     if image.text_size == 0 or not image.load <= image.entry < image.text_end:
@@ -470,7 +468,7 @@ def selftest(manifest: dict[str, object], executable: pathlib.Path) -> bool:
             ("mutated executable is rejected", bool(check(manifest, fixture, False)))
         )
 
-        image = psexe.load(str(executable))
+        image = psx_exe.load(str(executable))
         if bodies:
             body = bodies[0]
             body_offset = 0x800 + (body.begin - image.load)

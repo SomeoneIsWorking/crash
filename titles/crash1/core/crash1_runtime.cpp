@@ -6,9 +6,9 @@
 #include "crash1_disc_index_io.h"
 #include "crash1_frame_driver.h"
 #include "crash1_gpu_watchdog.h"
+#include "dynarec_dispatch.h"
 #include "game.h"
 #include "platform_hle.h"
-#include "recomp_iface.h"
 
 #include <cstdlib>
 #include <lucent/log.h>
@@ -51,33 +51,22 @@ void *Crash1Runtime::createContext(Core &) {
 void Crash1Runtime::destroyContext(void *) {}
 
 void Crash1Runtime::registerOverrides(Game &game) {
-  cd_boot::registerOverride();
-  disc_index_io::registerOverrides();
-  callback_boot::registerOverride();
-  gpu_watchdog::registerOverrides();
+  cd_boot::registerOverride(game.core);
+  disc_index_io::registerOverrides(game.core);
+  callback_boot::registerOverride(game.core);
+  gpu_watchdog::registerOverrides(game.core);
   Crash1FrameDriver::installOverrides(game);
 }
 
 void Crash1Runtime::bootInit(Core &core) {
-  const RecompRegistry *registry = psxport_recomp();
-  if (registry == nullptr || registry->main_dispatch == nullptr || registry->rec_func_index == nullptr) {
-    lucent::error("crash1-boot", "Crash 1 native boot has no installed resident recompiler registry");
-    std::abort();
-  }
   const std::uint32_t entries[]{CRASH1_STATIC_CONSTRUCTORS_ENTRY, CRASH1_INIT_ENTRY};
-  for (const std::uint32_t entry : entries) {
-    if (registry->rec_func_index(entry) < 0) {
-      lucent::error("crash1-boot", "measured native boot entry 0x{:08X} is absent from the generated substrate", entry);
-      std::abort();
-    }
-  }
 
   // Retail C main 0x80011D88 performs these three operations before entering CoreLoop 0x80011FC4.
   // Shared dc_boot_init already applied the measured crt0/libc group, so dispatching C main itself
   // would re-enter the guest-owned infinite loop and then run shutdown behind the host's back.
-  registry->main_dispatch(&core, CRASH1_STATIC_CONSTRUCTORS_ENTRY);
+  crash::dynarec::requireGuestReturn(crash::dynarec::callGuest(core, entries[0]), "Crash 1 static constructors");
   core.mem_w32(CRASH1_USE_CD_ADDRESS, 1u);
-  registry->main_dispatch(&core, CRASH1_INIT_ENTRY);
+  crash::dynarec::requireGuestReturn(crash::dynarec::callGuest(core, entries[1]), "Crash 1 Init");
 }
 
 const GuestProgramImage *Crash1Runtime::guestProgramImage() const {

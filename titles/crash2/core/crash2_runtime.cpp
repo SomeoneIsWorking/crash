@@ -27,9 +27,8 @@ const PlatformHlePlan Crash2Runtime::platformPlan_ = crash::makeNativeFramePlatf
 
 Crash2Runtime::Crash2Runtime()
     : BoundaryRuntime("crash2-runtime",
-                      "native boot is unavailable: Crash 2 execution has been independently verified "
-                      "only through its resident EnterCriticalSection boundary; syscall continuation "
-                      "is required before later boot") {}
+                      "native boot is unavailable: Crash 2 has no title-owned Lightrec boot services "
+                      "or measured advancing frame driver; Crash 1 remains the active title") {}
 
 const GuestProgramImage *Crash2Runtime::guestProgramImage() const {
   return &programImage_;

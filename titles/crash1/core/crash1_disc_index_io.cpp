@@ -2,7 +2,7 @@
 
 #include "cd_control.h"
 #include "core.h"
-#include "recomp_iface.h"
+#include "dynarec_dispatch.h"
 
 #include <array>
 #include <cstdlib>
@@ -66,7 +66,7 @@ constexpr Program kProgram{
 
 struct Binding {
   crash::GuestFunctionRange function;
-  RecOverrideFn owner;
+  psx::cpu::NativeFunction owner;
   const char *name;
 };
 
@@ -118,21 +118,11 @@ void applyReadSync(Core *core) {
   cd_readsync_stock_sync(core);
 }
 
-void registerOverrides() {
-  const RecompRegistry *const registry = psxport_recomp();
-  if (registry == nullptr || registry->rec_func_index == nullptr || registry->shard_set_override == nullptr) {
-    lucent::error("crash1-disc", "Crash 1 disc-index I/O owner has no installed resident recompiler registry");
-    std::abort();
-  }
+void registerOverrides(Core &core) {
   for (const Binding &binding : kBindings) {
-    if (registry->rec_func_index(binding.function.begin) < 0) {
-      lucent::error("crash1-disc",
-                    "measured {} entry 0x{:08X} is absent from the generated substrate",
-                    binding.name,
-                    binding.function.begin);
+    if (!crash::dynarec::installOverride(core, binding.function.begin, binding.name, binding.owner)) {
       std::abort();
     }
-    registry->shard_set_override(binding.function.begin, binding.owner);
   }
 }
 

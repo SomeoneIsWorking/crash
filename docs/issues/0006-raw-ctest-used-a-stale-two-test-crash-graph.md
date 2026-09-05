@@ -2,7 +2,7 @@
 id: 6
 title: Raw CTest used a stale two-test Crash graph
 status: resolved
-symptom: ctest --test-dir scratch/build-clang listed only crash_cpp_policy and deleted crash1_provision_tests, omitting every Crash 3 translation unit
+symptom: Raw CTest consumed a stale generated graph and omitted current title tests
 tags: workflow,verification,cmake,crash3
 created: 2026-08-22
 updated: 2026-08-22
@@ -14,11 +14,15 @@ CTest consumes the test graph already generated in its build directory. It does 
 
 ## Resolution
 
-tools/verify.py is now the normal verifier. It configures scratch/build-clang with Clang, builds that same tree, runs its full CTest graph, and checks the psxport pin. README.md and CLAUDE.md state that raw ctest is only a focused rerun after this verifier refreshes the tree.
+`tools/verify.py` is the normal verifier. It configures `build/verify` with the caller's selected
+compiler, builds that same tree, runs its full CTest graph, and checks the psxport provenance.
 
 ## Evidence
 
 The stale graph listed 2 tests and referenced deleted tests/test_provision_crash1.py. The shipping verifier then regenerated the same scratch/build-clang directory and ran 5/5: Crash 1, Crash 2, and Crash 3 runtime inheritance, crash_cpp_policy, and crash_title_provision_tests. All Crash 1/2/3 real gates subsequently passed from scratch/build-clang.
 
-### Note (2026-08-22)
-A second stale-path variant was found: tools/psxport_sync.py --check still read retired build/psxport_resolved.txt while tools/verify.py builds scratch/build-clang. That made a current 5/5 Clang run report the old ad5cf802 provenance. The checker now defaults to scratch/build-clang (and accepts --build-dir); the unchanged retired file supplies the opposite answer, while the authoritative tree matches recorded 57a17a14.
+### Note (updated 2026-09-04)
+
+The provenance checker and verifier now share `build/verify` as their one default build root. The
+earlier mismatch proved that reading another tree can report stale framework provenance even after a
+current build passes.

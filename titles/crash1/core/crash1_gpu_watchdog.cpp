@@ -1,8 +1,8 @@
 #include "crash1_gpu_watchdog.h"
 
 #include "core.h"
+#include "dynarec_dispatch.h"
 #include "game.h"
-#include "recomp_iface.h"
 
 #include <cstdlib>
 #include <lucent/log.h>
@@ -49,22 +49,14 @@ constexpr std::uint32_t kPollLimit = 0xF0000u;
 
 static_assert(kProgram.start.valid() && kProgram.check.valid());
 
-const RecompRegistry &requireRegistry() {
-  const RecompRegistry *const registry = psxport_recomp();
-  if (registry == nullptr || registry->main_dispatch == nullptr || registry->rec_func_index == nullptr ||
-      registry->shard_set_override == nullptr) {
-    lucent::error("crash1-gpu-watchdog", "GPU watchdog owner has no installed resident recompiler registry");
-    std::abort();
-  }
-  return *registry;
-}
-
 void startOverride(Core *core) {
   start(*core);
 }
 
 void checkOverride(Core *core) {
-  check(*core, requireRegistry().main_dispatch);
+  check(*core, [](Core *target, std::uint32_t address) {
+    crash::dynarec::requireGuestReturn(crash::dynarec::callGuest(*target, address), "Crash 1 GPU watchdog leaf");
+  });
 }
 
 void dispatchAt(Core &core, MainDispatch dispatch, std::uint32_t address, std::uint32_t continuation) {
@@ -78,23 +70,19 @@ const Program &program() {
   return kProgram;
 }
 
-void registerOverrides() {
-  const RecompRegistry &registry = requireRegistry();
+void registerOverrides(Core &core) {
   const struct Binding {
     std::uint32_t address;
-    RecOverrideFn function;
+    psx::cpu::NativeFunction function;
+    const char *name;
   } bindings[]{
-      {kProgram.start.begin, startOverride},
-      {kProgram.check.begin, checkOverride},
+      {kProgram.start.begin, startOverride, "Crash 1 GPU watchdog start"},
+      {kProgram.check.begin, checkOverride, "Crash 1 GPU watchdog check"},
   };
   for (const Binding &binding : bindings) {
-    if (registry.rec_func_index(binding.address) < 0) {
-      lucent::error("crash1-gpu-watchdog",
-                    "measured GPU watchdog entry 0x{:08X} is absent from the generated substrate",
-                    binding.address);
+    if (!crash::dynarec::installOverride(core, binding.address, binding.name, binding.function)) {
       std::abort();
     }
-    registry.shard_set_override(binding.address, binding.function);
   }
 }
 

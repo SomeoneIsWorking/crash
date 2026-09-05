@@ -123,6 +123,13 @@
         "address": "0x80056428",
         "load_entry": "0x80012510"
       },
+      "bios_pad_read": {
+        "entry": "0x8003E460",
+        "end": "0x8003E490",
+        "body_sha256": "2ccf10535b73ed4fe1908d0b6e568768f73a34f440cc235bce7b743729e6973c",
+        "address": "0x80057054",
+        "load_entry": "0x8003E470"
+      },
       "gpu_update": {
         "entry": "0x80016E5C",
         "end": "0x800172E8",

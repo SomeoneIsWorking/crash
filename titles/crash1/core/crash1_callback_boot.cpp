@@ -1,7 +1,7 @@
 #include "crash1_callback_boot.h"
 
 #include "core.h"
-#include "recomp_iface.h"
+#include "dynarec_dispatch.h"
 
 #include <array>
 #include <cstdlib>
@@ -48,25 +48,13 @@ constexpr std::array<EventSpec, 8> kEvents{{
     {0xF0000011u, 0x2000u, 768u, 0x8003CC88u, 0x8003CD2Cu},
 }};
 
-constexpr std::array<std::uint32_t, 7> kRequiredLeaves{
-    kEnterCritical,
-    kOpenEvent,
-    kExitCritical,
-    kCloseEvent,
-    kInitializePad,
-    kStartPad,
-    kChangeClearPad,
-};
-
 static_assert(kProgram.initialize.valid());
 
 void initializeOverride(Core *core) {
-  const RecompRegistry *const registry = psxport_recomp();
-  if (registry == nullptr || registry->main_dispatch == nullptr) {
-    lucent::error("crash1-callback", "Crash 1 callback boot owner has no installed main dispatcher");
-    std::abort();
-  }
-  initializeDriver(*core, registry->main_dispatch);
+  initializeDriver(*core, [](Core *target, std::uint32_t address) {
+    crash::dynarec::requireGuestReturn(crash::dynarec::callGuest(*target, address),
+                                       "Crash 1 callback initialization leaf");
+  });
 }
 
 void dispatchAt(Core &core, MainDispatch dispatch, std::uint32_t address, std::uint32_t continuation) {
@@ -80,26 +68,11 @@ const Program &program() {
   return kProgram;
 }
 
-void registerOverride() {
-  const RecompRegistry *const registry = psxport_recomp();
-  if (registry == nullptr || registry->rec_func_index == nullptr || registry->shard_set_override == nullptr) {
-    lucent::error("crash1-callback", "Crash 1 callback boot owner has no installed resident recompiler registry");
+void registerOverride(Core &core) {
+  if (!crash::dynarec::installOverride(
+          core, kProgram.initialize.begin, "Crash 1 callback initialization", initializeOverride)) {
     std::abort();
   }
-  if (registry->rec_func_index(kProgram.initialize.begin) < 0) {
-    lucent::error("crash1-callback",
-                  "measured callback initialization entry 0x{:08X} is absent from the generated substrate",
-                  kProgram.initialize.begin);
-    std::abort();
-  }
-  for (const std::uint32_t address : kRequiredLeaves) {
-    if (registry->rec_func_index(address) < 0) {
-      lucent::error(
-          "crash1-callback", "callback initialization leaf 0x{:08X} is absent from the generated substrate", address);
-      std::abort();
-    }
-  }
-  registry->shard_set_override(kProgram.initialize.begin, initializeOverride);
 }
 
 void initializeDriver(Core &core, MainDispatch dispatch) {

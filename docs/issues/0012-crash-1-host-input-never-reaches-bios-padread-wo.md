@@ -6,7 +6,7 @@ symptom: REPL Cross is accepted at the 3D title menu, but PadUpdate stays zero a
 state_items: S004,S011
 tags: crash1,input,bios,pad,gameplay
 created: 2026-08-27
-updated: 2026-08-27
+updated: 2026-09-04
 ---
 
 ## Root cause
@@ -34,11 +34,8 @@ menu timing or a short tap was the cause. The same run visibly reached the main 
 
 `crash1_bios_pad_input.*` now publishes the finalized host mask to the manifest-authenticated BIOS
 word once per host-owned frame, before retail `PadUpdate`. Its focused production-seam test covers
-released, Cross, and Start values plus Crash's post-complement logical interpretation. The changed
-Clang product built successfully against the exact `fb08d30f` framework source, but the focused test
-was not run after that build and its scratch framework checkout still reports a dirty build identity
-because three dependency gitlinks were provisioned as local symlinks. No post-change game run was
-performed. Preserve this implementation and its unrun focused proof during the execution migration;
-do not rebuild or rerun the static product to finish the issue. The acceptance run is now
-CRASH1-JIT-01/02: the native/Lightrec product must publish the same authenticated word, enter
-gameplay, and contain neither an interpreter nor generated guest code.
+released, Cross, and Start values plus Crash's post-complement logical interpretation. The exact
+pinned Clang/Ninja asset-free build and full CTest graph now pass with this owner composed into the
+native/Lightrec product. No post-change game run has proved the menu consumes it. The acceptance run
+is CRASH1-JIT-01/02: the native/Lightrec product must publish the authenticated word, enter gameplay,
+and contain neither generated guest code nor a full-game/player-selectable interpreter.

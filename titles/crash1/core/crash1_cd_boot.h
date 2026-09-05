@@ -12,12 +12,12 @@ struct Program {
 
 const Program &program();
 
-// Install the native owner over retail libcd initialization. The generated body remains available
+// Install the native owner over retail libcd initialization. The guest body remains available
 // for differential/A-B work; shipping boot cannot enter its VSync-driven controller wait.
-void registerOverride();
+void registerOverride(Core &core);
 
 // Production behavior behind the override, public only so the focused test exercises the shipping
-// state transition without needing a generated substrate.
+// state transition without needing an offline-generated guest corpus.
 void initializeDriver(Core &core);
 
 } // namespace crash1::cd_boot

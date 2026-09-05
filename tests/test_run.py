@@ -75,6 +75,10 @@ class LauncherTests(unittest.TestCase):
         shutil.copyfile(
             ROOT / "external/psxport/tools/port/launch_environment.py", fixture_policy
         )
+        for relative in ("project.py", "automation/__init__.py", "automation/process.py"):
+            target = self.root / "external/psxport/tools" / relative
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(ROOT / "external/psxport/tools" / relative, target)
 
     def tearDown(self) -> None:
         self.temporary.cleanup()
@@ -102,24 +106,22 @@ class LauncherTests(unittest.TestCase):
     def commands(host: FakeHost) -> list[list[str]]:
         return [command for command, _ in host.commands]
 
-    def test_default_provisions_generates_builds_and_launches_product(self) -> None:
+    def test_default_provisions_builds_and_launches_dynarec_product(self) -> None:
         host = FakeHost()
         code, stdout, stderr = self.invoke(host, "Crash Bandicoot.chd")
         commands = self.commands(host)
 
         self.assertEqual(code, 0)
         self.assertEqual(stderr, "")
-        self.assertIn("launching Crash Bandicoot 1 at its measured boot frontier", stdout)
+        self.assertIn("launching Crash Bandicoot 1 through Lightrec", stdout)
         self.assertIn([LOCKED_PYTHON, "tools/psxport_sync.py", "--auto"], commands)
         provision = next(command for command in commands if "tools/provision_title.py" in command)
         self.assertEqual(provision[-1], "Crash Bandicoot.chd")
         self.assertIn(LOCKED_PYTHON, provision)
-        generation = next(command for command in commands if "tools/crash1_recomp.py" in command)
-        self.assertEqual(generation[0], LOCKED_PYTHON)
-        self.assertIn("--emit", generation)
+        self.assertFalse(any("recomp" in token or "generated" in token for command in commands for token in command))
         self.assertEqual(commands[-1], [str(self.root / run.PRODUCT)])
         self.assertFalse(any(command and command[0] == "ctest" for command in commands))
-        forbidden_targets = {"crash_scaffold", "oracle_trace", "oracle_spike", "crash1_recomp_boundary"}
+        forbidden_targets = {"crash_scaffold", "oracle_trace", "oracle_spike"}
         self.assertFalse(
             any(forbidden_targets.intersection(command) for command in commands),
             commands,
@@ -128,11 +130,12 @@ class LauncherTests(unittest.TestCase):
         configure_commands = [
             command for command in commands if command[:2] == ["cmake", "-S"]
         ]
-        self.assertEqual(len(configure_commands), 2)
+        self.assertEqual(len(configure_commands), 1)
         self.assertTrue(
             all("-DBUILD_TESTING=OFF" in command for command in configure_commands)
         )
         self.assertIn(f"-DPython3_EXECUTABLE={LOCKED_PYTHON}", configure_commands[0])
+        self.assertEqual(configure_commands[0][5:7], ["-G", "Ninja"])
         self.assertIn("-DCMAKE_C_COMPILER=clang", configure_commands[0])
         self.assertIn("-DCMAKE_CXX_COMPILER=clang++", configure_commands[0])
         build_commands = [
@@ -173,8 +176,39 @@ class LauncherTests(unittest.TestCase):
 
         self.assertEqual(code, 0)
         self.assertEqual(stderr, "")
-        self.assertIn("built at its measured boot frontier", stdout)
+        self.assertIn("native/Lightrec product is built", stdout)
         self.assertNotEqual(self.commands(host)[-1], [str(self.root / run.PRODUCT)])
+
+    def test_runtime_dependency_overrides_reach_cmake(self) -> None:
+        prefix = self.root / "build/lightning"
+        for relative in ("include/lightning.h", "lib/liblightning.a"):
+            target = prefix / relative
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(b"fixture")
+        lightrec = self.root / "build/lightrec"
+        lightrec.mkdir(parents=True)
+        for relative in ("CMakeLists.txt", "lightrec.h"):
+            (lightrec / relative).write_text("fixture\n", encoding="utf-8")
+        host = FakeHost()
+        code, _, stderr = self.invoke(
+            host,
+            "--prepare-only",
+            environment={"PSXPORT_LIGHTNING_PREFIX": str(prefix), "PSXPORT_LIGHTREC_DIR": str(lightrec)},
+        )
+        self.assertEqual((code, stderr), (0, ""))
+        configure = next(command for command in self.commands(host) if command[:2] == ["cmake", "-S"])
+        self.assertIn(f"-DPSXPORT_LIGHTREC_DIR={lightrec}", configure)
+        self.assertIn(f"-DLIBLIGHTNING_INCLUDE_DIR={prefix / 'include'}", configure)
+        self.assertIn(f"-DLIBLIGHTNING={prefix / 'lib/liblightning.a'}", configure)
+
+    def test_incomplete_runtime_dependency_refuses_before_cmake(self) -> None:
+        host = FakeHost()
+        code, _, stderr = self.invoke(
+            host, "--prepare-only", environment={"PSXPORT_LIGHTNING_PREFIX": str(self.root / "missing")}
+        )
+        self.assertEqual(code, 1)
+        self.assertIn("PSXPORT_LIGHTNING_PREFIX is incomplete", stderr)
+        self.assertFalse(any(command[:2] == ["cmake", "-S"] for command in self.commands(host)))
 
     def test_explicit_compilers_pass_through_without_identity_policy(self) -> None:
         host = FakeHost(missing={"clang", "clang++"})
@@ -207,6 +241,7 @@ class LauncherTests(unittest.TestCase):
     def test_missing_dependencies_name_exact_install_commands(self) -> None:
         cases = (
             (FakeHost(missing={"cmake"}), "sudo dnf install cmake"),
+            (FakeHost(missing={"ninja"}), "sudo dnf install ninja-build"),
             (FakeHost(fail_token="sdl3", distribution="ubuntu"), "sudo apt install libsdl3-dev"),
             (FakeHost(missing={"cmake"}, system="Darwin"), "brew install cmake"),
         )

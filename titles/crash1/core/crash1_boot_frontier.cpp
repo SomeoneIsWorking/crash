@@ -1,31 +1,29 @@
 #include "crash1_boot_frontier.h"
 
-#include "crash1_runtime.h"
-
 #include <cstdio>
 
 namespace crash1 {
 
 #ifndef CRASH1_FIRST_SYSCALL_ENTRY
-#error "CRASH1_FIRST_SYSCALL_ENTRY must be generated from titles/crash1/executable.json"
+#error "CRASH1_FIRST_SYSCALL_ENTRY must be configured from titles/crash1/executable.json"
 #endif
 #ifndef CRASH1_FIRST_BIOS_DISPATCH_ADDRESS
-#error "CRASH1_FIRST_BIOS_DISPATCH_ADDRESS must be generated from titles/crash1/executable.json"
+#error "CRASH1_FIRST_BIOS_DISPATCH_ADDRESS must be configured from titles/crash1/executable.json"
 #endif
 #ifndef CRASH1_FIRST_BIOS_DISPATCH_FUNCTION
-#error "CRASH1_FIRST_BIOS_DISPATCH_FUNCTION must be generated from titles/crash1/executable.json"
+#error "CRASH1_FIRST_BIOS_DISPATCH_FUNCTION must be configured from titles/crash1/executable.json"
 #endif
 #ifndef CRASH1_FIRST_BIOS_DISPATCH_RETURN_ADDRESS
-#error "CRASH1_FIRST_BIOS_DISPATCH_RETURN_ADDRESS must be generated from titles/crash1/executable.json"
+#error "CRASH1_FIRST_BIOS_DISPATCH_RETURN_ADDRESS must be configured from titles/crash1/executable.json"
 #endif
 #ifndef CRASH1_POST_GET_C0_DISPATCH_ADDRESS
-#error "CRASH1_POST_GET_C0_DISPATCH_ADDRESS must be generated from titles/crash1/executable.json"
+#error "CRASH1_POST_GET_C0_DISPATCH_ADDRESS must be configured from titles/crash1/executable.json"
 #endif
 #ifndef CRASH1_POST_GET_C0_DISPATCH_FUNCTION
-#error "CRASH1_POST_GET_C0_DISPATCH_FUNCTION must be generated from titles/crash1/executable.json"
+#error "CRASH1_POST_GET_C0_DISPATCH_FUNCTION must be configured from titles/crash1/executable.json"
 #endif
 #ifndef CRASH1_POST_GET_C0_DISPATCH_RETURN_ADDRESS
-#error "CRASH1_POST_GET_C0_DISPATCH_RETURN_ADDRESS must be generated from titles/crash1/executable.json"
+#error "CRASH1_POST_GET_C0_DISPATCH_RETURN_ADDRESS must be configured from titles/crash1/executable.json"
 #endif
 
 namespace {
@@ -45,24 +43,6 @@ constexpr BootFrontierFacts kFacts{
 
 BootFrontierFacts bootFrontierFacts() {
   return kFacts;
-}
-
-crash::ResidentProgram makeBootFrontierProgram(Crash1Runtime &runtime,
-                                               const char *executable,
-                                               RecOverrideFn syscallTransition,
-                                               RecOverrideFn biosBoundary) {
-  const GuestProgramImage *image = runtime.guestProgramImage();
-  return {
-      .runtime = runtime,
-      .codeword = kCodeword,
-      .executable = executable,
-      .entry = image == nullptr ? 0u : image->crt0Entry,
-      .boundary = kFacts.postGetC0Dispatch,
-      .boundaryHandler = biosBoundary,
-      .boundaryKind = crash::ResidentBoundaryKind::DynamicDispatch,
-      .transitionBoundary = kFacts.firstSyscall,
-      .transitionHandler = syscallTransition,
-  };
 }
 
 BiosDispatchResult checkFirstBiosDispatch(std::uint32_t address, std::uint32_t function, std::uint32_t returnAddress) {

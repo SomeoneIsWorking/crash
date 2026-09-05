@@ -27,9 +27,8 @@ const PlatformHlePlan Crash3Runtime::platformPlan_ = crash::makeNativeFramePlatf
 
 Crash3Runtime::Crash3Runtime()
     : BoundaryRuntime("crash3-runtime",
-                      "native boot is unavailable: SCUS-94244 generated execution reaches its "
-                      "EnterCriticalSection syscall boundary, but independent post-syscall equality "
-                      "is not yet available") {}
+                      "native boot is unavailable: Crash 3 has no title-owned Lightrec boot services "
+                      "or measured advancing frame driver; Crash 1 remains the active title") {}
 
 const GuestProgramImage *Crash3Runtime::guestProgramImage() const {
   return &programImage_;

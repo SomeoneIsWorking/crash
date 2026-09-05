@@ -7,8 +7,8 @@ Stable product intent for the Crash engine-lineage repository. Factual coverage 
 
 Deliver native PC products for the North American releases of Crash Bandicoot, Crash Bandicoot 2,
 and Crash Bandicoot 3. Title-owned native subsystems cooperate with psxport's pinned Lightrec
-executor, which translates every remaining guest instruction on demand from the user's verified
-retail executable.
+executor, which executes remaining guest code on demand from the user's verified retail executable
+and translates it by default.
 
 Why it matters: the repository represents one engine lineage, so a Crash 1-only executable is not the
 trilogy product.
@@ -19,18 +19,22 @@ Success conditions:
 - each product reaches sustained gameplay with working presentation, input, audio, saves, and timing;
 - `run.sh` launches the current intended product from a fresh clone with documented native dependencies,
   `uv`, and user-supplied game data;
-- the gameplay executables contain neither generated guest code nor an interpreter/fallback, and
-  link/selector checks prove that separation;
+- the gameplay executables contain neither generated guest code, a full-game interpreter, nor a
+  player-selectable interpreter mode; link/selector checks prove that separation and measured
+  Lightrec fallback remains bounded to explicit backend reasons;
 - native overrides and override-bypassing original calls execute through one image-aware runtime
   dispatcher with explicit bounded exits and executable-memory invalidation.
+- Linux x86-64, Windows x86-64, Apple Silicon macOS, and Android arm64-v8a are independently
+  qualified through their real product boundary; an unavailable host remains explicitly missing
+  rather than being represented by a platform-named policy-only job.
 
 Constraints and non-goals:
 
 - no build, install, provisioning, or launch step emits or compiles guest code ahead of time;
-- an interpreter may be built only as a separate test/diagnostic oracle and is absent from every
-  gameplay product;
-- the old static path remains migration evidence only until representative gameplay authorizes its
-  complete removal; it is not regenerated, rebuilt, run, or retained as a compatibility mode;
+- an independent interpreter may be built only as a separate test/diagnostic oracle; the gameplay
+  product permits only Lightrec's bounded, measured per-block fallback;
+- measurements from the removed static path remain evidence only; no translator, corpus, static
+  dispatcher, seed input, compatibility selector, or static-only test returns to the product;
 - title addresses and behavior remain title-owned until direct cross-title evidence proves a shared
   engine owner;
 - CTR and Crash Bash are separate engines and are not part of this repository's product.

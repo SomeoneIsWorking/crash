@@ -21,15 +21,19 @@ native rendering, widescreen, interpolation, and player setup.
 | S007 | Interpolation through owned simulation and transform state | missing | S005 | G002 |
 | S008 | Crash 2 and Crash 3 native/Lightrec products | missing | S002, S003, S011 | G001 |
 | S009 | Playable Crash trilogy product | missing | S005, S008, S011 | G001 |
-| S010 | Host-owned native frame-loop contract and fatal guest-VSync boundary | partial | S001 | G001, G002 |
-| S011 | Crash 1 native/Lightrec product preserves the menu and BIOS PadRead frontier | missing | S002, S003, S004, S010 | G001 |
+| S010 | Host-owned native frame-loop contract and typed guest-VSync boundary | partial | S001 | G001, G002 |
+| S011 | Crash 1 native/Lightrec product preserves the menu and BIOS PadRead frontier | partial | S002, S003, S004, S010 | G001 |
+| S012 | Linux x86-64 native/Lightrec product qualification | partial | S011 | G001 |
+| S013 | Windows x86-64 native/Lightrec product qualification | missing | S011 | G001 |
+| S014 | Apple Silicon macOS native/Lightrec product qualification | missing | S011 | G001 |
+| S015 | Android arm64-v8a native/Lightrec product qualification | missing | S011 | G001 |
 
 ## Current focus
 
 S011 is the current focus: wire the authenticated Crash 1 image and existing native owners through
-psxport's per-`Core` Lightrec executor, preserve the dirty BIOS `PadRead` work, and reproduce the
-current menu frontier. This first discriminator does not authorize deletion of the static path;
-representative interactive gameplay does.
+psxport's per-`Core` Lightrec executor, preserve the BIOS `PadRead` owner, and reproduce the current
+menu frontier. The static path is already deleted; representative interactive gameplay remains the
+fidelity gate for its replacement.
 
 ## Capability details
 
@@ -106,21 +110,58 @@ have product execution.
 ### S010 — native frame-loop ownership contract
 
 Partial evidence: the three verified executables bind distinct VSync leaves—Crash 1
-`0x8003E4F0`, Crash 2 `0x8004A484`, and Crash 3 `0x8004B2A8`—to psxport's fatal host-loop trap.
-Crash 1 has recorded finite field-loop evidence; Crash 2 and Crash 3 still have refusing drivers.
+`0x8003E4F0`, Crash 2 `0x8004A484`, and Crash 3 `0x8004B2A8`—to typed psxport
+`FrameBoundary` exits. Crash 1 has recorded finite field-loop evidence; Crash 2 and Crash 3 still
+have refusing drivers.
 
-Gap: the frame owners have not yet consumed psxport's typed Lightrec executor exits, and only Crash 1
-has a measured advancing loop.
+Gap: only Crash 1 has a measured advancing loop, and none has consumed a frame boundary produced by
+the pinned Lightrec executor during real guest execution.
 
 ### S011 — Crash 1 native/Lightrec product
 
-Missing capability: Crash 1 still dispatches ordinary/original retail code through generated host
-functions. It has not mapped authenticated `SCUS_949.00` into a per-`Core` Lightrec executor,
-registered native owners by image identity plus address, or proven original-call and invalidation
-behavior. The gameplay link also lacks proof excluding the interpreter and generated corpus. Issue
-0013 owns this migration.
+Partial capability: the static translator, corpus, dispatcher, seed inputs, and static-only tests
+are absent. Crash 1 composition now targets psxport's image-aware executor and native override/
+original-call boundary, while preserving the BIOS `PadRead` owner. The asset-free product builds and
+passes its link/repository boundary audit, but real-game execution proof is not complete, so this is
+not yet a runnable gameplay claim.
 
-First discriminator: reach the existing 3D menu with nonzero Lightrec blocks while preserving all
-current native owners and issue 0012's BIOS `PadRead` publication. Deletion remains gated on
-representative gameplay, deterministic oracle/device comparison, override and original-call
-coverage, invalidation controls, and released-host qualification.
+On 2026-09-05 the canonical locked verifier passed all 19 title CTests against PSXPort
+`eb5f23a8b3506f8853b3cfadcedc024cd90818a0` and Lightrec
+`b1457137c31cedff5f440d59da29401d021ba2da`, with the maintained GNU Lightning prefix.
+The synthetic test exercises Crash's shipping dispatcher: unmapped override refusal, native
+augmentation calling the original guest function, native-memory-write invalidation, and a JIT turn
+that services native calls before its typed frame exit. It requires nonzero translated/executed
+blocks and instructions, with zero fallback. The same gate covers the retained native contracts,
+BIOS pad publication, launcher/dependency refusals, full C++ policy, and linked product inspection.
+
+Gap: reach the existing 3D menu with nonzero Lightrec blocks while preserving all
+current native owners and issue 0012's BIOS `PadRead` publication, then prove representative gameplay,
+deterministic oracle/device comparison, invalidation controls, and released-host qualification.
+
+### S012 — Linux x86-64 host qualification
+
+Evidence: S011's exact-pinned local Clang/Ninja product gate passes all 19 CTests and the linked
+execution-boundary audit. Hosted CI uses the same canonical verifier and maintained dependencies.
+
+Gap: no hosted result for this pending commit, representative real-game execution, or release
+performance qualification.
+
+### S013 — Windows x86-64 host qualification
+
+Missing capability: PSXPort currently refuses the Windows product target. Its Lightrec host
+integration must be implemented and verified before Crash's real product CI can run on Windows.
+
+### S014 — Apple Silicon macOS host qualification
+
+Missing capability: PSXPort currently refuses AArch64. Executable-memory, cache-coherence, ABI,
+exception, packaging, and gameplay boundaries remain missing, blocking real macOS product CI.
+
+### S015 — Android arm64-v8a host qualification
+
+Missing capability: there is no Crash Android package, shared Android-port integration, touch layer,
+device performance matrix, or verified AArch64 gameplay run. The absent backend and package block
+real Android product CI.
+
+Policy-only jobs on another operating system do not qualify a host. Add a Windows, macOS, or Android
+workflow only when it exercises that host's real product/runtime boundary; until then these capabilities stay
+explicitly missing.

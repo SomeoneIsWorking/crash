@@ -5,6 +5,8 @@ status: holds
 created: 2026-08-24
 tags: runtime,rendering,inheritance
 depends: titles/crash1/core/crash1_runtime.cpp#guestVramIsPicture, titles/crash2/core/crash2_runtime.cpp#guestVramIsPicture, titles/crash3/core/crash3_runtime.cpp#guestVramIsPicture, tests/title_runtime_contract.h#verifyTitleRuntimeContract
+reconfirmed: 2026-09-04
+verified_at: 2026-09-04
 ---
 
 ## Claim
@@ -13,7 +15,11 @@ Crash 1, Crash 2, and Crash 3 explicitly refuse guest-VRAM picture ownership thr
 
 ## Evidence
 
-Against fetchable pinned psxport bc8c8897, the authoritative Clang build and CTest passed 5/5. The shared production-seam runtime contract constructed each derived runtime and required guestVramIsPicture(Game) to return false; all three title tests passed. This records only absence of picture ownership because no measured frame producer exists.
+Against exact pinned PSXPort `dc7f53cb3d5e32439bb5d42f2405748418a008de` and Lightrec
+`c9f0a37dbbc7e24d841c84751d9619ad1bfcb7d8`, the Clang/Ninja build and 17-test CTest graph pass.
+The shared production-seam runtime contract constructs each derived runtime and requires
+`guestVramIsPicture(Game)` to return false. This records only absence of picture ownership; it does
+not claim a native graphics producer or real-game Lightrec run.
 
 ## What would falsify it
 

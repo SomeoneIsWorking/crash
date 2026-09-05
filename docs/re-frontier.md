@@ -115,28 +115,28 @@ Statuses: ✅ `re-verified` · 🟡 `re-partial` · 🔬 `in-progress` · ⬜ `t
 - gap: Equality is proven from the executable entry through the first post-syscall B(56h) dispatch boundary. Product composition extends to A(44h), but no serialized run has yet proven it reaches that boundary. The ordered real oracle now preserves CPU/RAM through the syscall, B(56h), C0 seed, and fourteen-word copy, but its first-post-model-call policy captures intermediate local wrapper `0x8004323C` with `ra=0x800431E8`. That wrapper tail-dispatches A(44h) via non-link `jr`, and modeled returns cannot currently combine with exact target capture. The A(44h) register file and fourteen destination words therefore lack an independent comparison (issue #8). Of 666 emitted candidates, eight bodies execute and one further candidate is observed as a call target without executing its body; 657 candidates lack execution provenance. Static table discovery also emits data-like fragments (issue #3), so neither the 115-seed nor 666-candidate count is a correctness denominator.
 - notes: C0 slot 6 is fixed in the shared framework, not overridden by Crash. The unresolved A(44h) oracle boundary remains valid evidence debt. Do not extend or rerun the static path; reproduce the recorded state through Lightrec and use the independent oracle for new comparison evidence. This is neither a rendered frame nor a playable-game claim.
 
-### CRASH1-VSYNC — identify and make guest VSync fatal
-- status: re-verified
+### CRASH1-VSYNC — identify and bound guest VSync
+- status: re-partial
 - deps: CRASH1-01
-- evidence: Verified SCUS_949.00 contains canonical libetc VSync at `[0x8003E4F0,0x8003E638)`. The tracked body SHA-256 is `915c96a114984906cdf7e9db7a82f361d9a716a593f5f8afead14b9f45edb8c7`; generated call routing preserves the body behind the runtime override seam. The executable gate passes 6/6 including altered entry/body controls, runtime facts agree 20/20, and the product-contract gate proves frame step, VSync(-1), VSync(0), and trap replacement all abort. The Crash 1 resident product rebuild proves its custom route initializes and requires the contract before generated dispatch.
+- evidence: Verified SCUS_949.00 contains canonical libetc VSync at `[0x8003E4F0,0x8003E638)`. The tracked body SHA-256 is `915c96a114984906cdf7e9db7a82f361d9a716a593f5f8afead14b9f45edb8c7`. The executable gate retains altered entry/body controls. The exact-pinned asset-free runtime test initializes the production platform owner, proves the two GpuUpdate JAL sites remain guest instructions rather than native-function overrides, and verifies that the VSync host service returns a typed `FrameBoundary` while preserving its guest continuation.
 - where: `titles/crash1/executable.json`, `titles/crash1/core/crash1_frame_driver.*`, `Crash1Runtime::platformHlePlan`
-- gap: The fatal boundary is complete; the title still lacks a runnable frame step (`CRASH1-FRAME`).
-- notes: Every mode, including VSync(-1) queries, is forbidden. The host advances its own clock and never calls this leaf.
+- gap: A real Lightrec run has not yet reached either GpuUpdate VSync and resumed at its measured continuation.
+- notes: The host advances its own clock at each typed boundary; it never executes the retail busy-wait body.
 
-### CRASH2-VSYNC — identify and make guest VSync fatal
-- status: re-verified
+### CRASH2-VSYNC — identify and bound guest VSync
+- status: re-partial
 - deps: CRASH2-01
-- evidence: Verified SCUS_941.54 contains canonical libetc VSync at `[0x8004A484,0x8004A5CC)`. The tracked body SHA-256 is `25097695f5ebd26728662b7989487b139e140ccf2129a14df10b30a003865b4e`. The executable gate passes 6/6 including altered entry/body controls, runtime facts agree 20/20, and the product-contract gate proves frame step, VSync(-1), VSync(0), and trap replacement all abort.
+- evidence: Verified SCUS_941.54 contains canonical libetc VSync at `[0x8004A484,0x8004A5CC)`. The tracked body SHA-256 is `25097695f5ebd26728662b7989487b139e140ccf2129a14df10b30a003865b4e`. The executable gate retains altered entry/body controls, and the exact-pinned asset-free contract test proves the production platform owner returns a typed `FrameBoundary`.
 - where: `titles/crash2/executable.json`, `titles/crash2/core/crash2_frame_driver.*`, `Crash2Runtime::platformHlePlan`
-- gap: The fatal boundary is complete; the title still lacks a product and runnable frame step (`CRASH2-FRAME`).
+- gap: The title still lacks a product and runnable frame step (`CRASH2-FRAME`), so real guest execution has not reached this boundary.
 - notes: The address is a Crash 2 fact; neither Crash 1 nor Crash 3 addresses are reusable.
 
-### CRASH3-VSYNC — identify and make guest VSync fatal
-- status: re-verified
+### CRASH3-VSYNC — identify and bound guest VSync
+- status: re-partial
 - deps: CRASH3-01
-- evidence: Verified SCUS_942.44 contains canonical libetc VSync at `[0x8004B2A8,0x8004B3F0)`. The tracked body SHA-256 is `9de0bd51589e40ceb1c85119f26f3a0ab8ffd90e8435df340c529444e8a52e80`. The executable gate passes 6/6 including altered entry/body controls, runtime facts agree 20/20, and the product-contract gate proves frame step, VSync(-1), VSync(0), and trap replacement all abort.
+- evidence: Verified SCUS_942.44 contains canonical libetc VSync at `[0x8004B2A8,0x8004B3F0)`. The tracked body SHA-256 is `9de0bd51589e40ceb1c85119f26f3a0ab8ffd90e8435df340c529444e8a52e80`. The executable gate retains altered entry/body controls, and the exact-pinned asset-free contract test proves the production platform owner returns a typed `FrameBoundary`.
 - where: `titles/crash3/executable.json`, `titles/crash3/core/crash3_frame_driver.*`, `Crash3Runtime::platformHlePlan`
-- gap: The fatal boundary is complete; the title still lacks a product and runnable frame step (`CRASH3-FRAME`).
+- gap: The title still lacks a product and runnable frame step (`CRASH3-FRAME`), so real guest execution has not reached this boundary.
 - notes: The address is a Crash 3 fact; neither Crash 1 nor Crash 2 addresses are reusable.
 
 ### CRASH1-FRAME — recover one complete native-owned frame step
@@ -191,12 +191,15 @@ Statuses: ✅ `re-verified` · 🟡 `re-partial` · 🔬 `in-progress` · ⬜ `t
 ## Runtime execution migration
 
 ### CRASH1-JIT-01 — reproduce the current menu and PadRead frontier through Lightrec
-- status: todo
+- status: partial
 - deps: CRASH1-02, CRASH1-03, CRASH1-FRAME
 - evidence: The preserved compatibility path reached 1,172/1,172 frame fences and the 3D title menu. Issue 0012 grounds the missing BIOS auto-pad publication at `0x80057054` and records the in-flight owner. The portfolio plan selects psxport's pinned Lightrec integration as the gameplay executor.
 - where: psxport's target per-`Core` executor; `titles/crash1/core/crash1_{runtime,port,frame_driver,bios_pad_input}.*`
-- gap: Map the authenticated `SCUS_949.00` image directly, register existing native owners by image identity plus address, replace generated dispatch and `super` calls with executor dispatch/original calls, and reach the menu with nonzero Lightrec blocks. Product link/selector inspection must prove that neither the interpreter nor generated guest code is present.
-- notes: This is the first wiring discriminator only. It preserves the current frontier and must not delete the static path.
+- gap: The title composition and native owners now call the intended image-aware executor boundary,
+  but a nonzero-block real-game run remains unverified. Reach the menu and inspect the product link
+  to prove no full-game/player-selectable interpreter or generated guest code exists.
+- notes: The static translator, corpus, dispatch adapters, seeds, and static-only tests were deleted
+  before this integration; do not restore a compatibility path.
 
 ### CRASH1-JIT-02 — prove representative interactive gameplay
 - status: todo
@@ -204,14 +207,14 @@ Statuses: ✅ `re-verified` · 🟡 `re-partial` · 🔬 `in-progress` · ⬜ `t
 - evidence:
 - where: Crash 1 product plus separately built independent-oracle harness
 - gap: Enter and sustain a representative level with the PadRead owner and all native services active; compare timing, interrupts, CPU/memory and relevant device state; exercise an override, original call, and executable-memory invalidation in positive and controlled-negative cases; qualify released hosts.
-- notes: Only this representative-gameplay gate authorizes complete removal of Crash 1's static corpus, generator inputs, static dispatcher, generated-symbol tests, and stale methodology. No compatibility mode remains.
+- notes: This is the fidelity gate for the replacement product. No compatibility mode exists.
 
 ### CRASH2-JIT-01 — migrate Crash 2 after Crash 1 is complete
 - status: todo
 - deps: CRASH1-JIT-02, CRASH2-02, CRASH2-03, CRASH2-VSYNC
 - evidence:
 - where: `titles/crash2/` plus psxport executor
-- gap: Reproduce Crash 2's recorded resident boundary through Lightrec, recover its title-owned frame/services, and pass representative gameplay before removing its static path.
+- gap: Reproduce Crash 2's recorded resident boundary through Lightrec, recover its title-owned frame/services, and pass representative gameplay.
 - notes: Do not inherit Crash 1 addresses, seeds, or behavior.
 
 ### CRASH3-JIT-01 — migrate Crash 3 after Crash 2 is complete
@@ -219,5 +222,5 @@ Statuses: ✅ `re-verified` · 🟡 `re-partial` · 🔬 `in-progress` · ⬜ `t
 - deps: CRASH2-JIT-01, CRASH3-02, CRASH3-03, CRASH3-VSYNC
 - evidence:
 - where: `titles/crash3/` plus psxport executor
-- gap: Reproduce Crash 3's recorded resident boundary through Lightrec, recover its title-owned frame/services, and pass representative gameplay before removing its static path.
+- gap: Reproduce Crash 3's recorded resident boundary through Lightrec, recover its title-owned frame/services, and pass representative gameplay.
 - notes: Preserve `SYSTEM.CNF` selection and reject `DRAGON/SPYRO.EXE` as the Crash 3 product image.

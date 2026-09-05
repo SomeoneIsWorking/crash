@@ -1,80 +1,48 @@
 #!/usr/bin/env python3
-"""Configure, build, and test Crash's authoritative Clang verification tree."""
+"""Run Crash's asset-free product and title contracts through PSXPort's shared verifier."""
 
 from __future__ import annotations
 
-import argparse
-import os
-import pathlib
 import subprocess
 import sys
+from pathlib import Path
 
-ROOT = pathlib.Path(__file__).resolve().parent.parent
-DEFAULT_BUILD = ROOT / "scratch" / "build-clang"
-
-
-class Refused(RuntimeError):
-    """A required verifier command could not be executed."""
-
-
-def run(command: list[str], *, environment: dict[str, str] | None = None) -> int:
-    print("+ " + " ".join(command), flush=True)
-    try:
-        result = subprocess.run(
-            command,
-            cwd=ROOT,
-            env=environment,
-            check=False,
-        )
-    except OSError as exc:
-        raise Refused(f"could not execute {command[0]}: {exc}") from exc
-    return result.returncode
-
-
-def verify(build: pathlib.Path, jobs: int) -> int:
-    environment = dict(os.environ)
-    environment["CC"] = "clang"
-    environment["CXX"] = "clang++"
-    configure = [
-        "cmake",
-        "-S",
-        str(ROOT),
-        "-B",
-        str(build),
-        "-DCMAKE_C_COMPILER=clang",
-        "-DCMAKE_CXX_COMPILER=clang++",
-    ]
-    commands = (
-        (configure, environment),
-        (["cmake", "--build", str(build), "--parallel", str(jobs)], None),
-        (["ctest", "--test-dir", str(build), "--output-on-failure"], None),
-        ([sys.executable, str(ROOT / "tools" / "psxport_sync.py"), "--check"], None),
-    )
-    for command, command_environment in commands:
-        result = run(command, environment=command_environment)
-        if result:
-            return 1
-    print(f"PASS: authoritative verifier completed in {build.relative_to(ROOT)}")
-    return 0
+ROOT = Path(__file__).resolve().parents[1]
+PSXPORT = ROOT / "external" / "psxport"
+BUILD = ROOT / "build" / "verify"
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument(
-        "--jobs",
-        type=int,
-        default=max(1, os.cpu_count() or 1),
-        help="parallel build jobs (default: host CPU count)",
+    bootstrap = subprocess.run(
+        [sys.executable, ROOT / "tools" / "psxport_sync.py", "--auto"],
+        cwd=ROOT,
+        check=False,
     )
-    args = parser.parse_args()
-    if args.jobs < 1:
-        parser.error("--jobs must be at least 1")
+    if bootstrap.returncode:
+        return bootstrap.returncode
 
-    try:
-        return verify(DEFAULT_BUILD, args.jobs)
-    except Refused as exc:
-        print(f"REFUSED: {exc}", file=sys.stderr)
-        return 2
+    sys.path.insert(0, str(PSXPORT / "tools"))
+    from port.consumer_verify import ConsumerVerifyConfig, run_consumer_verification
+
+    result = run_consumer_verification(
+        ConsumerVerifyConfig(
+            name="Crash Bandicoot",
+            root=ROOT,
+            build=BUILD,
+            psxport=PSXPORT,
+            product=BUILD / "crash1_port",
+            cmake_module=ROOT / "CMakeLists.txt",
+            test_regex=r"^crash",
+            cmake_definitions=("-DBUILD_TESTING=ON", "-DPSXPORT_BUILD_SMOKE=OFF"),
+        )
+    )
+    if result:
+        return result
+    return subprocess.run(
+        [sys.executable, ROOT / "tools" / "psxport_sync.py", "--check", "--build-dir", BUILD],
+        cwd=ROOT,
+        check=False,
+    ).returncode
 
 
 if __name__ == "__main__":

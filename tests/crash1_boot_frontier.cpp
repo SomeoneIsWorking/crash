@@ -1,7 +1,5 @@
 #include "crash1_boot_frontier.h"
 
-#include "crash1_runtime.h"
-
 #include <cstdio>
 
 namespace {
@@ -16,23 +14,10 @@ int failures = 0;
     }                                                                                                                  \
   } while (false)
 
-void transition(Core *) {}
-void boundary(Core *) {}
-
 } // namespace
 
 int main() {
-  crash1::Crash1Runtime runtime;
   const crash1::BootFrontierFacts facts = crash1::bootFrontierFacts();
-  const crash::ResidentProgram program = crash1::makeBootFrontierProgram(runtime, "retail.exe", transition, boundary);
-
-  CHECK(program.entry == runtime.guestProgramImage()->crt0Entry);
-  CHECK(program.boundary == facts.postGetC0Dispatch);
-  CHECK(program.boundaryHandler == boundary);
-  CHECK(program.boundaryKind == crash::ResidentBoundaryKind::DynamicDispatch);
-  CHECK(program.transitionBoundary == facts.firstSyscall);
-  CHECK(program.transitionHandler == transition);
-
   CHECK(crash1::checkFirstBiosDispatch(facts.firstBiosDispatch, facts.firstBiosFunction, facts.firstBiosReturnAddress)
             .accepted);
   CHECK(!crash1::checkFirstBiosDispatch(
@@ -58,7 +43,7 @@ int main() {
              .accepted);
 
   if (failures == 0) {
-    std::puts("Crash 1 boot frontier: 14/14 checks passed");
+    std::puts("Crash 1 boot frontier facts: 8/8 checks passed");
   }
   return failures == 0 ? 0 : 1;
 }

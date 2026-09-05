@@ -1,7 +1,7 @@
 #include "crash1_cd_boot.h"
 
 #include "core.h"
-#include "recomp_iface.h"
+#include "dynarec_dispatch.h"
 
 #include <cstdlib>
 #include <lucent/log.h>
@@ -45,19 +45,11 @@ const Program &program() {
   return kProgram;
 }
 
-void registerOverride() {
-  const RecompRegistry *const registry = psxport_recomp();
-  if (registry == nullptr || registry->rec_func_index == nullptr || registry->shard_set_override == nullptr) {
-    lucent::error("crash1-cd", "Crash 1 CD boot owner has no installed resident recompiler registry");
+void registerOverride(Core &core) {
+  if (!crash::dynarec::installOverride(
+          core, kProgram.initialize.begin, "Crash 1 libcd initialization", initializeOverride)) {
     std::abort();
   }
-  if (registry->rec_func_index(kProgram.initialize.begin) < 0) {
-    lucent::error("crash1-cd",
-                  "measured libcd initialization entry 0x{:08X} is absent from the generated substrate",
-                  kProgram.initialize.begin);
-    std::abort();
-  }
-  registry->shard_set_override(kProgram.initialize.begin, initializeOverride);
 }
 
 void initializeDriver(Core &core) {
