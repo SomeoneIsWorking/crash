@@ -142,9 +142,11 @@ deterministic oracle/device comparison, invalidation controls, and released-host
 
 Evidence: S011's exact-pinned local Clang/Ninja product gate passes all 19 CTests and the linked
 execution-boundary audit. Hosted CI uses the same canonical verifier and maintained dependencies.
+The Linux x86-64 asset-free product composition gate passed on main commit
+`fd277b409fd8d12a8bde2824de705d7335c53eec` in
+[run 33960149147](https://github.com/SomeoneIsWorking/crash/actions/runs/33960149147).
 
-Gap: no hosted result for this pending commit, representative real-game execution, or release
-performance qualification.
+Gap: representative real-game execution and release performance qualification remain unverified.
 
 ### S013 — Windows x86-64 host qualification
 
