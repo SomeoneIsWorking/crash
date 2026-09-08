@@ -16,6 +16,10 @@ callbacks, image-aware override table, original calls, bounded exits, and invali
 title identity, native service/input/frame/render owners, title-specific addresses, and product
 composition. Lightrec owns its code cache and executable memory.
 
+WebAssembly is part of the migration release contract: add a browser-capable path that keeps the
+same runtime boundary and fallback accounting, and treat release claims as blocked until it shows
+representative gameplay parity and telemetry on web alongside desktop hosts.
+
 ## Ordered migration
 
 1. Completed break-first: remove the translator, generated corpus, static dispatch adapters, seed

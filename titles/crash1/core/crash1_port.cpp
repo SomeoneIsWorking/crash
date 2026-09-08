@@ -1,4 +1,6 @@
 #include "crash1_port.h"
+#include "hw_bind.h"
+#include "psx_exe_image.h"
 
 #include "core.h"
 #include "crash1_runtime.h"
@@ -17,8 +19,6 @@ void spu_init();
 void watchdog_init();
 }
 
-void gte_init();
-void load_exe(const char *path, Core *core);
 void native_boot_run(Core *core);
 
 namespace crash1 {
