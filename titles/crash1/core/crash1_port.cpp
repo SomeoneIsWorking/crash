@@ -1,8 +1,8 @@
 #include "crash1_port.h"
 #include "hw_bind.h"
-#include "psx_exe_image.h"
 
 #include "core.h"
+#include "crash1_executable.h"
 #include "crash1_runtime.h"
 #include "game.h"
 #include "lightrec_executor.h"
@@ -46,7 +46,17 @@ int runPort(int argc, char **argv) {
   Core *const core = &game->core;
 
   watchdog_init();
-  load_exe(kDefaultExecutable, core);
+  const auto loaded = loadResidentExecutable(*core, kDefaultExecutable);
+  if (!loaded) {
+    lucent::error(
+        "crash1-boot", "cannot load authenticated Crash 1 executable '{}': {}", kDefaultExecutable, loaded.detail);
+    return 1;
+  }
+  lucent::info("crash1-boot",
+               "authenticated Crash 1 executable: entry 0x{:08X}, text 0x{:08X}+0x{:X}",
+               loaded.image.entry,
+               loaded.image.textAddress,
+               loaded.image.textBytes);
   if (!core->lightrecExecutor().available()) {
     lucent::error("crash1-boot", "psxport was built without its Lightrec dynarec backend");
     return 2;

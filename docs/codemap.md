@@ -20,6 +20,7 @@ into a gameplay executable; Lightrec alone owns any bounded per-block fallback.
 | Disc provisioning | Follow `SYSTEM.CNF`, select one identity, and publish validated user data | `tools/provision_title.py` | `provision_title.py` | Provisioning publishes bytes for runtime mapping, not offline translation |
 | Lightrec executor integration | Bind image-aware native overrides and bounded guest/original calls; run frame turns through the shared host-service dispatcher | `game/core/dynarec_dispatch.*`, `game/core/boundary_runtime.*`, `titles/<title>/core/<title>_runtime.*` | `crash::dynarec::executeTurn`, title runtime composition | psxport owns CPU synchronization, cache invalidation and service dispatch; Crash owns title identity and policy |
 | Product composition | Compose one title's native owners and executor without absorbing their implementations | `titles/crash1/core/crash1_port.*`, later title-local equivalents | `crash1::runPort` | Crash 1 remains active until representative gameplay; Crash 2/3 follow sequentially |
+| Crash 1 executable admission | Check the retail size and SHA-256 on one bounded byte buffer, then hand that same buffer to psxport's PS-X EXE mapper | `titles/crash1/core/crash1_executable.*` | `crash1::loadResidentExecutable` | Title identity stays in the Crash 1 manifest; psxport owns structural parsing, publication, and invalidation |
 | Native frame ownership | Own exact title input, audio, simulation, host-service, render, and presentation order; consume typed executor exits | `titles/<title>/core/<title>_frame_driver.*`, `game/core/native_frame_loop_contract.*` | title `FrameDriver::stepFrame` | Guest VSync produces a typed boundary; no C++ unwind crosses JIT frames |
 | Crash 1 native boot services | Preserve measured libcd state, disc-index I/O, callback/event/pad initialization, and GPU watchdog behavior | `titles/crash1/core/crash1_{cd_boot,disc_index_io,callback_boot,gpu_watchdog}.*` | `Crash1Runtime::registerOverrides` | Original guest bodies re-enter through executor original calls; shared Sony semantics stay in psxport |
 | Crash 1 BIOS pad input | Publish the finalized host mask in Crash's authenticated BIOS `PadRead` word before retail `PadUpdate` | `titles/crash1/core/crash1_bios_pad_input.*` | `bios_pad_input::publishPrimary` | psxport owns device polling; this owner owns address `0x80057054` and byte order only |
@@ -40,6 +41,7 @@ into a gameplay executable; Lightrec alone owns any bounded per-block fallback.
 | A title-specific native override or original call | That title runtime, keyed by image identity and guest address |
 | A frame/host-work/interrupt stop | A typed psxport executor exit handled by the title frame owner |
 | A serial-specific address or BIOS fact | That title's executable manifest and owning module |
+| The Crash 1 executable bytes accepted for runtime mapping | `crash1_executable.*`, using the Crash 1 manifest identity |
 | Host controller polling | psxport `Pad` |
 | Crash 1 BIOS auto-pad layout | `crash1_bios_pad_input.*` |
 | A cross-title engine behavior | `game/`, only after direct correspondence |

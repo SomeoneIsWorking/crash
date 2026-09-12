@@ -125,6 +125,10 @@ original-call boundary, while preserving the BIOS `PadRead` owner. The asset-fre
 passes its link/repository boundary audit, but real-game execution proof is not complete, so this is
 not yet a runnable gameplay claim.
 
+Crash 1's product loader now checks the manifest size and SHA-256 on the same bounded buffer it gives
+the shared PS-X EXE mapper. Its asset-free contract refuses altered and truncated inputs before
+changing Core state; a real Lightrec menu run remains unverified.
+
 The title currently declares guest GTE geometry as its default and refuses native rendering and
 temporal interpolation requests while the corresponding producers remain missing (issue #5).
 

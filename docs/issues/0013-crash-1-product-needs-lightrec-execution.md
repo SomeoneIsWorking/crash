@@ -6,7 +6,7 @@ symptom: Static execution is removed, but the replacement psxport-Lightrec path 
 state_items: S011
 tags: crash1,dynarec,lightrec,migration,product
 created: 2026-09-04
-updated: 2026-09-04
+updated: 2026-09-12
 ---
 
 ## Root cause
@@ -27,3 +27,10 @@ The first discriminator preserves issue 0012's PadRead owner and reaches the exi
 nonzero Lightrec blocks. Representative interactive gameplay, independent state/device comparison,
 override/original-call coverage, invalidation controls, and released-host qualification then prove
 the replacement. The deleted static machinery must not return.
+
+The former product path reopened the Python-verified executable with psxport's structural-only
+`load_exe`, so a changed cached file could be mapped without title authentication. The Crash 1
+loader now checks the manifest size and SHA-256 and passes those same bytes to
+`loadPsxExeImage`. Synthetic altered-digest, altered-byte, short-file, and positive publication
+controls exercise the shipping loader without putting retail bytes in the test. This closes the
+runtime image-admission gap, but it does not prove the menu or gameplay execution.

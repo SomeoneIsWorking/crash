@@ -121,6 +121,7 @@ add_library(
   "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/core/crash1_callback_boot.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/core/crash1_cd_boot.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/core/crash1_disc_index_io.cpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/core/crash1_executable.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/core/crash1_frame_driver.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/core/crash1_gpu_watchdog.cpp"
 )
@@ -129,8 +130,13 @@ target_compile_features(crash1_runtime PUBLIC cxx_std_20)
 target_link_libraries(crash1_runtime PUBLIC crash_boundary_runtime crash_native_frame_contract)
 configure_title_vsync(crash1_runtime crash1)
 configure_crash1_native_contract(crash1_runtime)
-
 file(READ "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/executable.json" crash1_manifest_json)
+string(JSON crash1_exe_expected_size GET "${crash1_manifest_json}" file_size)
+string(JSON crash1_exe_sha256 GET "${crash1_manifest_json}" sha256)
+target_compile_definitions(crash1_runtime PRIVATE
+  "CRASH1_EXE_EXPECTED_SIZE=${crash1_exe_expected_size}"
+  "CRASH1_EXE_SHA256=\"${crash1_exe_sha256}\"")
+
 string(JSON crash1_first_syscall_entry GET "${crash1_manifest_json}" runtime first_syscall_entry)
 string(JSON crash1_first_bios_dispatch_address
        GET "${crash1_manifest_json}" runtime first_bios_dispatch_address)
@@ -180,6 +186,12 @@ if(BUILD_TESTING)
   target_compile_features(crash1_runtime_test PRIVATE cxx_std_20)
   target_link_libraries(crash1_runtime_test PRIVATE crash1_runtime)
   add_test(NAME crash1_runtime_inheritance COMMAND crash1_runtime_test)
+
+  add_executable(crash1_executable_test "${CMAKE_CURRENT_SOURCE_DIR}/tests/crash1_executable.cpp")
+  target_compile_features(crash1_executable_test PRIVATE cxx_std_20)
+  target_link_libraries(crash1_executable_test PRIVATE crash1_runtime)
+  add_test(NAME crash1_executable COMMAND crash1_executable_test
+           "${CMAKE_CURRENT_SOURCE_DIR}/scratch/executable-loader")
 
   add_executable(crash1_cd_boot_test "${CMAKE_CURRENT_SOURCE_DIR}/tests/crash1_cd_boot.cpp")
   target_compile_features(crash1_cd_boot_test PRIVATE cxx_std_20)
