@@ -61,9 +61,19 @@ int verifyTitleRuntimeContract(const char *name,
     return 1;
   }
   const RenderCapabilities capabilities = runtime.renderCapabilities();
-  if (capabilities.defaultPath != RenderPath::Native || !capabilities.nativeRenderPath ||
-      !capabilities.temporalInterpolation || capabilities.playerPathCount() != 2) {
-    std::fprintf(stderr, "%s did not declare the Crash lineage native/interpolation product target\n", name);
+  if (capabilities.defaultPath != RenderPath::Gte || capabilities.nativeRenderPath ||
+      capabilities.temporalInterpolation || capabilities.playerPathCount() != 1 ||
+      render_path_resolve(RenderPath::Native, capabilities) != RenderPath::Gte ||
+      render_path_resolve(RenderPath::Gte, capabilities) != RenderPath::Gte ||
+      game->mods.temporalInterpolationSupported()) {
+    std::fprintf(stderr, "%s exposed native geometry or interpolation before a title producer exists\n", name);
+    return 1;
+  }
+  if (render_path_apply(*game, RenderPath::Native, RenderPathAudience::Player) !=
+          RenderPathSelectionResult::Unsupported ||
+      render_path_apply(*game, RenderPath::Gte, RenderPathAudience::Player) != RenderPathSelectionResult::Applied ||
+      game->core.rsub.mode.path() != RenderPath::Gte) {
+    std::fprintf(stderr, "%s did not enforce its guest-geometry player path at the live selector\n", name);
     return 1;
   }
 
@@ -71,7 +81,7 @@ int verifyTitleRuntimeContract(const char *name,
     game->core.imageCatalog().activate(name, runtime.guestProgramImage()->residentText, 1u);
     runtime.registerOverrides(*game);
   }
-  std::printf("%s: direct derived install; host FrameDriver + typed VSync contract; native/interpolation target; "
+  std::printf("%s: direct derived install; host FrameDriver + typed VSync contract; guest-geometry path; "
               "%s\n",
               name,
               expectRunnableFrame ? "measured runnable frame seam" : "explicit non-runnable frontier");

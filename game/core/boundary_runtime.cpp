@@ -10,7 +10,7 @@ BoundaryRuntime::BoundaryRuntime(std::string_view logDomain, std::string_view bl
     : logDomain_(logDomain), blockedReason_(blockedReason) {}
 
 RenderCapabilities BoundaryRuntime::renderCapabilities() const {
-  return RenderCapabilities::interpolatedNative();
+  return RenderCapabilities::widescreenOnly();
 }
 
 void *BoundaryRuntime::createContext(Core &) {

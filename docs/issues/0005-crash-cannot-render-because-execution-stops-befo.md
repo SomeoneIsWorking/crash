@@ -6,7 +6,7 @@ symptom: The preserved compatibility path reaches the 3D menu and grounded pre-G
 state_items: S005,S006,S007,S009,S011
 tags: crash1,rendering,native,producers
 created: 2026-08-22
-updated: 2026-09-04
+updated: 2026-09-12
 ---
 
 ## Root cause
@@ -16,6 +16,10 @@ the 3D menu and grounded the camera/publication chain at `GfxUpdateMatrices 0x80
 object-level pre-GTE submitter `GoolObjectTransform 0x8001DE78`, but no game-owned producer emits
 typed native primitives and no representative gameplay run identifies live world/object inputs.
 Therefore no grounded native renderer, widescreen projection, or interpolation path exists.
+The runtime nonetheless declared `interpolatedNative()` for Crash 1 and the shared refusing runtime,
+which would select an empty native geometry path by default and expose an interpolation control with
+no authoritative transform pair. The title declarations now select guest GTE geometry and refuse
+native/interpolation requests until those producers exist.
 
 ## What was tried / dead ends
 

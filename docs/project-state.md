@@ -125,6 +125,9 @@ original-call boundary, while preserving the BIOS `PadRead` owner. The asset-fre
 passes its link/repository boundary audit, but real-game execution proof is not complete, so this is
 not yet a runnable gameplay claim.
 
+The title currently declares guest GTE geometry as its default and refuses native rendering and
+temporal interpolation requests while the corresponding producers remain missing (issue #5).
+
 On 2026-09-05 the canonical locked verifier passed all 19 title CTests against PSXPort
 `eb5f23a8b3506f8853b3cfadcedc024cd90818a0` and Lightrec
 `b1457137c31cedff5f440d59da29401d021ba2da`, with the maintained GNU Lightning prefix.

@@ -41,7 +41,7 @@ const PlatformHlePlan Crash1Runtime::platformPlan_ = crash::makeNativeFramePlatf
 Crash1Runtime::Crash1Runtime() = default;
 
 RenderCapabilities Crash1Runtime::renderCapabilities() const {
-  return RenderCapabilities::interpolatedNative();
+  return RenderCapabilities::widescreenOnly();
 }
 
 void *Crash1Runtime::createContext(Core &) {
