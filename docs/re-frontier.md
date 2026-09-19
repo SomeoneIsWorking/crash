@@ -193,11 +193,11 @@ Statuses: ✅ `re-verified` · 🟡 `re-partial` · 🔬 `in-progress` · ⬜ `t
 ### CRASH1-JIT-01 — reproduce the current menu and PadRead frontier through Lightrec
 - status: partial
 - deps: CRASH1-02, CRASH1-03, CRASH1-FRAME
-- evidence: The preserved compatibility path reached 1,172/1,172 frame fences and the 3D title menu. Issue 0012 grounds the missing BIOS auto-pad publication at `0x80057054` and records the in-flight owner. The portfolio plan selects psxport's pinned Lightrec integration as the gameplay executor.
+- evidence: The 2026-09-12 authenticated native/Lightrec run reached the 3D menu with nonzero translated/executed blocks and zero fallback; issue 0013 records the exact counts and the finite-budget continuation fix. The BIOS `PadRead` word changes for held Start/Cross; issue 0012 records the downstream pad-struct failure.
 - where: psxport's target per-`Core` executor; `titles/crash1/core/crash1_{runtime,port,frame_driver,bios_pad_input}.*`
-- gap: The title composition and native owners now call the intended image-aware executor boundary,
-  but a nonzero-block real-game run remains unverified. Reach the menu and inspect the product link
-  to prove no full-game/player-selectable interpreter or generated guest code exists.
+- gap: Diagnose why retail pad structs stay zero after the BIOS word changes, then enter interactive
+  gameplay. Keep the linked product boundary free of a full-game/player-selectable interpreter and
+  generated guest code.
 - notes: The static translator, corpus, dispatch adapters, seeds, and static-only tests were deleted
   before this integration; do not restore a compatibility path.
 

@@ -9,6 +9,7 @@
 #include "game.h"
 
 #include <cstdlib>
+#include <limits>
 #include <lucent/log.h>
 
 #ifndef CRASH_TITLE_VSYNC_ENTRY
@@ -189,6 +190,31 @@ void Crash1FrameDriver::finishFrameIteration(Core *core) {
   psx::cpu::requestExecutionExit(*core, psx::cpu::ExecutionExitReason::FrameBoundary);
 }
 
+psx::cpu::ExecutionResult
+Crash1FrameDriver::runGuestToBoundary(Core &core, std::uint32_t entry, const ExecuteSlice &execute) {
+  std::uint32_t resumePc = entry;
+  std::uint64_t consumedCycles = 0;
+  while (true) {
+    psx::cpu::ExecutionResult result = execute(core, resumePc);
+    if (result.cycles > std::numeric_limits<std::uint64_t>::max() - consumedCycles) {
+      return {psx::cpu::ExecutionExitReason::Fault, result.guestPc, consumedCycles, "guest cycle count overflow"};
+    }
+    consumedCycles += result.cycles;
+    if (result.reason != psx::cpu::ExecutionExitReason::BudgetExhausted) {
+      result.cycles = consumedCycles;
+      return result;
+    }
+    if (result.cycles == 0u) {
+      return {psx::cpu::ExecutionExitReason::Fault,
+              result.guestPc,
+              consumedCycles,
+              "guest turn exhausted its budget without advancing guest cycles"};
+    }
+    serviceRootCounter(core, game_.timing.emulatedCpuTicks());
+    resumePc = result.guestPc;
+  }
+}
+
 void Crash1FrameDriver::stepFrame(Core &core, std::uint32_t frame) {
   if (&core != &game_.core || core.game != &game_) {
     lucent::error("crash1-frame", "Crash1FrameDriver was asked to step a different Game/Core");
@@ -212,10 +238,10 @@ void Crash1FrameDriver::stepFrame(Core &core, std::uint32_t frame) {
   psx::cpu::ExecutionResult result;
   if (!enteredCoreLoop_) {
     core.r[4] = 25u;
-    result = crash::dynarec::executeTurn(core, kProgram.coreLoop.begin);
+    result = runGuestToBoundary(core, kProgram.coreLoop.begin, crash::dynarec::executeTurn);
     enteredCoreLoop_ = true;
   } else {
-    result = crash::dynarec::executeTurn(core, kProgram.iteration.begin);
+    result = runGuestToBoundary(core, kProgram.iteration.begin, crash::dynarec::executeTurn);
   }
   while (!frameCompleted_ && result.reason == psx::cpu::ExecutionExitReason::FrameBoundary) {
     if (result.guestPc != kContract.guestVSync.begin ||
@@ -229,14 +255,17 @@ void Crash1FrameDriver::stepFrame(Core &core, std::uint32_t frame) {
     }
     const std::uint32_t continuation = core.r[31];
     deliverDisplayField(core);
-    result = crash::dynarec::executeTurn(core, continuation);
+    result = runGuestToBoundary(core, continuation, crash::dynarec::executeTurn);
   }
   if (!frameCompleted_ || result.reason != psx::cpu::ExecutionExitReason::FrameBoundary) {
     lucent::error("crash1-frame",
-                  "frame {} left guest execution at 0x{:08X} with {} instead of the measured frame boundary",
+                  "frame {} left guest execution at 0x{:08X} with {} after {} cycles ({}); "
+                  "expected the measured frame boundary",
                   frame,
                   result.guestPc,
-                  psx::cpu::executionExitName(result.reason));
+                  psx::cpu::executionExitName(result.reason),
+                  result.cycles,
+                  result.detail);
     std::abort();
   }
 

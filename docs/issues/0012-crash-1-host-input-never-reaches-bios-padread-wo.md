@@ -1,12 +1,12 @@
 ---
 id: 12
-title: Crash 1 host input never reaches BIOS PadRead word
+title: Crash 1 menu does not consume published BIOS PadRead input
 status: investigating
-symptom: REPL Cross is accepted at the 3D title menu, but PadUpdate stays zero and Start cannot enter gameplay
+symptom: REPL Start and Cross update the BIOS PadRead word at the 3D title menu, but the retail pad button structs remain zero and the menu does not advance
 state_items: S004,S011
 tags: crash1,input,bios,pad,gameplay
 created: 2026-08-27
-updated: 2026-09-04
+updated: 2026-09-12
 ---
 
 ## Root cause
@@ -18,9 +18,12 @@ psxport's generic pad service. Retail `PadUpdate` at `0x800167A4` calls the `Pad
 finalized mask to that word, so it remained `0xFFFFFFFF` for both pressed and released frames.
 
 The BIOS word also uses Crash's byte-swapped per-port logical layout: standard active-low Cross
-`0xBFFF` must become primary halfword `0xFFBF`, so retail complement/shift yields logical Cross
-`0x0040`. Writing a generic four-byte pad packet at this address would corrupt the second port and is
-not a valid substitute.
+`0xBFFF` must become primary halfword `0xFFBF`, so retail complement yields logical Cross `0x0040`.
+The first publisher incorrectly placed that primary halfword in bits 31–16 and disconnected the low
+halfword. Retail `PadUpdate` selects `PadRead() & 0xFFFF` for controller 0 and `>> 16` for controller
+1, so it always saw zero buttons for the primary controller. The required word is `0xFFFFFFBF` for
+Cross and `0xFFFFF7FF` for Start. Writing a generic four-byte pad packet here would corrupt the
+second port and is not a valid substitute.
 
 ## What was tried / dead ends
 
@@ -30,12 +33,18 @@ never selected Start. With Cross held at frame 1171 and released at frame 1172, 
 menu timing or a short tap was the cause. The same run visibly reached the main menu and reconciled
 1,172/1,172 frame fences, so boot/render progression was not the input failure.
 
-## Work in progress
+## Current discriminator
 
-`crash1_bios_pad_input.*` now publishes the finalized host mask to the manifest-authenticated BIOS
-word once per host-owned frame, before retail `PadUpdate`. Its focused production-seam test covers
-released, Cross, and Start values plus Crash's post-complement logical interpretation. The exact
-pinned Clang/Ninja asset-free build and full CTest graph now pass with this owner composed into the
-native/Lightrec product. No post-change game run has proved the menu consumes it. The acceptance run
-is CRASH1-JIT-01/02: the native/Lightrec product must publish the authenticated word, enter gameplay,
-and contain neither generated guest code nor a full-game/player-selectable interpreter.
+`crash1_bios_pad_input.*` publishes the finalized host mask once per host-owned frame. A 2026-09-12
+authenticated Lightrec run before the halfword correction reached the 3D menu at frame 1,172. With
+Start held, `0x80057054` became `0xF7FFFFFF`; with Cross held through frame 1,185, it became
+`0xFFBFFFFF`. Both words at `0x8005E71C` remained zero and the menu did not advance. Those values
+place input in the retail second-port halfword, exactly matching the defect above.
+
+The corrected production publisher and asset-free test put controller 0 in the low halfword and
+assert controller 1 remains disconnected. The next retail menu probe must verify the corrected word,
+primary current buttons at `0x8005E720`, and actual menu navigation. If the corrected word reaches
+the game but the primary struct stays zero, inspect `0x8005E718` (pad count) and `0x80061A30`
+(replay suppression) before changing any other owner. The executable's Init `0x8001652C` calls
+`0x80016718(2)` to set that count; PadUpdate's direct call sites are scene initialization
+`0x80011DD8` and primary-object runtime update `0x8001DA40`.

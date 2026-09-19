@@ -1,9 +1,11 @@
 #pragma once
 
+#include "execution_exit.h"
 #include "game_runtime.h"
 #include "native_frame_loop_contract.h"
 
 #include <cstdint>
+#include <functional>
 
 class Game;
 
@@ -29,9 +31,12 @@ struct Crash1FrameProgram {
 
 class Crash1FrameDriver final : public FrameDriver {
 public:
+  using ExecuteSlice = std::function<psx::cpu::ExecutionResult(Core &, std::uint32_t)>;
+
   explicit Crash1FrameDriver(Game &game);
 
   void stepFrame(Core &core, std::uint32_t frame) override;
+  psx::cpu::ExecutionResult runGuestToBoundary(Core &core, std::uint32_t entry, const ExecuteSlice &execute);
 
   static const crash::NativeFrameLoopContract &contract();
   static const Crash1FrameProgram &program();

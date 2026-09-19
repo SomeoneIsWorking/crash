@@ -30,10 +30,9 @@ native rendering, widescreen, interpolation, and player setup.
 
 ## Current focus
 
-S011 is the current focus: wire the authenticated Crash 1 image and existing native owners through
-psxport's per-`Core` Lightrec executor, preserve the BIOS `PadRead` owner, and reproduce the current
-menu frontier. The static path is already deleted; representative interactive gameplay remains the
-fidelity gate for its replacement.
+S011 is the current focus: determine why the authenticated Lightrec menu run does not consume
+published BIOS `PadRead` input, then enter representative interactive gameplay. The static path is
+already deleted; gameplay remains the fidelity gate for its replacement.
 
 ## Capability details
 
@@ -120,14 +119,16 @@ the pinned Lightrec executor during real guest execution.
 ### S011 — Crash 1 native/Lightrec product
 
 Partial capability: the static translator, corpus, dispatcher, seed inputs, and static-only tests
-are absent. Crash 1 composition now targets psxport's image-aware executor and native override/
-original-call boundary, while preserving the BIOS `PadRead` owner. The asset-free product builds and
-passes its link/repository boundary audit, but real-game execution proof is not complete, so this is
-not yet a runnable gameplay claim.
+are absent. The authenticated Crash 1 native/Lightrec product reaches the preserved 3D title menu
+through psxport's image-aware executor and native override/original-call boundary. The 2026-09-12
+headless/silent run recorded 3,389 translated blocks, 13,964,056 executed blocks, and zero fallback.
+Before correcting controller-0 halfword placement, the BIOS `PadRead` word responded to held Start
+and Cross, but the retail pad structs remained zero and the menu did not advance (issue 0012). The
+corrected input path still needs a retail acceptance run; this is not yet a runnable gameplay claim.
 
 Crash 1's product loader now checks the manifest size and SHA-256 on the same bounded buffer it gives
 the shared PS-X EXE mapper. Its asset-free contract refuses altered and truncated inputs before
-changing Core state; a real Lightrec menu run remains unverified.
+changing Core state; the real Lightrec menu run above used the authenticated image.
 
 The title currently declares guest GTE geometry as its default and refuses native rendering and
 temporal interpolation requests while the corresponding producers remain missing (issue #5).
@@ -141,8 +142,7 @@ that services native calls before its typed frame exit. It requires nonzero tran
 blocks and instructions, with zero fallback. The same gate covers the retained native contracts,
 BIOS pad publication, launcher/dependency refusals, full C++ policy, and linked product inspection.
 
-Gap: reach the existing 3D menu with nonzero Lightrec blocks while preserving all
-current native owners and issue 0012's BIOS `PadRead` publication, then prove representative gameplay,
+Gap: resolve issue 0012's downstream pad consumption, then prove representative gameplay,
 deterministic oracle/device comparison, invalidation controls, and released-host qualification.
 
 ### S012 — Linux x86-64 host qualification

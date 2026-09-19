@@ -187,6 +187,11 @@ if(BUILD_TESTING)
   target_link_libraries(crash1_runtime_test PRIVATE crash1_runtime)
   add_test(NAME crash1_runtime_inheritance COMMAND crash1_runtime_test)
 
+  add_executable(crash1_frame_turn_test "${CMAKE_CURRENT_SOURCE_DIR}/tests/crash1_frame_turn.cpp")
+  target_compile_features(crash1_frame_turn_test PRIVATE cxx_std_20)
+  target_link_libraries(crash1_frame_turn_test PRIVATE crash1_runtime)
+  add_test(NAME crash1_frame_turn COMMAND crash1_frame_turn_test)
+
   add_executable(crash1_executable_test "${CMAKE_CURRENT_SOURCE_DIR}/tests/crash1_executable.cpp")
   target_compile_features(crash1_executable_test PRIVATE cxx_std_20)
   target_link_libraries(crash1_executable_test PRIVATE crash1_runtime)

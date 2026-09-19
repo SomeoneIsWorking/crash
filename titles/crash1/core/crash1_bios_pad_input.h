@@ -6,6 +6,8 @@ struct Core;
 
 namespace crash1::bios_pad_input {
 
+inline constexpr std::uint16_t kDisconnectedPort = 0xFFFFu;
+
 // Publish the framework's standard active-low PSX mask through Crash 1's BIOS
 // PadRead word. Port 1 remains disconnected until the product owns a second
 // host controller.

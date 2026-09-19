@@ -20,9 +20,8 @@ std::uint32_t wordAddress() {
 }
 
 void publishPrimary(Core &core, std::uint16_t activeLowButtons) {
-  constexpr std::uint32_t kDisconnectedPort = 0xFFFFu;
   const std::uint32_t primary = static_cast<std::uint32_t>(toBiosHalfword(activeLowButtons));
-  core.mem_w32(wordAddress(), (primary << 16u) | kDisconnectedPort);
+  core.mem_w32(wordAddress(), (static_cast<std::uint32_t>(kDisconnectedPort) << 16u) | primary);
 }
 
 } // namespace crash1::bios_pad_input

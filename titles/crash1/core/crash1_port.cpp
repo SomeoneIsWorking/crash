@@ -71,6 +71,15 @@ int runPort(int argc, char **argv) {
   runtime.registerOverrides(*game);
   lucent::info("crash1-boot", "entering the host-owned Crash 1 boot and frame loop");
   native_boot_run(core);
+  const auto &execution = core->lightrecExecutor().counters();
+  lucent::info("crash1-boot",
+               "Lightrec run-end: translated_blocks={} executed_blocks={} executed_instructions={} "
+               "fallback_blocks={} fallback_instructions={}",
+               execution.translatedBlocks,
+               execution.executedBlocks,
+               execution.executedInstructions,
+               execution.fallback.calls,
+               execution.fallback.instructions);
   lucent::info("crash1-boot", "Crash 1 native loop returned");
   return EXIT_SUCCESS;
 }
