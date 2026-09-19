@@ -86,14 +86,28 @@ template <typename Runtime> void checkVSyncExit(const char *name) {
   if (vsync == nullptr) {
     return;
   }
-  for (const std::uint32_t mode : {0xFFFFFFFFu, 0u}) {
-    game->core.r[4] = mode;
-    vsync(&game->core);
-    const auto result = game->core.executionControl().consume();
-    check(result.has_value(), name);
-    if (result) {
-      check(result->reason == psx::cpu::ExecutionExitReason::FrameBoundary, name);
-    }
+  // A NEGATIVE argument is a QUERY for the elapsed field count, not a frame wait (psxport 51df140f).
+  // It is answered from the title's measured libetc field counter, returns that count in v0, and must
+  // NOT advance a field or produce a frame-boundary exit. This test asserted a FrameBoundary for both
+  // arms until 2026-09-19, which is the pre-51df140f contract; the two arms are now distinct, because
+  // an assertion that accepts either one cannot tell a served query from a swallowed frame.
+  constexpr std::uint32_t kProbeCount = 0x1234u;
+  const std::uint32_t counter = runtime.nativeFrameLoopContract().vsyncQueryCounter;
+  check(counter != 0, name);
+  game->core.mem_w32(counter, kProbeCount);
+
+  game->core.r[4] = 0xFFFFFFFFu; // VSync(-1)
+  vsync(&game->core);
+  check(!game->core.executionControl().consume().has_value(), name);
+  check(game->core.r[2] == kProbeCount, name);
+  check(game->core.mem_r32(counter) == kProbeCount, name); // the query does not advance the field
+
+  game->core.r[4] = 0u; // VSync(0) — a real frame wait
+  vsync(&game->core);
+  const auto waited = game->core.executionControl().consume();
+  check(waited.has_value(), name);
+  if (waited) {
+    check(waited->reason == psx::cpu::ExecutionExitReason::FrameBoundary, name);
   }
 }
 

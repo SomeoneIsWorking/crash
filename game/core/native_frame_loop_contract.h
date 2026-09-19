@@ -32,6 +32,13 @@ enum class NativeFrameLoopState {
 struct NativeFrameLoopContract {
   std::string_view codeword;
   GuestFunctionRange guestVSync;
+  // The libetc field counter this title's VSync body returns for a NEGATIVE argument. That call is a
+  // query for the elapsed field count, not a frame wait, so the framework answers it from here and
+  // does not advance a field. Measured per title by disassembling the body's `bgez $a0` arm: all three
+  // load one global and return it (Crash 1 0x800549F0, Crash 2 0x8005DC98, Crash 3 0x8005F384, each
+  // also the counter the body increments past its callback wait). Zero means undeclared, and the
+  // framework then refuses the query by name rather than fabricating a count.
+  std::uint32_t vsyncQueryCounter;
   NativeFrameLoopState state;
   std::string_view refusal;
 

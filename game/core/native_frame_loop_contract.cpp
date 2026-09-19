@@ -24,6 +24,7 @@ namespace crash {
 PlatformHlePlan makeNativeFramePlatformPlan(const NativeFrameLoopContract &contract) {
   PlatformHlePlan plan{};
   plan.vsyncAddress = contract.guestVSync.begin;
+  plan.vsyncQueryCounterAddress = contract.vsyncQueryCounter;
   plan.windowLo[0] = contract.guestVSync.begin;
   plan.windowHi[0] = contract.guestVSync.end;
   return plan;

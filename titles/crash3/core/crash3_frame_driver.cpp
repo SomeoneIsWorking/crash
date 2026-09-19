@@ -13,10 +13,12 @@ namespace {
 constexpr crash::NativeFrameLoopContract kContract{
     .codeword = "SCUS-94244",
     .guestVSync = {CRASH_TITLE_VSYNC_ENTRY, CRASH_TITLE_VSYNC_END},
+    .vsyncQueryCounter = CRASH_TITLE_VSYNC_QUERY_COUNTER,
     .state = crash::NativeFrameLoopState::Missing,
     .refusal = "Crash 3 has no shipping product or measured frame boundary.",
 };
 static_assert(kContract.guestVSync.valid());
+static_assert(kContract.vsyncQueryCounter != 0, "the libetc field counter is measured, not optional");
 
 } // namespace
 

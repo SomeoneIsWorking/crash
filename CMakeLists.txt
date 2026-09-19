@@ -35,11 +35,13 @@ function(configure_title_vsync target title)
   file(READ "${CMAKE_CURRENT_SOURCE_DIR}/titles/${title}/executable.json" title_vsync_manifest)
   string(JSON title_vsync_entry GET "${title_vsync_manifest}" runtime vsync entry)
   string(JSON title_vsync_end GET "${title_vsync_manifest}" runtime vsync end)
+  string(JSON title_vsync_query_counter GET "${title_vsync_manifest}" runtime vsync query_counter)
   target_compile_definitions(
     ${target}
     PRIVATE
       "CRASH_TITLE_VSYNC_ENTRY=${title_vsync_entry}u"
       "CRASH_TITLE_VSYNC_END=${title_vsync_end}u"
+      "CRASH_TITLE_VSYNC_QUERY_COUNTER=${title_vsync_query_counter}u"
   )
 endfunction()
 

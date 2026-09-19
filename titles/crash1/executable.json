@@ -28,6 +28,7 @@
     "vsync": {
       "entry": "0x8003E4F0",
       "end": "0x8003E638",
+      "query_counter": "0x800549F0",
       "body_sha256": "915c96a114984906cdf7e9db7a82f361d9a716a593f5f8afead14b9f45edb8c7"
     },
     "native_boot": {

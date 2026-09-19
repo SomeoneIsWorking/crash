@@ -32,6 +32,7 @@ constexpr std::uint64_t kRootCounterCpuTicks = 8ull * kRootCounterTarget;
 constexpr crash::NativeFrameLoopContract kContract{
     .codeword = "SCUS-94900",
     .guestVSync = {CRASH_TITLE_VSYNC_ENTRY, CRASH_TITLE_VSYNC_END},
+    .vsyncQueryCounter = CRASH_TITLE_VSYNC_QUERY_COUNTER,
     .state = crash::NativeFrameLoopState::FiniteBootSeamOnly,
     .refusal = "candidate frame step is not ready until a real product frame returns",
 };
@@ -55,6 +56,7 @@ constexpr Crash1FrameProgram kProgram{
 };
 
 static_assert(kContract.guestVSync.valid());
+static_assert(kContract.vsyncQueryCounter != 0, "the libetc field counter is measured, not optional");
 static_assert(kProgram.coreLoop.valid() && kProgram.iteration.valid() && kProgram.transition.valid() &&
               kProgram.gpuUpdate.valid());
 static_assert(kProgram.coreLoop.contains(kProgram.iteration.begin));

@@ -22,6 +22,7 @@
     "vsync": {
       "entry": "0x8004A484",
       "end": "0x8004A5CC",
+      "query_counter": "0x8005DC98",
       "body_sha256": "25097695f5ebd26728662b7989487b139e140ccf2129a14df10b30a003865b4e"
     }
   },
