@@ -214,6 +214,15 @@ void GuestProjectionPublication::publishCentre(Core &core, const RetailBody &ret
   // anything, and the contract holds OFY and the vertical field of view fixed.
   core.r[kCentreYArgument] = static_cast<std::uint32_t>(retailY);
 
+  // THE ARGUMENT MUST BE CAPTURED BEFORE THE LEAF RUNS. The guest's retail leaf at 0x80042F8C is
+  // `sll $a0, $a0, 0x10` -- it shifts the argument register IN PLACE, and $a0 is
+  // kCentreXArgument. Reading `core.r[kCentreXArgument]` after `retail(core)` therefore yields
+  // `centre << 16`, not `centre`, so the guard below compared a correctly-published 86 against
+  // 5,636,096 and aborted a frame whose widening was exactly right. It was invisible at 4:3 because
+  // retail's OFX is 0 there, so `0 == 0` passes -- which is how a guard that fires only on a
+  // non-zero centre survived a gate that never exercised one.
+  const std::int32_t expectedX = static_cast<std::int32_t>(core.r[kCentreXArgument]);
+
   retail(core);
 
   // What the GUEST published, read out of the coprocessor rather than assumed from the argument. A
@@ -229,7 +238,6 @@ void GuestProjectionPublication::publishCentre(Core &core, const RetailBody &ret
       static_cast<std::int32_t>(static_cast<std::int16_t>(gte_read_ctrl(facts_.centreXRegister) >> 16));
   const auto publishedY =
       static_cast<std::int32_t>(static_cast<std::int16_t>(gte_read_ctrl(facts_.centreYRegister) >> 16));
-  const std::int32_t expectedX = static_cast<std::int32_t>(core.r[kCentreXArgument]);
   if (publishedY != retail_.y) {
     lucent::error(facts_.serial,
                   "the guest published the vertical centre {} from an unchanged $a1 = {}; a vertical "
