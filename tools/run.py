@@ -227,7 +227,11 @@ def player_launch_environment(
     apply_policy = policy.get("player_environment")
     if not callable(apply_policy):
         raise LauncherFailure(f"invalid psxport shipping launch policy: {policy_path}")
-    return apply_policy(environment)
+    # `product` names this title's run-log directory under the OS user-data location, and psxport
+    # requires it: the log is the only copy of what the product said, and it must not land in another
+    # title's file. Omitting it raised `TypeError`, so a fresh clone could not launch at all — which
+    # is the one thing `run.sh` is the contract for.
+    return apply_policy(environment, product="crash")
 
 
 def parse_args(argv: Sequence[str]) -> argparse.Namespace:
