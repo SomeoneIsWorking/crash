@@ -111,6 +111,7 @@ add_library(
   crash_boundary_runtime STATIC
   "${CMAKE_CURRENT_SOURCE_DIR}/game/core/boundary_runtime.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/game/core/dynarec_dispatch.cpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/game/core/guest_projection_publication.cpp"
 )
 target_include_directories(crash_boundary_runtime PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/game/core")
 target_compile_features(crash_boundary_runtime PUBLIC cxx_std_20)
@@ -288,6 +289,7 @@ function(add_crt0_boundary_title title)
     ${title}_runtime STATIC
     "${CMAKE_CURRENT_SOURCE_DIR}/titles/${title}/core/${title}_runtime.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/titles/${title}/core/${title}_frame_driver.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/titles/${title}/core/${title}_widescreen.cpp"
   )
   target_include_directories(${title}_runtime
                              PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/titles/${title}/core")
@@ -307,6 +309,14 @@ function(add_crt0_boundary_title title)
                    "${CMAKE_CURRENT_SOURCE_DIR}/tests/${title}_runtime_facts.cpp")
     target_compile_features(${title}_runtime_facts PRIVATE cxx_std_20)
     target_link_libraries(${title}_runtime_facts PRIVATE ${title}_runtime)
+
+    # The title's guest-widescreen owner: 4:3 identity, the widening, the per-call-site policy, and an
+    # install proof with no HLE plan in existence. It needs no disc, so it runs on a fresh clone.
+    add_executable(${title}_widescreen_test
+                   "${CMAKE_CURRENT_SOURCE_DIR}/tests/${title}_widescreen.cpp")
+    target_compile_features(${title}_widescreen_test PRIVATE cxx_std_20)
+    target_link_libraries(${title}_widescreen_test PRIVATE ${title}_runtime)
+    add_test(NAME ${title}_widescreen COMMAND ${title}_widescreen_test)
 
     add_custom_target(
       ${title}_oracle_boot_check
@@ -398,6 +408,35 @@ if(BUILD_TESTING)
   )
   set_tests_properties(crash1_horizontal_bound_selftest
                        PROPERTIES ENVIRONMENT "PYTHONDONTWRITEBYTECODE=1")
+  # ONE probe for both newer titles, driven by their manifests. It exists instead of two per-title
+  # copies because `probe_crash1_projection.py` and `probe_crash1_horizontal_bound.py` already carry
+  # their own copies of the PS-X EXE reader, the COP2 classifier and the displacement scan, and a third
+  # and fourth copy of the same rules is how this workspace has measured gates drifting silently.
+  foreach(probe_title crash2 crash3)
+    file(READ "${CMAKE_CURRENT_SOURCE_DIR}/titles/${probe_title}/executable.json" ${probe_title}_proj_json)
+    string(JSON ${probe_title}_proj_exe GET "${${probe_title}_proj_json}" executable)
+    add_custom_target(
+      ${probe_title}_projection_census
+      COMMAND
+        "${Python3_EXECUTABLE}" -B
+        "${CMAKE_CURRENT_SOURCE_DIR}/tools/probe_title_projection.py" --title
+        ${probe_title} --executable
+        "${CMAKE_CURRENT_SOURCE_DIR}/scratch/bin/${probe_title}/${${probe_title}_proj_exe}"
+      COMMENT
+        "Re-derive ${probe_title}'s GTE projection owners, its variable screen-distance bound, its consumers and its cull census from the authenticated executable"
+      USES_TERMINAL
+      VERBATIM
+    )
+    add_test(
+      NAME ${probe_title}_projection_selftest
+      COMMAND
+        "${Python3_EXECUTABLE}" -B
+        "${CMAKE_CURRENT_SOURCE_DIR}/tools/probe_title_projection.py" --title
+        ${probe_title} --selftest-only
+    )
+    set_tests_properties(${probe_title}_projection_selftest
+                         PROPERTIES ENVIRONMENT "PYTHONDONTWRITEBYTECODE=1")
+  endforeach()
   add_custom_target(
     crash1_widescreen_legs
     COMMAND

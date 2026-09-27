@@ -216,8 +216,15 @@ void Crash1Widescreen::publishCentre(Core &core, const RetailBody &retail) {
   // What the GUEST published, read out of the coprocessor rather than assumed from the argument.
   // A vertical shift would move every primitive without widening anything, and a horizontal shift
   // that missed the plan's centre would be a translation under a wide claim - both are named.
-  const auto publishedX = static_cast<std::int32_t>(gte_read_ctrl(kGteCrOfx) >> 16);
-  const auto publishedY = static_cast<std::int32_t>(gte_read_ctrl(kGteCrOfy) >> 16);
+  //
+  // SIGNED 16.16, AND THE SIGN IS EXPLICIT. The leaf's `sll 16` on a 32-bit `$a0`/`$a1` leaves the
+  // two's complement of a negative centre in the top halfword, and these registers are signed. A plain
+  // `>> 16` on the unsigned read-back is a LOGICAL shift, so a centre below zero - which 0x80017F00
+  // publishes whenever the camera-shake word goes negative - comes back as 65529 and this guard would
+  // abort a perfectly good frame. Found by the Crash 2/3 owners' shared-rule test, which publishes a
+  // negative centre on purpose.
+  const auto publishedX = static_cast<std::int32_t>(static_cast<std::int16_t>(gte_read_ctrl(kGteCrOfx) >> 16));
+  const auto publishedY = static_cast<std::int32_t>(static_cast<std::int16_t>(gte_read_ctrl(kGteCrOfy) >> 16));
   const std::int32_t expectedX = static_cast<std::int32_t>(core.r[kCentreXArgument]);
   if (publishedY != retail_.y) {
     lucent::error("crash1-wide",
@@ -270,8 +277,8 @@ void Crash1Widescreen::publishInitProjection(Core &core, const RetailBody &retai
   // the core loop reaches at 0x800123BC every frame, so no frame is left un-widened by relying on it
   // and no coprocessor register is written from here.
   publishedScreenDistance_ = static_cast<std::int32_t>(gte_read_ctrl(kGteCrH) & 0xFFFF);
-  const std::int32_t retailX = static_cast<std::int32_t>(gte_read_ctrl(kGteCrOfx) >> 16);
-  const std::int32_t retailY = static_cast<std::int32_t>(gte_read_ctrl(kGteCrOfy) >> 16);
+  const std::int32_t retailX = static_cast<std::int32_t>(static_cast<std::int16_t>(gte_read_ctrl(kGteCrOfx) >> 16));
+  const std::int32_t retailY = static_cast<std::int32_t>(static_cast<std::int16_t>(gte_read_ctrl(kGteCrOfy) >> 16));
   if (publishedScreenDistance_ != kRetailScreenDistance || retailX != kRetailCentreX || retailY != kRetailCentreY) {
     lucent::error("crash1-wide",
                   "gte_init published H {} OFX {} OFY {}; the manifest records H {} OFX {} OFY {}",

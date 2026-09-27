@@ -38,6 +38,16 @@ const PlatformHlePlan *Crash3Runtime::platformHlePlan() const {
   return &platformPlan_;
 }
 
+const GuestWidescreenProjection *Crash3Runtime::guestWidescreenProjection() const {
+  // The policy answers which aspect the player selected; the owner behind it is what publishes a
+  // guest projection (external/psxport/docs/presentation-contract.md, "Title-owned guest
+  // widescreen"). Returning the policy without the three measured overrides installed would be the
+  // half that advertises a capability the picture does not have - and the overrides cannot be
+  // installed yet, because `BoundaryRuntime::registerOverrides` is final and Crash 3 still refuses to
+  // boot. See docs/issues/0018 for the seam this leaves, which is a boot gap and not a projection gap.
+  return &widescreen_;
+}
+
 bool Crash3Runtime::guestVramIsPicture(const Game &) const {
   return false;
 }
