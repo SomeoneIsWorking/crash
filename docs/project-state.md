@@ -18,7 +18,7 @@ native rendering, widescreen, interpolation, and player setup.
 | S004 | The preserved Crash 1 compatibility path reaches the measured menu frontier | partial | S002, S003 | G001 |
 | S005 | Game-owned native renderer submission path | missing | S011 | G002 |
 | S006 | Widescreen through owned camera/projection state | partial | S005 | G002 |
-| S007 | Interpolation through owned simulation and transform state | missing (out of scope for Crash 1) | S005 | G002 |
+| S007 | Interpolation through owned simulation and transform state | missing — IN SCOPE (prior text said the opposite) | S005 | G002 |
 | S008 | Crash 2 and Crash 3 native/Lightrec products | missing | S002, S003, S011 | G001 |
 | S009 | Playable Crash trilogy product | missing | S005, S008, S011 | G001 |
 | S010 | Host-owned native frame-loop contract and typed guest-VSync boundary | partial | S001 | G001, G002 |
@@ -134,9 +134,34 @@ before either title is allowed to present.
 
 ### S007 — interpolation
 
-**Out of scope for Crash 1.** Crash 1 is 30 fps, so this repository will not add an fps60 mode, an
-interpolation path, a lerp, or any temporal pipeline to support one. S007 stays `missing` for the
-trilogy and is a Crash 2/3 concern only after they exist as products.
+**CORRECTED 2026-09-27. The previous text here was self-contradictory and inverted the scope.** It read:
+
+> "**Out of scope for Crash 1.** Crash 1 is 30 fps, so this repository will not add an fps60 mode, an
+> interpolation path, a lerp, or any temporal pipeline to support one."
+
+Crash 1 being 30 fps is the reason it is **IN** scope, not out of it. The deliverable is interpolated
+(lerp) 60 fps for the titles that run 30 fps; the only exclusions are the titles that are *already* 60 fps
+(Tekken 3 `SLUS_004.02`, Tomba! 1 `SCUS_942.36`, Mega Man X4 `SLUS_005.61`). So the previous paragraph named
+Crash 1 as 30 fps and then used that fact to exclude it — a conclusion that follows from nothing, in a living
+document that is the authority a reader would take the scope from. The three 30 fps titles in this
+workspace (Crash 1, Crash 2, Crash 3) are all in lerp scope. Nothing else in the workspace states this
+inversion, so it was a local mistake here rather than a convention.
+
+**What the work actually is, and it is smaller than the paragraph implied.** The framework owns the
+interpolation machinery: `runtime/psx/frame_presenter.cpp` and `runtime/psx/fps60_game_hooks.h` implement
+the presenter and the source-reconstruction seam. A port opts in by returning
+`RenderCapabilities::interpolatedNative()` (`runtime/psx/render_capabilities.h`), which sets
+`temporalInterpolation`, and that flag is what gates the `fps60` row in the options UI
+(`runtime/ui/mod_row_model.cpp:247`: `id != "fps60" || m.temporalInterpolationSupported()`). A port that
+never declares it cannot be toggled into 60 fps at all. `Tomba2Engine` (both titles) and `spyro` already
+declare it.
+
+**So S007 is `missing` for the honest reason: Crash 1 has no native/Lightrec product to interpolate.**
+`BoundaryRuntime` returns `RenderCapabilities::widescreenOnly()` and the Crash 2/3 runtimes refuse to boot
+(S008, S009). Interpolating frames that are never produced is not a smaller task; it is the same task one
+step later. The work is therefore sequenced after the Crash 1 product, and its first observable step is
+`BoundaryRuntime` returning `interpolatedNative()` for Crash 1 — which also discharges the widescreen
+declaration problem recorded above it.
 
 ### S008 — Crash 2 and Crash 3 products
 
