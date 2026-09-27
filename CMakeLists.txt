@@ -408,6 +408,22 @@ if(BUILD_TESTING)
   )
   set_tests_properties(crash1_horizontal_bound_selftest
                        PROPERTIES ENVIRONMENT "PYTHONDONTWRITEBYTECODE=1")
+  # The 4:3-vs-16:9 receipt logic, and specifically its REFUSAL matcher. The selftest half is a ctest
+  # test because it needs no disc, no GPU and no product; the pair itself is a maintainer run.
+  #
+  # This matcher earned its own registration by failing its own first selftest: it matched the channel
+  # as `[crash1-frame]`, the product logs `[crash1-frame:error]`, and it therefore matched NOTHING on
+  # a real log — reporting a clean leg for a product that had aborted. A diagnostic that cannot match
+  # the string it exists to match is worse than none, so the fixtures now feed it the real lines, plus
+  # a bare channel announcement that must NOT match. See docs/issues/0019.
+  add_test(
+    NAME crash1_widescreen_pair_selftest
+    COMMAND
+      "${Python3_EXECUTABLE}" -B
+      "${CMAKE_CURRENT_SOURCE_DIR}/tools/probe_crash1_widescreen_pair.py" --selftest
+  )
+  set_tests_properties(crash1_widescreen_pair_selftest
+                       PROPERTIES ENVIRONMENT "PYTHONDONTWRITEBYTECODE=1")
   # ONE probe for both newer titles, driven by their manifests. It exists instead of two per-title
   # copies because `probe_crash1_projection.py` and `probe_crash1_horizontal_bound.py` already carry
   # their own copies of the PS-X EXE reader, the COP2 classifier and the displacement scan, and a third
