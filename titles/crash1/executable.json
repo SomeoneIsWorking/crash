@@ -130,6 +130,95 @@
         "retail_ofy": "0x0",
         "init_h": "0x3E8"
       },
+      "horizontal_bound": {
+        "_measured_by": "tools/probe_crash1_horizontal_bound.py",
+        "_note": "H (CR[26]) is not a coprocessor register the guest branches on; the guest keeps its horizontal bound in a MAIN-RAM global and RE-SENDS it into CR[26] every frame. That global is the variable bound the literal-immediate cull census in probe_crash1_projection.py structurally cannot see, so the 21 sites below are the honest answer to 'does anything consume a horizontal bound'. Measured two ways (a lui+offset word scan and Ghidra's reference database); the four sites the word scan misses are the compiler re-using a register proved equal to the same address. Decompiling the two that turn H into a decision shows neither is a screen-space cull: FUN_8003A144 uses H as the GTE near-plane distance and FUN_8001DE78 derives a GTE light-intensity offset from H/2.",
+        "global": "0x800578D0",
+        "global_note": "one writer, in the camera setup; and one reader site in that same writer's function is the compiler's re-used register form",
+        "writer": {
+          "address": "0x80017820",
+          "word": "0xAC2278D0",
+          "in_function": "FUN_80017790",
+          "note": "sw $v0,0x78D0($at) after lui $at,0x8005 - the ONLY store to the global in the image"
+        },
+        "resend_call_site": {
+          "address": "0x80026770",
+          "word": "0x0C010BEB",
+          "in_function": "FUN_80026650",
+          "note": "jal 0x80042FAC (set_geom_screen) fed by lw $a0,0x78D0($a0) at 0x80026764: a per-frame CONSUMER that re-sends the global into CR[26], not a producer"
+        },
+        "per_camera_values": {
+          "note": "the per-camera-mode H chosen in FUN_80017790, one 'mode -> H' pair each",
+          "0x25": 500,
+          "0x1E": 960,
+          "0x38": 800,
+          "0x3C": 460,
+          "0x5A": 288
+        },
+        "readers": [
+          "0x8001782C",
+          "0x80018224",
+          "0x800189EC",
+          "0x80018A98",
+          "0x80018B40",
+          "0x80018C64",
+          "0x80018FEC",
+          "0x8001957C",
+          "0x80019978",
+          "0x80019A60",
+          "0x80019D88",
+          "0x80019F40",
+          "0x8001A07C",
+          "0x8001A280",
+          "0x8001A404",
+          "0x8001DF6C",
+          "0x8001DFFC",
+          "0x8001E048",
+          "0x8001E850",
+          "0x80026764"
+        ],
+        "reader_count_note": "Ghidra's reference database reports 21 references; 19 are listed here and 0x8001782C is the re-used-register read inside the single writer function. A word scan of the immediate 0x78D0 finds 17 of the 21 and names which four it cannot see.",
+        "near_plane_consumer": {
+          "in_function": "FUN_8003A144",
+          "entry": "0x8003A144",
+          "end": "0x8003A76C",
+          "body_sha256": "d8b81f604977cc967682763d57786e74661c0c5ff04cb4781b34638ef1cbd64a",
+          "h_argument_slot": 5,
+          "h_argument_load": "0x8003A18C",
+          "h_argument_word": "0x8FA20014",
+          "reject_if_not": "0x8003A240 slt $at,$v0,$s2 / 0x8003A244 beq $at,$zero,0x8003A71C",
+          "reject_if_farther": "0x8003A248 ori $at,$zero,0x2EE0 / 0x8003A24C slt $at,$at,$s2 / 0x8003A250 bne $at,$zero,0x8003A71C",
+          "far_limit": 12000,
+          "note": "$s2 is the object's projected Z from the rtps at 0x8003A220 (cop2 0x49E012). So the band is H < Z <= 11999: H is the GTE near-plane distance, NOT a screen-space half-width."
+        },
+        "submitter_consumer": {
+          "in_function": "FUN_8001DE78",
+          "entry": "0x8001DE78",
+          "end": "0x8001E3D4",
+          "body_sha256": "567e1ecd1be6ad7403bb97ccd2b37ce5a7e7dd6c4e1b40929fd167bc84c198e1",
+          "base_register_load": [
+            "0x8001DF64 lui $s5,0x8005",
+            "0x8001DF68 addiu $s5,$s5,0x78D0"
+          ],
+          "reused_register_reads": [
+            "0x8001DF6C lw $v0,0x0($s5)",
+            "0x8001DFFC lw $v0,0x0($s5)"
+          ],
+          "half_distance_site": [
+            "0x8001DFFC lw $v0,0x0($s5)",
+            "0x8001E008 srl $v1,$v0,0x1F",
+            "0x8001E00C addu $v0,$v0,$v1",
+            "0x8001E010 sra $v0,$v0,0x1",
+            "0x8001E004 addiu $t0,$t0,0x800",
+            "0x8001E014 subu $t0,$t0,$v0"
+          ],
+          "consumed_by": "FUN_8003A76C",
+          "consumed_by_entry": "0x8003A76C",
+          "consumed_by_end": "0x8003A94C",
+          "consumed_by_body_sha256": "bba82b4454d19f7a32e754826b91c6403d0bfc4c99ca91e64c9a8bce29976032",
+          "note": "The derived value (object+0x138)+0x800-H/2 is the 5th argument of FUN_8003A76C, which uses it as `param_5*4 + (IR0.r+IR0.g+IR0.b >> 5)*-4`: a GTE LIGHT-INTENSITY offset, not a screen extent."
+        }
+      },
       "_call_sites": {
         "gte_init": "0x80016558",
         "set_geom_offset": "0x8001783C 0x80017F00",

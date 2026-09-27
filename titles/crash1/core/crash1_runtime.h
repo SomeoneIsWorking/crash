@@ -1,5 +1,6 @@
 #pragma once
 
+#include "crash1_horizontal_bound.h"
 #include "crash1_widescreen.h"
 #include "game_runtime.h"
 #include "gpu_vk.h"
@@ -38,10 +39,21 @@ public:
     return widescreen_;
   }
 
+  // The variable horizontal-bound owner, beside the widescreen owner rather than inside it: the two
+  // share one measurement (a widening holds H fixed) and this one checks that it stayed fixed at the
+  // guest's own consumer. Same exposure rule and same reason as `widescreen()`.
+  Crash1HorizontalBound &horizontalBound() {
+    return horizontalBound_;
+  }
+  const Crash1HorizontalBound &horizontalBound() const {
+    return horizontalBound_;
+  }
+
 private:
   static const GuestProgramImage programImage_;
   static const PlatformHlePlan platformPlan_;
   Crash1Widescreen widescreen_{&gpu_vk_latch_guest_projection};
+  Crash1HorizontalBound horizontalBound_{};
 };
 
 } // namespace crash1

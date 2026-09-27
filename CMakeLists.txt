@@ -92,7 +92,15 @@ function(configure_crash1_native_contract target)
           "CRASH1_ROOT_COUNTER_INCREMENT;runtime;native_frame;root_counter_increment"
           "CRASH1_SET_ROOT_COUNTER;runtime;native_frame;set_root_counter"
           "CRASH1_START_ROOT_COUNTER;runtime;native_frame;start_root_counter"
-          "CRASH1_STOP_ROOT_COUNTER;runtime;native_frame;stop_root_counter")
+          "CRASH1_STOP_ROOT_COUNTER;runtime;native_frame;stop_root_counter"
+          "CRASH1_HORIZONTAL_BOUND;runtime;projection;horizontal_bound;global"
+          "CRASH1_HORIZONTAL_BOUND_WRITER;runtime;projection;horizontal_bound;writer;address"
+          "CRASH1_HORIZONTAL_BOUND_RESEND;runtime;projection;horizontal_bound;resend_call_site;address"
+          "CRASH1_HORIZONTAL_SUBMITTER;runtime;projection;horizontal_bound;submitter_consumer;entry"
+          "CRASH1_HORIZONTAL_SUBMITTER_END;runtime;projection;horizontal_bound;submitter_consumer;end"
+          "CRASH1_HORIZONTAL_NEAR_PLANE;runtime;projection;horizontal_bound;near_plane_consumer;entry"
+          "CRASH1_HORIZONTAL_NEAR_PLANE_END;runtime;projection;horizontal_bound;near_plane_consumer;end"
+          "CRASH1_HORIZONTAL_FAR_LIMIT;runtime;projection;horizontal_bound;near_plane_consumer;far_limit")
     list(POP_FRONT fact definition)
     string(JSON value GET "${crash1_contract_manifest}" ${fact})
     target_compile_definitions(${target} PRIVATE "${definition}=${value}u")
@@ -126,6 +134,7 @@ add_library(
   "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/core/crash1_executable.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/core/crash1_frame_driver.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/core/crash1_gpu_watchdog.cpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/core/crash1_horizontal_bound.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/core/crash1_widescreen.cpp"
 )
 target_include_directories(crash1_runtime PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/core")
@@ -237,6 +246,12 @@ if(BUILD_TESTING)
   target_link_libraries(crash1_widescreen_test PRIVATE crash1_runtime)
   add_test(NAME crash1_widescreen COMMAND crash1_widescreen_test
            "${CMAKE_CURRENT_SOURCE_DIR}/scratch/executable-loader")
+
+  add_executable(crash1_horizontal_bound_test
+                 "${CMAKE_CURRENT_SOURCE_DIR}/tests/crash1_horizontal_bound.cpp")
+  target_compile_features(crash1_horizontal_bound_test PRIVATE cxx_std_20)
+  target_link_libraries(crash1_horizontal_bound_test PRIVATE crash1_runtime)
+  add_test(NAME crash1_horizontal_bound COMMAND crash1_horizontal_bound_test)
 
   add_executable(crash1_boot_frontier_test
                  "${CMAKE_CURRENT_SOURCE_DIR}/tests/crash1_boot_frontier.cpp")
@@ -363,6 +378,26 @@ if(BUILD_TESTING)
     USES_TERMINAL
     VERBATIM
   )
+  add_custom_target(
+    crash1_horizontal_bound_census
+    COMMAND
+      "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tools/probe_crash1_horizontal_bound.py"
+      --title crash1 --executable "${crash1_exe}"
+    COMMENT
+      "Re-derive Crash 1's variable horizontal bound, its 20 readers and its two decision-making consumers from the authenticated executable"
+    USES_TERMINAL
+    VERBATIM
+  )
+  # The selftest half needs no disc, so it IS a ctest test. The census half above is a maintainer
+  # target because it needs the user's authenticated executable, which must never be a build input.
+  add_test(
+    NAME crash1_horizontal_bound_selftest
+    COMMAND
+      "${Python3_EXECUTABLE}" -B
+      "${CMAKE_CURRENT_SOURCE_DIR}/tools/probe_crash1_horizontal_bound.py" --selftest-only
+  )
+  set_tests_properties(crash1_horizontal_bound_selftest
+                       PROPERTIES ENVIRONMENT "PYTHONDONTWRITEBYTECODE=1")
   add_custom_target(
     crash1_widescreen_legs
     COMMAND

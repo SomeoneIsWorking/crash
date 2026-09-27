@@ -6,6 +6,7 @@
 #include "crash1_disc_index_io.h"
 #include "crash1_frame_driver.h"
 #include "crash1_gpu_watchdog.h"
+#include "crash1_horizontal_bound.h"
 #include "dynarec_dispatch.h"
 #include "game.h"
 #include "gpu_vk.h"
@@ -57,6 +58,7 @@ void Crash1Runtime::registerOverrides(Game &game) {
   callback_boot::registerOverride(game.core);
   gpu_watchdog::registerOverrides(game.core);
   installCrash1Widescreen(game.core);
+  installCrash1HorizontalBound(game.core);
   Crash1FrameDriver::installOverrides(game);
 }
 
