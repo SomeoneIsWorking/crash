@@ -30,8 +30,8 @@ into a gameplay executable; Lightrec alone owns any bounded per-block fallback.
 | Differential evidence | Compare deterministic runtime state with the independent emulator and exercise negative controls | target dynamic harness; existing recorded evidence in `docs/info/` and `docs/re-frontier.md` | separately built diagnostic target | The oracle/interpreter never becomes a product fallback |
 | Shared Crash engine | Hold behavior proven common across title binaries | `game/` | assigned only by evidence | Similar names and franchise lineage do not establish ownership |
 | Native graphics producers | Convert pre-GTE game camera/object/material state to typed primitives | title-local producer modules, then `game/` if proven shared | future producer interfaces | Never consume GTE/OT/GP0/framebuffer output as product source |
-| Widescreen | Widen owned camera/projection, viewport, scissor, and proven horizontal culling | beside the camera/renderer owners | future projection owner | Deterministic geometry expansion only; no final-image stretch |
-| Temporal presentation | Interpolate authoritative previous/current simulation transforms | beside simulation snapshots and renderer consumption | future presentation decorator | Simulation and guest memory remain unchanged |
+| Widescreen | Widen owned camera/projection, viewport, scissor, and proven horizontal culling | `titles/crash1/core/crash1_widescreen.*` (Crash 1, measured), later title-local equivalents | `crash1::installCrash1Widescreen`, `Crash1Runtime::guestWidescreenProjection` | Deterministic geometry expansion only; no final-image stretch, no fps60/interpolation path for Crash 1 |
+| Temporal presentation | Interpolate authoritative previous/current simulation transforms | beside simulation snapshots and renderer consumption | future presentation decorator | Simulation and guest memory remain unchanged; **out of scope for Crash 1** (30 fps, widescreen-only) |
 
 ## Where does it go?
 
@@ -45,4 +45,6 @@ into a gameplay executable; Lightrec alone owns any bounded per-block fallback.
 | Host controller polling | psxport `Pad` |
 | Crash 1 BIOS auto-pad layout | `crash1_bios_pad_input.*` |
 | A cross-title engine behavior | `game/`, only after direct correspondence |
+| Crash 1's horizontal field of view | `crash1_widescreen.*`, at GTE control register 24 (OFX) — measured, not H and not a viewport rectangle |
+| Crash 1's horizontal culling | **nothing to widen**: a whole-image census of all 72192 instruction words finds no compare against a 4:3 dot width (see `docs/issues/0015`) |
 | Capability, migration order, evidence, or an atomic blocker | `docs/project-state.md`, `docs/migration.md`, `docs/re-frontier.md`, or `docs/issues/` respectively |

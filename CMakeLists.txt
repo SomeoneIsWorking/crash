@@ -126,6 +126,7 @@ add_library(
   "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/core/crash1_executable.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/core/crash1_frame_driver.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/core/crash1_gpu_watchdog.cpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/core/crash1_widescreen.cpp"
 )
 target_include_directories(crash1_runtime PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/core")
 target_compile_features(crash1_runtime PUBLIC cxx_std_20)
@@ -229,6 +230,13 @@ if(BUILD_TESTING)
   target_compile_features(crash1_gpu_watchdog_test PRIVATE cxx_std_20)
   target_link_libraries(crash1_gpu_watchdog_test PRIVATE crash1_runtime)
   add_test(NAME crash1_gpu_watchdog COMMAND crash1_gpu_watchdog_test)
+
+  add_executable(crash1_widescreen_test
+                 "${CMAKE_CURRENT_SOURCE_DIR}/tests/crash1_widescreen.cpp")
+  target_compile_features(crash1_widescreen_test PRIVATE cxx_std_20)
+  target_link_libraries(crash1_widescreen_test PRIVATE crash1_runtime)
+  add_test(NAME crash1_widescreen COMMAND crash1_widescreen_test
+           "${CMAKE_CURRENT_SOURCE_DIR}/scratch/executable-loader")
 
   add_executable(crash1_boot_frontier_test
                  "${CMAKE_CURRENT_SOURCE_DIR}/tests/crash1_boot_frontier.cpp")
@@ -342,6 +350,31 @@ if(BUILD_TESTING)
 endif()
 set(crash1_exe "${CMAKE_CURRENT_SOURCE_DIR}/scratch/bin/crash1/SCUS_949.00")
 if(BUILD_TESTING)
+  # Maintainer targets, NOT ctest tests: both need the user's authenticated executable or a run of
+  # the product, and neither is a build input. A gate that required them would fail on a fresh clone
+  # for the wrong reason, and the guest image must never become a build or CI dependency.
+  add_custom_target(
+    crash1_projection_census
+    COMMAND
+      "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tools/probe_crash1_projection.py"
+      --title crash1 --exe "${crash1_exe}"
+    COMMENT
+      "Re-derive Crash 1's GTE projection owners, the GPU driver table and the cull census from the authenticated executable"
+    USES_TERMINAL
+    VERBATIM
+  )
+  add_custom_target(
+    crash1_widescreen_legs
+    COMMAND
+      "${Python3_EXECUTABLE}"
+      "${CMAKE_CURRENT_SOURCE_DIR}/tools/probe_crash1_widescreen_legs.py" --bin
+      "$<TARGET_FILE:crash1_port>"
+    DEPENDS crash1_port
+    COMMENT
+      "Run the matched Crash 1 4:3 / 16:9 legs, one process each, and report the guest's own projection words"
+    USES_TERMINAL
+    VERBATIM
+  )
   add_custom_target(
     crash1_oracle_boot_check
     COMMAND

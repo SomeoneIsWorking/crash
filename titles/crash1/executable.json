@@ -104,6 +104,38 @@
         "body_sha256": "fe2b7bf9a393232084b985c0dcd0a069a383adb188d74893b237403589c29838"
       }
     },
+    "projection": {
+      "_measured_by": "tools/probe_crash1_projection.py",
+      "_note": "Crash 1's horizontal projection is the GTE screen offset OFX (cop2 control register 24), NOT a viewport rectangle. A whole-image census of every instruction word found exactly two control-register writers for OFX, for OFY (25) and for H (26), and zero control-register readers of any of them; the three ranges below are every one of them. Ghidra's reference model reports 0 references to set_geom_screen and 2 to set_geom_offset, and the display/draw-area owner is reachable only through the GPU driver pointer table at 0x80054A24 - see docs/issues/0015.",
+      "gte_init": {
+        "entry": "0x80042B1C",
+        "end": "0x80042B9C",
+        "body_sha256": "d4c38c7e03b4ae7a55a82ca11f8202ea37f36e86337ed841932eb9314d8e01f6"
+      },
+      "set_geom_offset": {
+        "entry": "0x80042F8C",
+        "end": "0x80042FA4",
+        "body_sha256": "9aa95b09a0c5f31d49c3f954d1bc4cbe5101b46feb9a7a9a92673d0716fdfcf1"
+      },
+      "set_geom_screen": {
+        "entry": "0x80042FAC",
+        "end": "0x80042FB8",
+        "body_sha256": "d8c79a8c2661cba5b0c79fdf925407b5a4945c383bb0c8c293287878a693cac2"
+      },
+      "_control_registers": {
+        "ofx": 24,
+        "ofy": 25,
+        "h": 26,
+        "retail_ofx": "0x0",
+        "retail_ofy": "0x0",
+        "init_h": "0x3E8"
+      },
+      "_call_sites": {
+        "gte_init": "0x80016558",
+        "set_geom_offset": "0x8001783C 0x80017F00",
+        "set_geom_screen": "0x80017830 0x80026770"
+      }
+    },
     "native_frame": {
       "core_loop": {
         "entry": "0x80011FC4",

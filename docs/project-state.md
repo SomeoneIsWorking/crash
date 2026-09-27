@@ -17,8 +17,8 @@ native rendering, widescreen, interpolation, and player setup.
 | S003 | Independent CPU comparison of the resident boot spine | partial | S001 | G001 |
 | S004 | The preserved Crash 1 compatibility path reaches the measured menu frontier | partial | S002, S003 | G001 |
 | S005 | Game-owned native renderer submission path | missing | S011 | G002 |
-| S006 | Widescreen through owned camera/projection state | missing | S005 | G002 |
-| S007 | Interpolation through owned simulation and transform state | missing | S005 | G002 |
+| S006 | Widescreen through owned camera/projection state | partial | S005 | G002 |
+| S007 | Interpolation through owned simulation and transform state | missing (out of scope for Crash 1) | S005 | G002 |
 | S008 | Crash 2 and Crash 3 native/Lightrec products | missing | S002, S003, S011 | G001 |
 | S009 | Playable Crash trilogy product | missing | S005, S008, S011 | G001 |
 | S010 | Host-owned native frame-loop contract and typed guest-VSync boundary | partial | S001 | G001, G002 |
@@ -85,14 +85,58 @@ primitive records do not satisfy this capability.
 
 ### S006 — widescreen
 
-Missing capability: no owned camera/projection producer exists, so there is no grounded state that
-can widen horizontal view geometry. GTE/OT/GP0/framebuffer reconstruction and final-image stretching
-are excluded.
+**Crash 1: partial. Crash 2 and Crash 3: missing.** The owner exists and is gated; the live wide-leg
+measurement is not available on this machine.
+
+Evidence, and it is guest-state evidence rather than a config value: a whole-image census of all
+72192 instruction words of `SCUS_949.00` finds exactly **two** GTE control-register writers for
+`OFX` (`CR[24]`, `0x80042B88` in `gte_init` and `0x80042F94` in `SetGeomOffset`), two for `OFY`
+(`CR[25]`) and two for `H` (`CR[26]`), and **zero** control-register readers of any of them
+(`tools/probe_crash1_projection.py`, ranges in `titles/crash1/executable.json` → `runtime.projection`).
+The retail 4:3 projection is therefore **`OFX = 0`, `OFY = 0`, `H = 0x3E8` (1000)** with a
+per-camera-mode `H` republished every frame — and the real boot prints exactly that from the guest's
+own registers. `crash1_widescreen.*` widens `OFX` by the plan's horizontal margin at the measured
+per-frame publication site, leaves `OFY` and `H` untouched, and is 4:3-identical by construction
+(`tests/crash1_widescreen.cpp`, 12 cases including an install proof with no HLE plan in existence).
+
+Gap, stated rather than papered over: the product faults on frame 0 at `unimplemented BIOS A0:0x27`
+because **no disc media is provisioned** on this machine, so the per-frame `SetGeomOffset` is never
+reached in a live run and the widened centre has no live leg. Two framework-side facts also mean
+`render_width > native_width` cannot be shown for this title as the tree stands, and both are
+reported rather than worked around:
+
+- `runtime/psx/picture_announce.cpp:69` judges a widening with
+  `classifyWide(aspect, core.rsub.mode.enhancementsAllowed(), ...)`, and `enhancementsAllowed()` is
+  `mPath == RenderPath::Native`. A `widescreenOnly` title's path is **Gte**, so the classifier always
+  returns `RefusedPure` and logs `any widescreen claim from this run is void` — for a *guest*
+  widening, which the contract deliberately allows on Gte.
+- `picture_announce` prints only on CHANGE, and in the measured legs the single `[wide]` line
+  precedes the guest's own publication by 125 ms, so the post-latch steady state is never announced.
+
+What the legs do prove, from the guest's own registers and the framework's own latch: the real boot
+publishes `H 1000, OFX 0, OFY 0` in both legs, and the latched plan widens with the requested
+aspect — `host canvas 428 (native 320)` at 16:9 against `host canvas 320 (native 320)` at 4:3.
+`tools/probe_crash1_widescreen_legs.py` reports the missing leg as a failure rather than substituting
+a value. Separately, a cull census over the same 72192 words finds **no** compare against a 4:3 dot
+width (320 appears only in two stack frames; 319/318/352/368 appear zero times), so there is no
+literal horizontal cull to widen — but a *variable-bound* cull carries no immediate and is invisible
+to that scan, which is the honest null. See `docs/issues/0015`.
+
+Pre-existing and not caused by the widescreen work: `crash_dynarec_dispatch` fails, because psxport
+now leaves an unstamped exit's `guestPc` to the consumer
+(`runtime/cpu/execution_control.cpp:29`) while `tests/dynarec_dispatch.cpp:81` still asserts the old
+stamping. The frame-loop contract owns that decision.
+
+Crash 2 and Crash 3 own no projection owner at all. `RenderCapabilities::widescreenOnly()` is
+returned by `BoundaryRuntime` for them, which is a **declaration this repository cannot currently
+keep**; it is left in place only because those runtimes refuse to boot, and it must be corrected
+before either title is allowed to present.
 
 ### S007 — interpolation
 
-Missing capability: no authoritative native simulation tick and no owned previous/current camera or
-object-transform snapshots exist. Presentation therefore has no grounded state pair to interpolate.
+**Out of scope for Crash 1.** Crash 1 is 30 fps, so this repository will not add an fps60 mode, an
+interpolation path, a lerp, or any temporal pipeline to support one. S007 stays `missing` for the
+trilogy and is a Crash 2/3 concern only after they exist as products.
 
 ### S008 — Crash 2 and Crash 3 products
 

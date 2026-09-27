@@ -189,7 +189,17 @@ void Crash1FrameDriver::finishFrameIteration(Core *core) {
     std::abort();
   }
   driver.frameCompleted_ = true;
-  psx::cpu::requestExecutionExit(*core, psx::cpu::ExecutionExitReason::FrameBoundary);
+  // The boundary's PROVENANCE is stated rather than inferred. `requestExecutionExit(core, reason)` no
+  // longer stamps a PC at all, because stamping `core.pc` gave a `jal`ed leaf its own ENTRY as the resume
+  // point, and resuming there re-enters the leaf that asked for the boundary. The consumer below checks
+  // this address to confirm the boundary came from the measured VSync site, so it is stated here rather
+  // than left to a default that no longer exists.
+  //
+  // Stating it is safe HERE specifically because this driver does not resume from it: it continues from
+  // `core.r[31]`, which is the guest's own return address. So the address is evidence, not a destination.
+  psx::cpu::requestExecutionExit(
+      *core,
+      psx::cpu::ExecutionResult{psx::cpu::ExecutionExitReason::FrameBoundary, kContract.guestVSync.begin, 0, {}});
 }
 
 psx::cpu::ExecutionResult

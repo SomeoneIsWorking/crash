@@ -8,6 +8,7 @@
 #include "crash1_gpu_watchdog.h"
 #include "dynarec_dispatch.h"
 #include "game.h"
+#include "gpu_vk.h"
 #include "platform_hle.h"
 
 #include <cstdlib>
@@ -55,6 +56,7 @@ void Crash1Runtime::registerOverrides(Game &game) {
   disc_index_io::registerOverrides(game.core);
   callback_boot::registerOverride(game.core);
   gpu_watchdog::registerOverrides(game.core);
+  installCrash1Widescreen(game.core);
   Crash1FrameDriver::installOverrides(game);
 }
 
@@ -75,6 +77,14 @@ const GuestProgramImage *Crash1Runtime::guestProgramImage() const {
 
 const PlatformHlePlan *Crash1Runtime::platformHlePlan() const {
   return &platformPlan_;
+}
+
+const GuestWidescreenProjection *Crash1Runtime::guestWidescreenProjection() const {
+  // The policy answers which aspect the player selected; the owner behind it is what publishes a
+  // guest projection (external/psxport/docs/presentation-contract.md, "Title-owned guest
+  // widescreen"). Returning the policy without the three measured overrides installed by
+  // registerOverrides() would be the half that advertises a capability the picture does not have.
+  return &widescreen_;
 }
 
 bool Crash1Runtime::guestVramIsPicture(const Game &) const {

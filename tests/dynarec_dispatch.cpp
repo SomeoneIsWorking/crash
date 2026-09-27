@@ -23,8 +23,14 @@ void addNativeResult(Core *core) {
   core->r[2] += 10u;
 }
 
+// The boundary's PROVENANCE is stated, not left to a default. The reason-only overload no longer stamps
+// a PC, because the PC it used to stamp was the leaf's own entry — never a valid resume point, since
+// resuming there re-enters the leaf that asked for the boundary. This case reaches `kFrame` by a `j`, so
+// there is no `r[31]` continuation at all and nothing could be inferred; the caller says where the
+// boundary came from, which is also what the real frame driver does.
 void finishFrame(Core *core) {
-  psx::cpu::requestExecutionExit(*core, psx::cpu::ExecutionExitReason::FrameBoundary);
+  psx::cpu::requestExecutionExit(
+      *core, psx::cpu::ExecutionResult{psx::cpu::ExecutionExitReason::FrameBoundary, kFrame, 0, {}});
 }
 
 bool runFunction(Core &core, std::uint32_t expected) {
