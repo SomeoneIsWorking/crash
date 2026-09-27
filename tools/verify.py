@@ -39,7 +39,7 @@ def main() -> int:
     if result:
         return result
     return subprocess.run(
-        [sys.executable, ROOT / "tools" / "psxport_sync.py", "--check", "--build-dir", BUILD],
+        [sys.executable, ROOT / "tools" / "psxport_sync.py", "--check", "--build", BUILD],
         cwd=ROOT,
         check=False,
     ).returncode

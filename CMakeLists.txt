@@ -423,3 +423,18 @@ if(BUILD_TESTING)
       --binary "$<TARGET_FILE:crash1_port>"
   )
 endif()
+
+# THE LIVE PIN CHECK. Not a selftest: this runs the real function against this repository's real
+# psxport.pin and the real build receipt, so it can fail when the pin is actually wrong.
+#
+# MEASURED 2026-09-27: every port in the workspace registered only a SELFTEST of the check function, run
+# against a temporary fixture. A selftest asserts the function behaves; it cannot fail when this repo's
+# pin is stale, which is why ten ports reported green while four pins were demonstrably stale. --build
+# points at THIS build directory, configured moments ago, so the receipt is current by construction and
+# the staleness guard cannot fire spuriously. Verified: perturbing psxport.pin turns it red.
+if(BUILD_TESTING)
+  add_test(
+    NAME crash_psxport_pin_live
+    COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tools/psxport_sync.py"
+            --check --build "${CMAKE_BINARY_DIR}")
+endif()
