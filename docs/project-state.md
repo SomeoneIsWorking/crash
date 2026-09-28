@@ -91,8 +91,18 @@ missing, but it is missing because no **native** producer exists, not because th
 
 ### S006 — widescreen
 
-**Crash 1: partial. Crash 2 and Crash 3: missing.** The owner exists and is gated; the live wide-leg
-measurement is not available on this machine.
+**Crash 1: partial. Crash 2 and Crash 3: missing.** The owner exists and is gated, and the live
+wide-leg measurement now runs on this machine with the disc: the 16:9 leg announces
+`native_width=512 render_width=684` against `512/512` in 4:3, and the host canvas is 428 against 320.
+**What is still missing is the GUEST's own widened centre, and the reason is now named and is not the
+owner** — see `docs/issues/0023`. A whole-image scan finds exactly **two** direct callers of the
+widened leaf `0x80042F8C`, `0x8001783C` and `0x80017F00`, and **zero** `lui`+`addiu`
+materialisations, so the leaf is reached only through camera code: caller A publishes the distance and
+reads the near-plane global `0x800578D0`, caller B re-authors the horizontal centre every frame from
+the camera-shake word. **Neither runs in 400 frames**, and the owner's own `[crash1-wide] guest centre`
+line appears zero times in the wide leg. The run reaches a rendered picture (issue 0022) and still
+never enters the camera path, which makes the remaining step player input: issue 0012's pad
+consumption at `0x80057054`, on a product that now has a frame to respond to.
 
 Evidence, and it is guest-state evidence rather than a config value: a whole-image census of all
 72192 instruction words of `SCUS_949.00` finds exactly **two** GTE control-register writers for
