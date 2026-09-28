@@ -55,7 +55,53 @@ What that leaves, and it is a short list:
   failure the Crash 1 resume test had to defend against. The install line IS in the log, which proves
   `install()` returned true and proves nothing about whether the key matches the executing image.
 
-## 5. Two defects the tool had, both found by making its own verdict disagree with its own flags
+## 4. What a control/treatment pair settles, and what it does not
+
+The three candidates above were separated far enough to be worth recording, because the experiment
+that separated them is small and the mistake in it is instructive.
+
+**The control.** The control channel's `call A [a0..a3]` command enters a guest function from outside.
+Whether that path consults a title's native overrides at all is not documented, so a negative result
+through `call` would have said nothing. So the same command was aimed at a site whose override is
+**known to fire from the guest** — the projection init at `0x80042B1C`, whose line is in every leg's
+log — and at the widened leaf itself:
+
+    call 80042B1C(a0=00001000,...)  -> v0=40000001 v1=40000000
+      and the leg then carries a SECOND `guest projection init published` line, with
+      `host canvas 512 (native 512)` against the boot's `host canvas 320 (native 320)`.
+      Only the owner's override prints that line, so the control FIRED.
+
+    call 80042F8C(a0=0,a1=0,...)    -> v0=00223FFC v1=80081C78
+      and the leg carries NO `guest centre` line at all, ever. A second identical call returned
+      v0=0022FFFC, so the retail body really ran both times.
+
+**So `call` consults overrides, the mechanism works, the image is the same, and the install loop is
+the same — and the `SetGeomOffset` key specifically does not intercept its own leaf.** That is a fact
+about the two keys, and it is not the same fact as "the guest never calls the leaf", which is what
+issue 0023 concluded. The guest's not calling it may still be true; the owner would not have noticed
+either way.
+
+**The two candidates the framework leaves open**, and they are the only two, because
+`NativeDispatcher::intercepts` is exactly `isInstalled(key) && !suppressed(key)`
+(`runtime/cpu/native_dispatch.cpp`) and the key is `(currentImageIdentity(address), address)`:
+
+1. **The identity resolved at call time differs from the one at install time.** `installOverride`
+   resolves the identity once, at install; the dispatcher resolves it again on every entry. A
+   generation bump between the two — a module load, a DMA, an image replacement — moves the key's
+   image and the leaf stops intercepting, silently, with the install line still in the log.
+2. **The key is suppressed and never released.** The dispatcher suppresses a key while a native
+   override runs the original, so a suppression pushed and not popped leaves that ONE address dead
+   for the rest of the process while every other override keeps working. The boot reaches the GTE
+   init site long before the per-frame camera path, so the init key is long-established when the
+   camera key would first be exercised — which is the wrong way round for this hypothesis to explain
+   the init firing and the leaf not, so (1) is the likelier of the two. That is a prediction, not a
+   measurement, and the measurement is cheap: print both identities.
+
+**What would settle it, and it is an assertion rather than a log line:** a test that installs the
+three bindings against a real `Core`, then asserts `intercepts()` is true for all three keys both
+immediately after install and after a guest field has run. `tests/crash1_widescreen.cpp` already
+drives the recovered leaf directly, which is why it never saw this — a direct drive exercises
+`publishCentre` and not the dispatch that is supposed to reach it.
 
 Recorded because both are the shape of mistake this workspace keeps making, and because a tool that
 prints a verdict next to a contradicting flag is not a tool.
@@ -75,5 +121,9 @@ absent because nothing feeds the thing that prints it. The absence of `[crash1-w
 exactly that shape: the owner prints it when it runs, so an absent line is consistent with an owner
 that never ran AND with an owner that ran and did not print. Only the owner's own invocation count
 distinguishes them, and the owner does not keep one.
+
+## 5. Two defects the tool had, both found by making its own verdict disagree with its own flags
+
+PLACEHOLDER_MOVE
 
 ## 6. The instrument this needs, and does not have
