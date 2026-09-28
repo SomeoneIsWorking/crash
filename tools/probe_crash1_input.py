@@ -167,7 +167,9 @@ def capture(client: LiveClient, path: pathlib.Path) -> tuple[float | None, int |
 
 
 def run(binary: pathlib.Path, out: pathlib.Path, frames: int, disc: str, port: int,
-        button: str, hold_frames: int, taps: int, tap_gap: float) -> int:
+        button: str, hold_frames: int, taps: int, tap_gap: float, aspect: int) -> int:
+    settings = out / "settings.ini"
+    settings.write_text(f"aspect={aspect}\n", encoding="utf-8")
     environment = dict(os.environ)
     environment.update(
         PSXPORT_VK_HEADLESS="1",
@@ -177,6 +179,12 @@ def run(binary: pathlib.Path, out: pathlib.Path, frames: int, disc: str, port: i
         PSXPORT_PRESENT_SINK="320x240",
         PSXPORT_CRASH1_DISC=disc,
         PSXPORT_DEBUG_SERVER=str(port),
+        # The aspect is a SETTINGS file, not an env knob: `ASPECT_AUTO` resolves against the sink
+        # and silently means 4:3 headless, so a wide leg has to be requested by the file. It matters
+        # here because the widened centre's log line is printed ONLY when the latched plan is wide
+        # AND the retail centre is non-zero, so a 4:3 leg cannot report a centre at all - and its
+        # silence is not a measurement of the owner.
+        PSXPORT_SETTINGS=str(settings),
         SDL_VIDEODRIVER="offscreen",
         SDL_AUDIODRIVER="dummy",
     )
@@ -336,6 +344,8 @@ def main() -> int:
     parser.add_argument("--tap-gap", type=float, default=2.0,
                         help="seconds between taps (the run is unpaced, so this is wall clock)")
     parser.add_argument("--port", type=int, default=DEFAULT_PORT)
+    parser.add_argument("--aspect", type=int, default=0, choices=(0, 1),
+                        help="0 = 4:3, 1 = 16:9. The widened centre is only reported in a wide leg.")
     parser.add_argument("--out", type=pathlib.Path, default=ROOT / "scratch/input")
     args = parser.parse_args()
 
@@ -355,7 +365,7 @@ def main() -> int:
     out.mkdir(parents=True, exist_ok=True)
     try:
         code = run(binary, out, args.frames, args.disc, args.port, args.button, args.hold_frames,
-                   args.taps, args.tap_gap)
+                   args.taps, args.tap_gap, args.aspect)
     except Refused as exc:
         print(f"REFUSED: {exc}", file=sys.stderr)
         return 2

@@ -1,4 +1,4 @@
-# 0023 — Crash 1's widening gap is an INPUT gap, and both callers of the widened leaf are named
+# 0023 — Crash 1's widened leaf is never called, and the owner's own log line is why nobody noticed
 
 ## What was believed
 
@@ -76,6 +76,48 @@ run and together:
 All three in one run, because (1) without (2) is a title that reads input and ignores it, and (2)
 without (3) is a title that animates without ever reaching the camera. Any of the three alone is a
 fact about the tool.
+
+## CORRECTION 2026-09-29, and it is the third dead tap in this one file
+
+The reasoning above was sound and its conclusion was still wrong, for a reason that lives in the
+owner's own reporting.
+
+`publishCentre` prints its `guest centre` line under TWO conditions:
+
+    if (latched.widescreen() && retailX != 0) { ... print ... }
+
+So a **4:3** leg cannot report a centre at all, and neither can a call that passes `$a0 = 0`. Both
+are exactly the legs that were run here, and both are silent whether or not the owner executed. The
+absence of the line was therefore carrying no information about whether the leaf was entered, and two
+intermediate conclusions were drawn from it before that was noticed.
+
+The POSITIVE CONTROL, in a 16:9 leg with a non-zero centre, which is what the line's two conditions
+require:
+
+    call 80042f8c(a0=00000005, a1=0, a2=0, a3=0)
+      guest centre 5 -> 91 (retail 5 + margin 86, OFY 0, H 288), host canvas 684 (native 512)
+
+The key **intercepts**, the owner runs, and the widening arithmetic is right: retail 5 plus the
+measured margin 86 is 91, and the host canvas is 684 against a native 512. And the control for the
+control: a plain 400-frame 4:3 leg with no injected calls prints exactly ONE `projection init
+published` line, so the second one in the call run was the injected call and the control channel
+really does consult title overrides.
+
+**So the corrected conclusion is the one this issue originally reached, for a different reason.** The
+key is alive and the owner is correct; the guest really does not call `0x80042F8C` in this level. What
+was wrong was the stated REASON — not "the product stopped before the per-frame `SetGeomOffset`",
+which is dead — and the 400-frame limit, which was never a limit. With input driving the title, in a
+live UNPAUSED level, in a 16:9 leg:
+
+    present frame 3903, paused 0, N. SANITY BEACH, 1,384 polygons,
+    the widened leaf published a centre 0 time(s)
+
+**What that leaves, and it is the thing the census did not close:** the two callers found are camera
+code for a camera mode this level is not in, and a direct-call census is not the question. The two
+questions still worth asking are the `CR[24]` writer census (who ELSE writes the horizontal offset)
+and the indirect `jalr` set, which this census explicitly did not scan — and which has already
+produced a false zero once in a sibling image in this workspace, where a `jal`-only scan reported 0
+for every library routine in an image that dispatches through function pointers.
 
 ## Falsifiers
 

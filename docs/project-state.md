@@ -99,10 +99,20 @@ owner** — see `docs/issues/0023`. A whole-image scan finds exactly **two** dir
 widened leaf `0x80042F8C`, `0x8001783C` and `0x80017F00`, and **zero** `lui`+`addiu`
 materialisations, so the leaf is reached only through camera code: caller A publishes the distance and
 reads the near-plane global `0x800578D0`, caller B re-authors the horizontal centre every frame from
-the camera-shake word. **Neither runs in 400 frames**, and the owner's own `[crash1-wide] guest centre`
-line appears zero times in the wide leg. The run reaches a rendered picture (issue 0022) and still
-never enters the camera path, which makes the remaining step player input: issue 0012's pad
-consumption at `0x80057054`, on a product that now has a frame to respond to.
+the camera-shake word. **Neither runs**, and this is now measured with input driving the title into a live, unpaused level
+in a 16:9 leg (issue 0024): present frame 3903, `paused 0`, N. Sanity Beach, 1,384 polygons, and the
+leaf still publishes 0 centres. **The owner is not the cause, and a positive control proves it** —
+`call 0x80042F8C` with a non-zero centre in a wide leg prints
+`guest centre 5 -> 91 (retail 5 + margin 86, OFY 0), host canvas 684 (native 512)`, so the key
+intercepts, the owner runs, and the widening arithmetic is right.
+
+The reason nobody noticed sooner is that `publishCentre` prints its line under
+`latched.widescreen() && retailX != 0`, so a 4:3 leg — and a call passing `$a0 = 0` — cannot report a
+centre whether or not the owner ran. That is the fifth dead tap in this workspace and the first that
+lives in an owner rather than in a counter.
+
+What is left open is the census's own blind spot: a direct-call scan did not close the indirect
+`jalr`/computed-register set, and it did not ask the larger question, who ELSE writes `CR[24]`.
 
 Evidence, and it is guest-state evidence rather than a config value: a whole-image census of all
 72192 instruction words of `SCUS_949.00` finds exactly **two** GTE control-register writers for

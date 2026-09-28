@@ -55,72 +55,42 @@ What that leaves, and it is a short list:
   failure the Crash 1 resume test had to defend against. The install line IS in the log, which proves
   `install()` returned true and proves nothing about whether the key matches the executing image.
 
-## 4. What a control/treatment pair settles, and what it does not
+## 4. The control/treatment pair, and what the positive control did to it
 
-The three candidates above were separated far enough to be worth recording, because the experiment
-that separated them is small and the mistake in it is instructive.
+The candidate experiment is recorded here because the first reading of it was WRONG, and the way it
+was wrong is the most reusable thing in this file.
 
-**The control.** The control channel's `call A [a0..a3]` command enters a guest function from outside.
-Whether that path consults a title's native overrides at all is not documented, so a negative result
-through `call` would have said nothing. So the same command was aimed at a site whose override is
-**known to fire from the guest** — the projection init at `0x80042B1C`, whose line is in every leg's
-log — and at the widened leaf itself:
+**The experiment.** The control channel's `call A [a0..a3]` enters a guest function from outside.
+Whether that path consults a title's native overrides is not documented, so a negative result through
+it would have said nothing. The same command was therefore aimed at a site whose override is known to
+fire from the guest — the projection init at `0x80042B1C` — and at the widened leaf:
 
-    call 80042B1C(a0=00001000,...)  -> v0=40000001 v1=40000000
-      and the leg then carries a SECOND `guest projection init published` line, with
-      `host canvas 512 (native 512)` against the boot's `host canvas 320 (native 320)`.
-      Only the owner's override prints that line, so the control FIRED.
+    call 80042B1C(a0=1000,...)  -> a SECOND `guest projection init published` line appeared
+    call 80042F8C(a0=0,...)     -> v0=00223FFC, and no `guest centre` line
 
-    call 80042F8C(a0=0,a1=0,...)    -> v0=00223FFC v1=80081C78
-      and the leg carries NO `guest centre` line at all, ever. A second identical call returned
-      v0=0022FFFC, so the retail body really ran both times.
+The first reading was "the mechanism is consulted and the leaf's key is dead, so the cause is either a
+moved image identity or a suppression that was never released". **Both the control and the treatment
+were in 4:3 legs or carried `$a0 = 0`, and `publishCentre` prints its line only under
+`latched.widescreen() && retailX != 0`.** So the treatment's silence proved nothing, and the
+"second init line" needed its own control: a plain 400-frame leg with no injected calls prints
+exactly ONE init line, which is what makes the injected one real — but that only establishes the
+mechanism, not the key.
 
-**So `call` consults overrides, the mechanism works, the image is the same, and the install loop is
-the same — and the `SetGeomOffset` key specifically does not intercept its own leaf.** That is a fact
-about the two keys, and it is not the same fact as "the guest never calls the leaf", which is what
-issue 0023 concluded. The guest's not calling it may still be true; the owner would not have noticed
-either way.
+**The positive control, which is the whole point.** A 16:9 leg, `$a0 = 5`:
 
-**The two candidates the framework leaves open**, and they are the only two, because
-`NativeDispatcher::intercepts` is exactly `isInstalled(key) && !suppressed(key)`
-(`runtime/cpu/native_dispatch.cpp`) and the key is `(currentImageIdentity(address), address)`:
+    call 80042f8c(a0=00000005, a1=0, a2=0, a3=0)
+      -> guest centre 5 -> 91 (retail 5 + margin 86, OFY 0, H 288), host canvas 684 (native 512)
 
-1. **The identity resolved at call time differs from the one at install time.** `installOverride`
-   resolves the identity once, at install; the dispatcher resolves it again on every entry. A
-   generation bump between the two — a module load, a DMA, an image replacement — moves the key's
-   image and the leaf stops intercepting, silently, with the install line still in the log.
-2. **The key is suppressed and never released.** The dispatcher suppresses a key while a native
-   override runs the original, so a suppression pushed and not popped leaves that ONE address dead
-   for the rest of the process while every other override keeps working. The boot reaches the GTE
-   init site long before the per-frame camera path, so the init key is long-established when the
-   camera key would first be exercised — which is the wrong way round for this hypothesis to explain
-   the init firing and the leaf not, so (1) is the likelier of the two. That is a prediction, not a
-   measurement, and the measurement is cheap: print both identities.
+The key intercepts, the owner runs, the widening is correct, and both of the "key dead" candidates
+are refuted. **So the guest does not call `0x80042F8C` in a live unpaused level** — see
+`docs/issues/0023` for what that leaves open.
 
-**What would settle it, and it is an assertion rather than a log line:** a test that installs the
-three bindings against a real `Core`, then asserts `intercepts()` is true for all three keys both
-immediately after install and after a guest field has run. `tests/crash1_widescreen.cpp` already
-drives the recovered leaf directly, which is why it never saw this — a direct drive exercises
-`publishCentre` and not the dispatch that is supposed to reach it.
-
-Recorded because both are the shape of mistake this workspace keeps making, and because a tool that
-prints a verdict next to a contradicting flag is not a tool.
-
-* It read the pad word with `w32`, which is a **WRITE**. The reply echoed the address, so the tool
-  read `0xFFFFFFFF` back every sample and would have reported "the host's button never reached the
-  word" for a run in which it moved on all twelve samples. The read verb is `rw <addr> [n]`.
-* It compared captured frames by **file size**. A fixed-size PPM has a constant length, so a frame
-  whose every pixel changed compared equal and the tool reported "the frame did not change" while the
-  non-black fraction moved by 0.83. It compares a content digest now.
-* Its `frame` parse grepped for `real`, which the reply does not contain, so `advanced` was always
-  False — while the PASS branch printed "with the frame counter advancing". The verdict now requires
-  every flag it names, and a run that cannot establish one exits 2 as UNUSABLE rather than passing.
-
-Every number above is a log line, and this workspace has been burned four times by a log line that is
-absent because nothing feeds the thing that prints it. The absence of `[crash1-wide] guest centre` is
-exactly that shape: the owner prints it when it runs, so an absent line is consistent with an owner
-that never ran AND with an owner that ran and did not print. Only the owner's own invocation count
-distinguishes them, and the owner does not keep one.
+**The generalisable half.** A negative result read off a log line is only a measurement if the line's
+PRINT CONDITION has been satisfied, and the condition here is two-fold and one of the folds is the
+aspect the run is in. This is the fifth dead tap in this workspace (`is3d`, the `VSync(0)` census,
+`OtAttr`, the Spider-Man gate word, and now the owner's own centre line), and it is the first one that
+lives in the owner rather than in a counter. The habit that catches all five: before quoting an
+absence, name the feeder AND the condition, and then make the absence fire positively at least once.
 
 ## 5. Three defects the tool had, all found by making its own verdict disagree with its own flags
 
