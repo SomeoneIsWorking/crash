@@ -211,6 +211,14 @@ void Crash1Widescreen::publishCentre(Core &core, const RetailBody &retail) {
   // anything, and the contract holds OFY and the vertical field of view fixed.
   core.r[kCentreYArgument] = static_cast<std::uint32_t>(retailY);
 
+  // THE ARGUMENT MUST BE CAPTURED BEFORE THE LEAF RUNS, and this is the same defect the shared rule
+  // in game/core/guest_projection_publication.cpp had. The guest's retail leaf is
+  // `sll $a0, $a0, 0x10` -- it shifts the argument register IN PLACE, and $a0 is kCentreXArgument --
+  // so reading `core.r[kCentreXArgument]` after `retail(core)` yields `centre << 16`. The guard then
+  // compared a correctly-published 86 against 5,636,096 and aborted a frame whose widening was
+  // exactly right. Invisible at 4:3, where retail's OFX is 0 and `0 == 0` passes.
+  const std::int32_t expectedX = static_cast<std::int32_t>(core.r[kCentreXArgument]);
+
   retail(core);
 
   // What the GUEST published, read out of the coprocessor rather than assumed from the argument.
@@ -225,7 +233,6 @@ void Crash1Widescreen::publishCentre(Core &core, const RetailBody &retail) {
   // negative centre on purpose.
   const auto publishedX = static_cast<std::int32_t>(static_cast<std::int16_t>(gte_read_ctrl(kGteCrOfx) >> 16));
   const auto publishedY = static_cast<std::int32_t>(static_cast<std::int16_t>(gte_read_ctrl(kGteCrOfy) >> 16));
-  const std::int32_t expectedX = static_cast<std::int32_t>(core.r[kCentreXArgument]);
   if (publishedY != retail_.y) {
     lucent::error("crash1-wide",
                   "the guest published OFY {} from an unchanged $a1 = {}; a vertical shift moves "
