@@ -161,6 +161,35 @@ int main() {
   // adds over the guest's body, so it is the one case the fixture has to police hardest: the fixture
   // records every address it was asked for, and counts any request outside main RAM rather than
   // answering it, because answering would BE the failure.
+  // THE DISCRIMINATOR, and the case this whole correction exists for. `0x8001599C` is `beq $2,$4`:
+  // the cell's class field is compared against `$a0`, the WHOLE request, and the `srl $2,$4,13` at
+  // the entry feeds nothing but the bucket index. A fixture whose cell class carries the request's
+  // LOW bits — bits the shift discards — is therefore servable, and an owner that searched for the
+  // shifted key would walk straight past it and off the end of main RAM. Both the found answer and
+  // the walk length are checked, because "returned a cell at all" and "returned the RIGHT cell" are
+  // different claims.
+  {
+    constexpr std::uint32_t kRequest = 0x0057CCFBu; // a real request word measured from the live run
+    const std::uint32_t shifted = kRequest >> crash1::kClassShift;
+    check(shifted != kRequest && (kRequest & ((1u << crash1::kClassShift) - 1u)) != 0u,
+          "the fixture request actually carries bits below the shift, so the two models differ");
+    const Fixture fixture({kRequest});
+    const CellSearch search = crash1::searchCells(&fixture, &Fixture::read, fixture.base(), kRequest);
+    check(!search.leftMainRam && search.foundCell == fixture.base() && search.cellsWalked == 0u,
+          "a cell whose class IS the whole request is found on the first cell; the shift is a bucket "
+          "selector, not the class");
+    const Fixture missFixture({shifted});
+    const CellSearch miss = crash1::searchCells(&missFixture, &Fixture::read, missFixture.base(), kRequest);
+    check(miss.leftMainRam && miss.foundCell == 0x80200000u,
+          "and a cell carrying only the SHIFTED key is not a match, which is exactly what the "
+          "pre-correction owner looked for and never found");
+  }
+
+  // A class that no cell in the fixture serves. The walk must run until it reaches the edge of main
+  // RAM and stop there, WITHOUT reading the address past the edge. This is the one rule the owner
+  // adds over the guest's body, so it is the one case the fixture has to police hardest: the fixture
+  // records every address it was asked for, and counts any request outside main RAM rather than
+  // answering it, because answering would BE the failure.
   {
     const Fixture fixture({7u, 9u, 11u});
     const CellSearch search = crash1::searchCells(&fixture, &Fixture::read, fixture.base(), 99u);
@@ -202,23 +231,31 @@ int main() {
     }
   }
 
-  // The class key is `request >> 13` and the bucket index is `(key & 0x3FC)` BYTES. Both are the
-  // owner's arithmetic rather than the walk's, so they are pinned here as the values the header
-  // claims. The mask is applied to the KEY and its result is a BYTE offset into a word-strided
-  // table, which is the constraint the recovered code places on its own callers: only a key that is a
-  // multiple of four addresses a cell pointer at all. Measured, and it is why the request word cannot
-  // be an arbitrary byte count.
-  check((0x4000u >> crash1::kClassShift) == 2u, "one 8 KiB class of request is class 2");
-  check((0x1FFFu >> crash1::kClassShift) == 0u, "the largest request below 8 KiB is class 0");
-  check((4u & crash1::kBucketIndexMask) == 4u, "class 4's bucket sits at byte offset 4, one word in");
+  // The bucket index is `((request >> 13) & 0x3FC)` BYTES. That is the owner's arithmetic rather than
+  // the walk's, so it is pinned here as the values the header claims, and as what the mask does to
+  // the request.
+  check((0x4000u >> crash1::kClassShift) == 2u, "one 8 KiB class of request is bucket key 2");
+  check((0x1FFFu >> crash1::kClassShift) == 0u, "the largest request below 8 KiB is bucket key 0");
+  check(((0x0057CCFBu >> crash1::kClassShift) & crash1::kBucketIndexMask) == 700u,
+        "the request the live run measured, 0x0057CCFB, indexes bucket byte offset 700");
+  check((4u & crash1::kBucketIndexMask) == 4u, "bucket key 4 sits at byte offset 4, one word in");
   check((crash1::kBucketIndexMask / 4u) == 255u,
         "the byte mask spans 256 buckets of 4 bytes, which is the table the guest indexes");
-  check(crash1::isWordAlignedClassKey(4u) && crash1::isWordAlignedClassKey(252u),
-        "classes 4 and 252 address a whole word, as a PSX lw requires");
-  check(!crash1::isWordAlignedClassKey(1u) && !crash1::isWordAlignedClassKey(253u),
-        "classes 1 and 253 would address a cell pointer a quarter of the way into a word, so the "
-        "engine's six callers can only be passing multiples of four");
-  check(crash1::kClassShift == 13u, "the class shift is 13, the `sa` field of 0x00041342");
+  // MEASURED, AND IT CONTRADICTS A CLAIM THIS REPOSITORY PREVIOUSLY MADE, so it is stated here rather
+  // than quietly deleted. The header used to say the engine "can only ever" call the lookup with a
+  // key that is a multiple of four, because the index is a byte offset into a word-strided table.
+  // Four requests were captured from the live disc-backed run and THREE of them index an UNALIGNED
+  // bucket: 0x0057CCFB -> 700, 0x15814CE7 -> 8, 0x5452D94D -> 660, 0x4E938CCD -> 156. The engine
+  // does pass unaligned indices and psxport's word accessor tolerates them, so the claim was never
+  // established. What is NOT established is what a retail CPU does with them, and a host run cannot
+  // answer that.
+  check(!crash1::isWordAlignedClassKey(0x0057CCFBu),
+        "0x0057CCFB, a request the live run measured, indexes an UNALIGNED bucket — so the former "
+        "'only multiples of four' claim is false and this measurement replaces it");
+  check(crash1::isWordAlignedClassKey(0x4E938CCDu) && !crash1::isWordAlignedClassKey(0x00002000u),
+        "alignment is a property of the request's bits 13 and up, and requests differ on it: "
+        "0x00002000 shifts to 1 (odd, unaligned) and 0x4E938CCD shifts to 19660 (even, aligned)");
+  check(crash1::kClassShift == 13u, "the shift that indexes the bucket is 13, the `sa` of 0x00041342");
   check(crash1::kCellStride == 8u && crash1::kClassFieldOffset == 4u,
         "the cell is 8 bytes and its class is the second word, from 0x24630008 and 0x8C620004");
   check(crash1::isMainRam(0x80100000u), "a real cell address IS main RAM");
@@ -256,14 +293,15 @@ int main() {
         "0 of 0 lookups before the owner has run: a denominator, not a result");
 
   // A live pool, published through the three globals the guest uses, so the owner's reads are
-  // exercised against real guest memory rather than a stub. The class keys are multiples of four
-  // because the recovered bucket index is a BYTE offset into a word-strided table.
+  // exercised against real guest memory rather than a stub. The requests are WHOLE 32-bit words
+  // carrying bits below the shift, because that is what the live run measured and because it is the
+  // only shape on which the two candidate models disagree.
   const std::uint32_t kBucketTable = 0x80060000u;
   const std::uint32_t kCellCountBlock = 0x80060010u;
   const std::uint32_t kFirstCell = 0x80100000u;
-  const std::uint32_t kClassServed = 4u;     // class 4 -> bucket byte offset 4
-  const std::uint32_t kClassAlsoServed = 8u; // class 8 -> bucket byte offset 8
-  const std::uint32_t kClassUnmapped = 40u;  // class 40 -> bucket byte offset 40
+  const std::uint32_t kRequestServed = 0x0057CCFBu;     // bucket byte offset 700
+  const std::uint32_t kRequestAlsoServed = 0x5452D94Du; // bucket byte offset 660
+  const std::uint32_t kRequestUnmapped = 0x15814CE7u;   // bucket byte offset 8
   game->core.mem_w32(crash1::kBucketTablePointer, kBucketTable);
   game->core.mem_w32(crash1::kPoolBasePointer, kFirstCell);
   game->core.mem_w32(crash1::kCellCountBlockPointer, kCellCountBlock);
@@ -271,22 +309,24 @@ int main() {
   for (std::uint32_t bucket = 0; bucket < 256u; ++bucket) {
     game->core.mem_w32(kBucketTable + bucket * 4u, kFirstCell);
   }
-  game->core.mem_w32(kFirstCell + 0u, 0x00001234u);       // payload of cell 0
-  game->core.mem_w32(kFirstCell + 4u, kClassServed);      // class of cell 0
-  game->core.mem_w32(kFirstCell + 8u, 0x00005678u);       // payload of cell 1
-  game->core.mem_w32(kFirstCell + 12u, kClassAlsoServed); // class of cell 1
-  game->core.mem_w32(kFirstCell + 16u, 0x00009ABCu);      // payload of cell 2
-  game->core.mem_w32(kFirstCell + 20u, kClassServed);     // class of cell 2
+  game->core.mem_w32(kFirstCell + 0u, 0x00001234u);         // payload of cell 0
+  game->core.mem_w32(kFirstCell + 4u, kRequestServed);      // class of cell 0
+  game->core.mem_w32(kFirstCell + 8u, 0x00005678u);         // payload of cell 1
+  game->core.mem_w32(kFirstCell + 12u, kRequestAlsoServed); // class of cell 1
+  game->core.mem_w32(kFirstCell + 16u, 0x00009ABCu);        // payload of cell 2
+  game->core.mem_w32(kFirstCell + 20u, kRequestServed);     // class of cell 2
 
-  // A class the FIRST cell serves: the answer is the first cell and no step is taken.
+  // A request the FIRST cell serves: the answer is the first cell and no step is taken.
   game->core.r[31] = 0x80013140u; // the return address the first measured call site would carry
-  check(owner.findCell(game->core, kClassServed << crash1::kClassShift) == kFirstCell,
-        "a class on the first cell returns that cell");
+  check(owner.findCell(game->core, kRequestServed) == kFirstCell,
+        "a request whose WHOLE word is cell 0's class returns that cell — the low 13 bits are part "
+        "of the class, exactly as `beq $2,$4` at 0x8001599C compares them");
   check(owner.lookups() == 1u && owner.found() == 1u, "1 of 1 lookups found a cell");
   check(owner.firstCaller() == 0x80013140u,
         "the caller's return address is recorded once, so a run can name the module that asked");
-  check(owner.lastClassKey() == kClassServed, "the class key is the request shifted by 13");
-  check(owner.lastRequest() == kClassServed << crash1::kClassShift, "the request the guest passed is recorded");
+  check(owner.lastClassKey() == 700u,
+        "the recorded bucket offset is (request>>13)&0x3FC = 700, and it is NOT the class");
+  check(owner.lastRequest() == kRequestServed, "the request the guest passed is recorded");
   check(owner.lastBucketTable() == kBucketTable, "the bucket table the guest published is recorded");
   check(owner.lastFirstCell() == kFirstCell, "the bucket's first cell is recorded");
   check(owner.lastPoolBase() == kFirstCell, "the engine's pool base is recorded");
@@ -294,12 +334,12 @@ int main() {
   check(owner.lastPoolBaseDistance() == 0,
         "the signed distance from the engine's base is reported, and is 0 for a bucket sitting on it");
 
-  // The same class again, now served by the THIRD cell, with the first cell changed to something else
+  // The same request again, now served by the THIRD cell, with the first cell changed to something else
   // first. The pool is mutated between calls on purpose: a walk that ignored the guest's memory would
   // still pass, and a walk that returned the previous answer from a cache would too.
-  game->core.mem_w32(kFirstCell + 4u, kClassAlsoServed);
-  game->core.mem_w32(kFirstCell + 12u, kClassAlsoServed);
-  check(owner.findCell(game->core, kClassServed << crash1::kClassShift) == kFirstCell + 2u * crash1::kCellStride,
+  game->core.mem_w32(kFirstCell + 4u, kRequestAlsoServed);
+  game->core.mem_w32(kFirstCell + 12u, kRequestAlsoServed);
+  check(owner.findCell(game->core, kRequestServed) == kFirstCell + 2u * crash1::kCellStride,
         "a class on the third cell returns the third cell, walking two steps");
   check(owner.lastCellsWalked() == 2u, "the walk examined 2 cells after the first");
   check(owner.maxCellsWalked() == 2u, "the deepest walk so far is 2 cells");
@@ -309,8 +349,9 @@ int main() {
 
   // A bucket that is not a pointer into main RAM. This is the shape the media-less run had, and it is
   // the case the owner exists for: it must NOT read through the pointer, and it must name the value.
-  game->core.mem_w32(kBucketTable + kClassUnmapped, 0x00800000u);
-  const std::uint32_t unmapped = owner.findCell(game->core, kClassUnmapped << crash1::kClassShift);
+  const std::uint32_t unmappedOffset = (kRequestUnmapped >> crash1::kClassShift) & crash1::kBucketIndexMask;
+  game->core.mem_w32(kBucketTable + unmappedOffset, 0x00800000u);
+  const std::uint32_t unmapped = owner.findCell(game->core, kRequestUnmapped);
   check(unmapped == 0x00800000u,
         "the owner returns the pointer it was given rather than inventing a failure value: the "
         "guest's callers dereference the result unchecked, so a substituted error word would fault "

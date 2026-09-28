@@ -228,7 +228,7 @@
     "block_pool": {
       "_measured_by": "tools/probe_crash1_block_pool.py",
       "_note": "Crash 1's size-class block pool. The product's guest PC when it stops is 0x800159A8, and that word is `lw $v0,0x4($v1)` - the second class-field read of the cell lookup at 0x80015978. The pool is a table of 8-byte cells: `+0x00` is the payload the allocate path stores (0x80013020 `sw a1,0(s3)`) and `+0x04` is the class the cell serves, which is the only field this module's callers compare. There are exactly six `jal 0x80015978` sites in the image and 818 distinct `jal` targets in 72,192 words, so a function-entry census saturates and cannot rank the six by likelihood; which of them ran is a RUNTIME question, answered by crash1_block_pool.cpp.",
-      "_what_is_not_claimed": "The unit of the caller's request word is NOT established. The lookup compares each cell's +0x04 against `request >> 13`, and the six callers do not pass a uniform byte count - 0x80015034 passes a tagged handle read out of a struct at `lw a0,0(s0)`. So the recovered code names the field for what it is compared against and no more.",
+      "_what_is_not_claimed": "The unit of the caller's request word is NOT established. The lookup compares each cell's +0x04 against the request word WHOLE - `beq $2,$4` at 0x8001599C and `bne $2,$4` at 0x800159B0 both name $a0, and the srl at 0x80015978 only selects the bucket (issue 0021) - and the six callers do not pass a uniform byte count: 0x80015034 and 0x80015118 pass a tagged handle read out of a struct at `lw a0,0(s0)`. So the recovered code names the field for what it is compared against and no more.",
       "find_cell": {
         "entry": "0x80015978",
         "end": "0x800159C4",
@@ -239,10 +239,26 @@
         "class_field_offset": "0x4",
         "payload_field_offset": "0x0",
         "bucket_table_pointer": "0x8005C530",
-        "class_shift_site": { "address": "0x80015978", "word": "0x00041342", "meaning": "srl v0,a0,13" },
-        "bucket_mask_site": { "address": "0x80015984", "word": "0x304203FC", "meaning": "andi v0,v0,0x03FC" },
-        "bucket_load_site": { "address": "0x80015980", "word": "0x8C63C530", "meaning": "lw v1,-0x3AD0(v1) with v1=lui 0x8006" },
-        "stride_site": { "address": "0x800159A4", "word": "0x24630008", "meaning": "addiu v1,v1,8" },
+        "class_shift_site": {
+          "address": "0x80015978",
+          "word": "0x00041342",
+          "meaning": "srl v0,a0,13"
+        },
+        "bucket_mask_site": {
+          "address": "0x80015984",
+          "word": "0x304203FC",
+          "meaning": "andi v0,v0,0x03FC"
+        },
+        "bucket_load_site": {
+          "address": "0x80015980",
+          "word": "0x8C63C530",
+          "meaning": "lw v1,-0x3AD0(v1) with v1=lui 0x8006"
+        },
+        "stride_site": {
+          "address": "0x800159A4",
+          "word": "0x24630008",
+          "meaning": "addiu v1,v1,8"
+        },
         "note": "The index is a BYTE offset into a 256-entry pointer table, so the mask 0x3FC is 4-byte stride x 255. The loop is `if (cell[1]==key) return cell; for (cell+=2; cell[1]!=key; cell+=2) {} return cell;` - the two `addiu v1,v1,8` at 0x800159A4 and 0x800159B4 with the `addiu v1,v1,-8` at 0x800159B8 are the compiler's way of keeping the returned cell on the match, and the bne at 0x800159B0 targets 0x800159A8, the loop head, NOT the first read."
       },
       "find_cell_bounded": {
@@ -264,21 +280,139 @@
         "reached_from": "0x800159A4, the stride step; the loop head is 0x800159A8 itself (bne at 0x800159B0, word 0x1444FFFD, displacement -3)"
       },
       "call_sites": [
-        { "address": "0x8001313C", "word": "0x0C00565E", "caller": "0x80012F10", "distance_from_core_loop": 3 },
-        { "address": "0x80015058", "word": "0x0C00565E", "caller": "0x80015034", "distance_from_core_loop": 3 },
-        { "address": "0x8001515C", "word": "0x0C00565E", "caller": "0x80015118", "distance_from_core_loop": 2 },
-        { "address": "0x80015484", "word": "0x0C00565E", "caller": "0x80015458", "distance_from_core_loop": 2 },
-        { "address": "0x80015800", "word": "0x0C00565E", "caller": "0x8001579C", "distance_from_core_loop": 3 },
-        { "address": "0x800176F8", "word": "0x0C00565E", "caller": "0x8001767C", "distance_from_core_loop": 3 }
+        {
+          "address": "0x8001313C",
+          "word": "0x0C00565E",
+          "caller": "0x80012F10",
+          "distance_from_core_loop": 3
+        },
+        {
+          "address": "0x80015058",
+          "word": "0x0C00565E",
+          "caller": "0x80015034",
+          "distance_from_core_loop": 3
+        },
+        {
+          "address": "0x8001515C",
+          "word": "0x0C00565E",
+          "caller": "0x80015118",
+          "distance_from_core_loop": 2
+        },
+        {
+          "address": "0x80015484",
+          "word": "0x0C00565E",
+          "caller": "0x80015458",
+          "distance_from_core_loop": 2
+        },
+        {
+          "address": "0x80015800",
+          "word": "0x0C00565E",
+          "caller": "0x8001579C",
+          "distance_from_core_loop": 3
+        },
+        {
+          "address": "0x800176F8",
+          "word": "0x0C00565E",
+          "caller": "0x8001767C",
+          "distance_from_core_loop": 3
+        }
       ],
       "call_site_count": 6,
       "pool_globals": {
         "_note": "Every one of these is read with a `lui $reg,0x8006` + `lw` pair, so a literal-immediate scan cannot see them, and none of them has a `sw` with that displacement anywhere in the image - the pool is filled through a computed pointer, not by a direct store to the global.",
-        "bucket_table": { "address": "0x8005C530", "load_sites": 8 },
-        "pool_base": { "address": "0x8005C534", "load_sites": 3 },
-        "cell_count_block": { "address": "0x8005C540", "load_sites": 11 },
-        "heap_top": { "address": "0x8005C550", "load_sites": 5 },
-        "side_index_table": { "address": "0x8005CFBC", "load_sites": 28 }
+        "bucket_table": {
+          "address": "0x8005C530",
+          "load_sites": 8
+        },
+        "pool_base": {
+          "address": "0x8005C534",
+          "load_sites": 3
+        },
+        "cell_count_block": {
+          "address": "0x8005C540",
+          "load_sites": 11
+        },
+        "heap_top": {
+          "address": "0x8005C550",
+          "load_sites": 5
+        },
+        "side_index_table": {
+          "address": "0x8005CFBC",
+          "load_sites": 28
+        }
+      }
+    },
+    "pool_node": {
+      "_measured_by": "tools/probe_crash1_pool_node.py",
+      "_note": "The pool's OWN ALLOCATE PATH, recovered from the image. It matters because it is where the CLASS WORD is defined: the word is loaded at 0x80012FBC, shifted at 0x80012FC8 to pick a bucket, and the SAME unshifted word is compared against a cell's class field at 0x80012FFC and stored into the cell at 0x80013140. The lookup at 0x80015978 was recovered against the SHIFTED form, could never match anything this function wrote, and its walk ran off the end of main RAM on every lookup. Corrected in titles/crash1/core/crash1_block_pool.{h,cpp}; this block is the allocate side of the same evidence and is gated by its own probe.",
+      "entry": "0x80012F10",
+      "end": "0x8001331C",
+      "body_sha256": "217a4cd96984370fbc016c9b17b6fd394c50fe415ce79ee150adab84c0330dce",
+      "word_count": 259,
+      "lookup_entry": "0x80015978",
+      "globals": {
+        "node_table": "0x8005C554",
+        "node_cursor": "0x8005CFAC",
+        "bucket_table": "0x8005C530",
+        "handle_table": "0x800580A0",
+        "escape_class_table": "0x8005728C",
+        "type_callback_table": "0x800514EC"
+      },
+      "strides": {
+        "node_stride": 44,
+        "callback_stride": 28
+      },
+      "states": {
+        "state_built": "0x1E",
+        "state_done": "0x14",
+        "state_reset": "0x1"
+      },
+      "sites": {
+        "call_to_lookup": "0x8001313C",
+        "call_to_lookup_delay_slot": "0x80013140",
+        "measure_dead_end": "0x80013094",
+        "escape_class_init": "0x80013110"
+      },
+      "constants": {
+        "kEntry": "0x80012F10",
+        "kEnd": "0x8001331C",
+        "kLookupCall": "0x80015978",
+        "kCallToLookup": "0x8001313C",
+        "kCallToLookupDelaySlot": "0x80013140",
+        "kEscapeClassInit": "0x80040484",
+        "kLiveCallerCall": "0x8001515C",
+        "kNodeTable": "0x8005C554",
+        "kNodeCursor": "0x8005CFAC",
+        "kBucketTable": "0x8005C530",
+        "kHandleTable": "0x800580A0",
+        "kTypeCallbackTable": "0x800514EC",
+        "kEscapeClassTable": "0x8005728C",
+        "kNodeStride": 44,
+        "kCallbackStride": 28,
+        "kBucketIndexShift": 13,
+        "kBucketIndexMask": "0x03FC",
+        "kCellStride": 8,
+        "kClassWordOffset": "0x14",
+        "kRequestOffset": "0x18",
+        "kNodeElementArray": "0x10",
+        "kNodeLimit": "0x08",
+        "kNodeKind": "0x02",
+        "kNodePayload": "0x00",
+        "kNodeLiveCount": "0x0A",
+        "kNodeState": "0x04",
+        "kNodeContext": "0x24",
+        "kElementKind": "0x08",
+        "kElementType": "0x10",
+        "kDispatchKind": "0x80012F70",
+        "kKindZero": "0x80012FB4",
+        "kKindOne": "0x80013094",
+        "kKindTwo": "0x800130C0",
+        "kKindThreeOrFour": "0x8001317C",
+        "kKindOther": "0x800132E8",
+        "kStateBuilt": "0x1E",
+        "kStateDone": "0x14",
+        "kStateReset": "0x1",
+        "kMeasureDeadEndCall": "0x8001439C"
       }
     },
     "native_frame": {

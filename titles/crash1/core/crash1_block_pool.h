@@ -9,14 +9,14 @@
 // The lookup is the only function on the path that dereferences a pointer it did not compute from a
 // live allocation:
 //
-//   0x80015978  srl  v0,a0,13          ; the class key is the request shifted down 13
+//   0x80015978  srl  v0,a0,13          ; the BUCKET INDEX source is the request shifted down 13
 //   0x8001597C  lui  v1,0x8006
 //   0x80015980  lw   v1,-0x3AD0(v1)    ; v1 = *(0x8005C530): the base of a 256-entry bucket table
 //   0x80015984  andi v0,v0,0x03FC      ; ... indexed by (key & 0x3FC) BYTES, so 4 bytes per bucket
 //   0x80015988  addu v0,v0,v1
 //   0x8001598C  lw   v1,0(v0)          ; v1 = the first cell of that bucket
 //   0x80015994  lw   v0,4(v1)          ; does the first cell serve this class?
-//   0x8001599C  beq  v0,a0,0x800159BC   ; yes -> return it
+//   0x8001599C  beq  v0,a0,0x800159BC   ; yes -> return it.  THE COMPARISON IS AGAINST $a0 ITSELF.
 //   0x800159A4  addiu v1,v1,8           ; no -> step one cell
 //   0x800159A8  lw   v0,4(v1)          ; <-- THE STOP. No bound is checked anywhere on this path.
 //   0x800159B0  bne  v0,a0,0x800159A8   ; ... and the back edge targets 0x800159A8, the loop head
@@ -27,11 +27,25 @@
 //
 // so the recovered body is exactly:
 //
-//   key  = request >> 13
-//   cell = bucket[(key & 0x3FC) >> 2]
-//   if (cell->class == key) return cell;
-//   for (cell += 1; cell->class != key; cell += 1) {}
+//   key   = request >> 13                        // the shift picks the BUCKET, and nothing else
+//   cell  = bucket[(key & 0x3FC) >> 2]
+//   if (cell->class == request) return cell;      // <-- the WHOLE request word, not `key`
+//   for (cell += 1; cell->class != request; cell += 1) {}
 //   return cell;
+//
+// THE CLASS IS THE REQUEST WORD ITSELF, and the shift is only a bucket selector. That is not a
+// reading, it is three branch instructions in this image whose second operand is register `$a0`,
+// which nothing between the entry and each branch redefines:
+//   0x8001599C  beq  $2,$4   0x800159BC      ; the first-cell test in the lookup
+//   0x800159B0  bne  $2,$4   0x800159A8      ; the back edge in the lookup
+//   0x800159E8  beq  $2,$4   0x80015A34      ; the same test in the bounded sibling
+// and the pool's own allocate path compares the SAME unshifted word: `lw $2,0x10($4); lw $2,4($2)`
+// at 0x80012FB4..0x80012FBC is the word whose SHIFT feeds the bucket index, while `lw $3,4($5)` at
+// 0x80012FFC is what a cell's class field is compared against. An owner that compared the shifted key
+// against the cell's class could therefore never match a real cell, its walk would never end, and it
+// would hand the caller a cell at the edge of main RAM. `tools/probe_crash1_block_pool.py`
+// re-derives the comparison register from those three branch words and fails if it is not `$a0`, so
+// this correction cannot be undone by editing a comment.
 //
 // and the ONLY difference between a lookup that returns and one that faults is whether the bucket
 // holds a real cell pointer. Nothing else in the function can fault.
@@ -61,9 +75,10 @@
 //     `request >> 13`, and the six callers do not pass a uniform byte count — 0x80015034 and
 //     0x80015118 pass a tagged handle read out of a struct at `lw a0,0(s0)` — so the field is named
 //     for what it is compared against and no more.
-//   * The six callers can only be passing a class key that is a multiple of 4, because the bucket
-//     index is a BYTE offset into a word-strided table and an unaligned one would fault on the `lw`
-//     at 0x8001598C. That constrains what the request word may be, and it is asserted below.
+//   * The six callers can only be passing a request whose BITS 13 AND UP form a multiple of 4, because
+//     the bucket index is a BYTE offset into a word-strided table and an unaligned one would fault on
+//     the `lw` at 0x8001598C. That constrains what the request word may be, and it is asserted below.
+//     It says nothing about the low 13 bits, which are part of the class and are compared in full.
 //   * Which of the six `jal 0x80015978` call sites ran in a given run is a RUNTIME fact. There are
 //     818 distinct `jal` targets in 72,192 words, so every function is reachable from CoreLoop and a
 //     call-graph census cannot rank them. `Crash1BlockPool::firstCaller()` is the answer.
@@ -89,10 +104,11 @@ inline constexpr std::uint32_t kFindCellBounded = 0x800159C4u;
 inline constexpr std::uint32_t kFindCellBoundedEnd = 0x80015A3Cu;
 
 // The recovery's arithmetic, each value decoded out of the instruction that produces it.
-//   class shift        0x80015978  0x00041342  srl v0,a0,13
+//   bucket-index shift 0x80015978  0x00041342  srl v0,a0,13   (a0>>13: the BUCKET selector, nothing more)
 //   bucket index mask  0x80015984  0x304203FC  andi v0,v0,0x03FC   (a byte offset, 4 per bucket)
 //   cell stride        0x800159A4  0x24630008  addiu v1,v1,8       (and again at 0x800159B4)
 //   class field        0x80015994  0x8C620004  lw v0,4(v1)        (half the stride)
+// The class a cell is compared against is the request word UNCHANGED; see the header's decoded body.
 inline constexpr std::uint32_t kClassShift = 13u;
 inline constexpr std::uint32_t kBucketIndexMask = 0x03FCu;
 inline constexpr std::uint32_t kCellStride = 8u;
@@ -125,7 +141,7 @@ inline constexpr std::uint32_t kFaultSite = 0x800159A8u;
 // is a byte array behind an accessor and aliasing it as a C++ object would be a lie about the host.
 struct BlockCell {
   std::uint32_t payload;
-  std::uint32_t cellClass;
+  std::uint32_t cellClass; // the request word the engine compares at 0x8001599C, unshifted
 };
 static_assert(sizeof(BlockCell) == kCellStride, "the measured cell stride is the recovered cell size");
 static_assert(offsetof(BlockCell, cellClass) == kClassFieldOffset,
@@ -137,7 +153,8 @@ static_assert(offsetof(BlockCell, cellClass) == kClassFieldOffset,
 using CellClassReader = std::uint32_t (*)(const void *context, std::uint32_t cell);
 
 // The recovered walk. Every quantity is an ADDRESS or a COUNT, never a host pointer, so the same
-// function serves the owner and the test.
+// function serves the owner and the test. `request` below is the WHOLE word: the shift at 0x80015978
+// selects a bucket and never reaches the comparison at 0x8001599C.
 struct CellSearch {
   std::uint32_t foundCell;   // the cell whose class matched; meaningless when `leftMainRam` is set
   std::uint32_t cellsWalked; // cells examined; the denominator a reader needs to judge a walk
@@ -155,7 +172,7 @@ struct CellSearch {
 // for the low addresses that ARE mapped on this machine, and would call a merely-wrong pointer
 // "uninitialised", which is the specific misreading this owner exists to avoid.
 [[nodiscard]] CellSearch
-searchCells(const void *context, const CellClassReader &read, std::uint32_t firstCell, std::uint32_t classKey) noexcept;
+searchCells(const void *context, const CellClassReader &read, std::uint32_t firstCell, std::uint32_t request) noexcept;
 
 // Main RAM is 0x80000000..0x801FFFFF on this machine: 2 MiB, mirrored through KSEG0 and KSEG1. A
 // pool cell lives there, so this is the one range test that says whether a published cell pointer can
@@ -164,13 +181,13 @@ searchCells(const void *context, const CellClassReader &read, std::uint32_t firs
   return (address & 0xFFE00000u) == 0x80000000u;
 }
 
-// The bucket index is `classKey & 0x3FC` BYTES into a table whose entries are one word each, so a
-// class key that is not a multiple of 4 would address a cell pointer a quarter of the way into a
-// word. The recovered function does not care — it is a byte add and a load — but the PSX `lw` does, so
-// the engine can only ever call it with a key that is a multiple of 4. That is a property of the six
-// CALLERS, established here because it constrains what the request word may be.
-[[nodiscard]] constexpr bool isWordAlignedClassKey(std::uint32_t classKey) noexcept {
-  return (classKey & 0x3u) == 0u;
+// The bucket index is `((request >> 13) & 0x3FC)` BYTES into a table whose entries are one word each,
+// so a shifted key that is not a multiple of 4 would address a cell pointer a quarter of the way into
+// a word. The recovered function does not care — it is a byte add and a load — but the PSX `lw` does,
+// so the engine can only ever call it with a request whose bits 13 and up form a multiple of 4. That
+// is a property of the six CALLERS, established here because it constrains what the request may be.
+[[nodiscard]] constexpr bool isWordAlignedClassKey(std::uint32_t request) noexcept {
+  return ((request >> kClassShift) & 0x3u) == 0u;
 }
 
 // This title's owner. It records what each lookup saw, so a run can say WHICH condition was false
@@ -230,6 +247,17 @@ public:
     return firstCaller_;
   }
 
+  // Whether this run has already reported its first lookup and its first served cell. A run needs to
+  // say "1 of N found a cell" and NOT only "0 left main RAM": the second is a count of failures with
+  // no denominator beside it, and "no errors appeared in this log" is exactly the sentence that
+  // reads as a pass when nothing ran at all.
+  [[nodiscard]] bool reportedFirstLookup() const {
+    return reportedFirstLookup_;
+  }
+  [[nodiscard]] bool reportedFirstFound() const {
+    return reportedFirstFound_;
+  }
+
   // The recovered lookup, executed against guest memory. This is the whole of the override.
   [[nodiscard]] std::uint32_t findCell(Core &core, std::uint32_t request);
 
@@ -248,6 +276,8 @@ private:
   std::int32_t lastPoolBaseDistance_{};
   std::uint32_t maxCellsWalked_{};
   std::uint32_t firstCaller_{};
+  bool reportedFirstLookup_{};
+  bool reportedFirstFound_{};
   std::uint64_t lookups_{};
   std::uint64_t found_{};
   std::uint64_t leftMainRam_{};

@@ -83,6 +83,12 @@ Missing capability: live tracing grounds `GfxUpdateMatrices 0x80017A14` and
 native render queue, or native ordering/depth owner exists. Compatibility presentation and guest
 primitive records do not satisfy this capability.
 
+Correction to this entry, measured 2026-09-28 (issue 0021): it read as though the guest submitted
+nothing. It does — **238,624 primitives over 400 frames** on the disc-backed run, measured with
+`PSXPORT_PRIMDUMP` and a 238,624-row CSV. The `OtAttr spans recorded 0` line that produced the claim is
+a dead tap for a typed `GameRuntime` with no declared packet-pool window. The capability above is still
+missing, but it is missing because no **native** producer exists, not because the guest leg is empty.
+
 ### S006 — widescreen
 
 **Crash 1: partial. Crash 2 and Crash 3: missing.** The owner exists and is gated; the live wide-leg
@@ -262,17 +268,54 @@ leaf's own entry, and any other address. **After that correction the run complet
 translated blocks, 1,689,262 executed blocks, 26,457,241 executed instructions, **0 fallback blocks**,
 and the CD read the disc (104 hunk lookups, 85 hits).
 
-**STILL NO FRAME, and this is the honest bottom line.** The end-of-run line is
-`[producers] run-end: OtAttr spans recorded 0 (overflow 0)`: the guest reaches its display wait and
-submits **no primitives at all**, so there is nothing to draw. **Zero frames are presented and no drawn
-aspect is claimed**; every `[wide]` line reads `render_width == native_width`. Why it submits nothing
-is NOT established — the pool owner reports five unservable classes on the disc-backed leg, all from
-`FUN_80015118`, but the pool's initialiser at `0x80012F10` has not been recovered and the request
-word's unit is unknown.
+**STILL NO PICTURE, and this is the honest bottom line.** The end-of-run line is
+`[producers] run-end: OtAttr spans recorded 0 (overflow 0)`. **That line is a DEAD TAP for this title
+and the premise it encodes was false** (issue 0021). The guest is not silent: with the framework's own
+GP0 packet dump on the same binary, same disc, 400 frames, it submits **238,624 primitives** —
+210,144 `0x7C` sprites, 28,436 `0x30` Gouraud polygons, 44 `0x2A` textured Gouraud polygons, 1 on frame
+1 and ~900 per frame by frame 355. `OtAttr` attributes guest stores by asking `RenderNoiseMask` for the
+game's packet-pool window, which comes from `LegacyGameConfig::packetPoolBase/Stride`; **Crash 1 is a
+typed `GameRuntime` and declares neither**, so the mask is empty for every store and the count is 0 by
+construction. The framework says so itself at `psxport/runtime/psx/ot_attr.cpp:110-121` — "an empty span
+table means 'not measured', NOT 'the guest submitted nothing'" — but that warning is unreachable from
+this path, so `runtime/psx/native_boot.cpp:286` prints a bare `0` with no caveat. **Whether frames are
+PRESENTED was a separate question, and it is answered (issue 0022): they are.** One disc-backed
+400-frame run presents frames whose pixels are 35.7% non-black at fence 400 (512x240) — 6 of 6
+captured presented frames carry a picture, the UIS copyright screen at fence 205 and a lit 3D scene at
+fence 400 — measured by `tools/probe_crash1_primitives.py` in the SAME process that printed
+`OtAttr spans recorded 0`. **No drawn aspect is still claimed**; every `[wide]` line reads
+`render_width == native_width` on the 4:3 leg, and nothing above is a parity or gameplay claim.
 
-Gap: measure one run WITH the user's disc, then resolve issue 0012's downstream pad consumption, then
-prove representative gameplay, deterministic oracle/device comparison, invalidation controls, and
-released-host qualification.
+**THE CAUSE WAS A FAULT IN THE POOL OWNER, and it is corrected** (issue 0021).
+`crash1_block_pool.h` recovered the lookup at `0x80015978` as comparing each cell's class field
+against `request >> 13`, from the entry `srl $v0,$a0,13`. The image says the class is the request
+WHOLE: `0x8001599C` `beq $2,$4` and `0x800159B0` `bne $2,$4` compare against `$a0`, which nothing
+between the entry and them redefines; the bounded sibling at `0x800159E8` does the same; and the
+pool's own allocate path writes and compares the unshifted word (`0x80012FFC`), and stores the word it
+is about to look up in the delay slot at `0x80013140`. So the owner could never match a cell the engine
+wrote: every lookup ran off the end of main RAM and returned a cell at `0x80200000`. Controlled pair,
+same binary, same disc, 400 frames — **unservable classes 5 → 0**, executed blocks 1,689,262 → 3,461,249,
+executed instructions 26,457,241 → 46,438,388, `fallback_blocks` 0 in both.
+`tools/probe_crash1_block_pool.py` now decodes the register operands of all three comparisons and fails
+unless each is `$a0`, and its selftest requires one decoder to accept a whole-word fixture and reject a
+shifted-key fixture (12 of 12 cases). A prior claim in the same header — that the engine "can only ever"
+pass a word-aligned key — is **falsified**: 3 of the 4 live requests index unaligned buckets (700, 8,
+660, 156).
+
+**`0x80012F10` is recovered** as the pool's node allocate path, not an "initialiser" and not data: 259
+words, `0x80012F10..0x8001331C`, sha256 `217a4cd9…30dce`, two `jal` call sites, a 44-byte node table at
+`0x8005C554` with its cursor at `0x8005CFAC`, a five-way kind dispatch, the bucket/class rule above, a
+cell link, the `+0x0A` live counter, and a 28-byte-stride per-type callback table at `0x800514EC`. It is
+`titles/crash1/core/crash1_pool_node.{h,cpp}` — a readable model over an injected memory seam, gated by
+`tools/probe_crash1_pool_node.py` (12 of 12) and `tests/crash1_pool_node.cpp` — and it is **not**
+installed as a native override, because nothing yet measures the guest reaching it: every lookup in the
+disc-backed run came from `ra = 0x80015164` (`FUN_80015118`), never from `0x80013140`.
+
+Gap: the pool owner reports `1-of-1 found a cell, 0-of-1 left main RAM` on its first lookup and every
+later walk that leaves main RAM, but the run's TOTAL `lookups/found/leftMainRam` is never printed, so
+the denominators grow with the run instead of closing on it. Resolve issue
+0012's downstream pad consumption, then prove representative gameplay, deterministic oracle/device
+comparison, invalidation controls, and released-host qualification.
 
 ### S012 — Linux x86-64 host qualification
 

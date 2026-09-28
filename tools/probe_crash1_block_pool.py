@@ -246,6 +246,91 @@ def decode_lui_pool_global(image: Image, address: int) -> int:
     return (base + signed_immediate(image.word_at(address))) & 0xFFFFFFFF
 
 
+# ── A2: WHAT the class field is compared against, and what the shift is for ─────────────────────────
+#
+# THE THING THIS SECTION EXISTS FOR. `0x80015978` is `srl v0,a0,13`, which reads like "the class is
+# the request shifted down 13", and the shipped owner was written that way. It is not what the image
+# says. The class a cell carries is compared against register `$a0` — the request, WHOLE — and the
+# shifted value is dead one instruction after the bucket address is formed. A static reading of the
+# shift alone produced a lookup that could never match a cell the engine itself wrote, so its walk
+# never ended and it handed every caller a cell at the top of main RAM. That is not a subtle
+# regression: it was the measured cause of the product presenting nothing, and it survived a
+# self-test because the self-test was written from the same misreading.
+#
+# So the check below is on the BRANCH words, not on a comment: it reads the register operands of
+# every class comparison in the image and requires all of them to be the argument register, and it
+# requires the argument register to be UNREDEFINED between the entry and each comparison. Change the
+# owner back to searching for the shifted key and this still passes — the owner is not what is being
+# checked — but change the RECOVERY and this goes red, which is the direction that matters.
+OP_BEQ = 0x04
+OP_BNE = 0x05
+REG_A0 = 4
+REG_V0 = 2
+# (branch, what the branch is, the `lw` that produced the class field, the function entry)
+CLASS_COMPARISONS = (
+    (0x8001599C, "the lookup's first-cell test", 0x80015994, 0x80015978),
+    (0x800159B0, "the lookup's back edge", 0x800159A8, 0x80015978),
+    (0x800159E8, "the bounded sibling's first-cell test", 0x800159E0, 0x800159C4),
+)
+
+
+def decode_class_comparison(image: Image, branch: int, class_load: int) -> tuple[int, int]:
+    """(class field register, register the class is compared against) for one branch.
+
+    MIPS register fields, which this repo's other decoders already use: for a branch, `rs` is
+    bits 25-21 and `rt` is bits 20-16, and `beq` compares the two, so either order reads the same.
+    For the `lw` that produced the class field, the DESTINATION is `rt` (bits 20-16), not `rs` — a
+    loader that read `rs` here would be reading the cell pointer and would report the wrong register.
+    """
+    word = image.word_at(branch)
+    if opcode(word) not in (OP_BEQ, OP_BNE):
+        raise Refused(f"0x{branch:08X} is not a beq/bne, so it is not a class comparison")
+    # For a BRANCH the two operands are `rs` (bits 25-21) and `rt` (bits 20-16) and neither is a
+    # destination, so bits 15-11 are the high half of the displacement and must not be read.
+    compared, against, _ = registers(word)
+    load = image.word_at(class_load)
+    if opcode(load) != OP_LW:
+        raise Refused(f"0x{class_load:08X} is not the `lw` that produced the class field")
+    return registers(load)[1], against
+
+
+def decode_bucket_shift(image: Image, entry: int) -> tuple[int, int]:
+    """(source register, destination register) of the `srl` that builds the bucket index.
+
+    `srl rd,rt,sa` puts rt in bits 20-16 and rd in bits 15-11, so the SOURCE is `rt` and the
+    DESTINATION is `rd`. Reading the other way round would report the shift as consuming whatever
+    register it produced, which happens to be a plausible-looking sentence and is the wrong one.
+    """
+    word = image.word_at(entry)
+    if opcode(word) != 0x00 or special_funct(word) != FUNCT_SRL:
+        raise Refused(f"0x{entry:08X} is not an `srl`, so it is not the bucket-index shift")
+    return registers(word)[1], registers(word)[2]
+
+
+# Every opcode that WRITES a register, so the check below can ask "was $a0 touched?" from the words
+# instead of from a reading of the function. SPECIAL writes `rd` (bits 15-11); the rest write `rt`.
+# The branches are DELIBERATELY ABSENT: `beq`/`bne`/`blez`/`bgez` put their second operand in `rt`
+# and write nothing, and treating `rt` as a destination there invents a write of `$a0` that the
+# image does not contain — which is the kind of confident wrong answer this tool exists to stop.
+_WRITING_OPCODES = frozenset(
+    {0x02, 0x03, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0F,
+     0x20, 0x21, 0x23, 0x24, 0x25, 0x28, 0x29, 0x2B}
+)
+
+
+def redefined_registers(image: Image, entry: int, stop: int) -> set[int]:
+    """Registers written in [entry, stop), decoded from the words rather than asserted from a comment."""
+    written: set[int] = set()
+    for address in range(entry, stop, 4):
+        word = image.word_at(address)
+        op = opcode(word)
+        if op == 0x00:
+            written.add(registers(word)[2])
+        elif op in _WRITING_OPCODES:
+            written.add(registers(word)[1])
+    return written
+
+
 # ── B: the call sites, with the word scan as the denominator ─────────────────────────────────────
 
 def call_sites(image: Image, target: int) -> list[int]:
@@ -376,10 +461,52 @@ def check(image: Image, manifest: dict[str, object]) -> list[str]:
                 f"0x{recorded:X}"
             )
     print(
-        "[decode] find_cell: class shift {}, bucket mask 0x{:X}, cell stride {}, class field +{}"
+        "[decode] find_cell: bucket-index shift {}, bucket mask 0x{:X}, cell stride {}, class field +{}"
         .format(decoded["class_shift"], int(decoded["bucket_index_mask"]), decoded["cell_stride"],
                 decoded["class_field_offset"])
     )
+
+    # WHAT THE CLASS IS COMPARED AGAINST, read out of the branch words. See the note on
+    # `decode_class_comparison`: this is the check that the shipped owner was wrong about.
+    for branch, description, class_load, function_entry in CLASS_COMPARISONS:
+        field_reg, against = decode_class_comparison(image, branch, class_load)
+        shift_source, shift_dest = decode_bucket_shift(image, function_entry)
+        print(
+            "[compare] 0x{:08X} ({}): the class field in ${} is compared against ${}; the "
+            "bucket-index `srl` consumed ${}".format(
+                branch,
+                description,
+                REG_NAMES[field_reg],
+                REG_NAMES[against],
+                REG_NAMES[shift_source],
+            )
+        )
+        if against != REG_A0:
+            failures.append(
+                f"0x{branch:08X} ({description}) compares the class field against "
+                f"${REG_NAMES[against]}, not against $a0: the class is the request WHOLE, and an "
+                "owner that searches for the shifted key can never match a cell the engine wrote"
+            )
+        if field_reg != REG_V0:
+            failures.append(
+                f"0x{branch:08X} ({description}) tests ${REG_NAMES[field_reg]}, not $v0; the "
+                "recovery describes the `lw $v0,4($cell)` result"
+            )
+        if shift_source != REG_A0 or shift_dest != REG_V0:
+            failures.append(
+                f"0x{function_entry:08X} shifts ${REG_NAMES[shift_source]} into "
+                f"${REG_NAMES[shift_dest]}; the recovery describes `srl $v0,$a0,13`"
+            )
+        # The shift exists to index the bucket, so the register the request is compared against must
+        # survive untouched from the entry into the compare. This is the check that would fire if a
+        # future reader concluded the class is something derived rather than the argument itself.
+        overwritten = redefined_registers(image, function_entry, branch)
+        if REG_A0 in overwritten:
+            failures.append(
+                f"0x{branch:08X} compares against $a0, but $a0 is REDEFINED between "
+                f"0x{function_entry:08X} and it ({sorted(REG_NAMES[r] for r in overwritten)} are "
+                "written); the class is then something other than the request"
+            )
 
     # The pool global is named by a `lui`+`lw` PAIR, never by a literal, so the pair is what has to
     # be found: a scan for the 16-bit displacement alone would match unrelated code and a scan for
@@ -571,6 +698,54 @@ def selftest() -> list[str]:
         )
     else:
         fired.append("an empty image answers 0 call sites over a stated 0-word denominator")
+
+    # THE CLASS-COMPARISON CHECK HAS TO BE ABLE TO GO RED, and "it passed on the real image" is not
+    # evidence of that. So the two candidate models are built as synthetic word tables and the same
+    # decoder that accepted the image must reject the shifted one. This is the case the shipped owner
+    # was written from, and it is the case a self-test written from the same misreading agreed with.
+    for name, against in (("whole request", REG_A0), ("shifted key", 2)):
+        words = {}
+        for index, address in enumerate(range(0x80015978, 0x800159C4, 4)):
+            words[address] = 0x00000000
+        words[0x80015978] = 0x00041342  # srl $v0,$a0,13
+        words[0x8001597C] = 0x3C068006  # lui $v1,0x8006
+        words[0x80015980] = 0x8E63C530  # lw $v1,-0x3AD0($v1)
+        words[0x80015984] = 0x304203FC  # andi $v0,$v0,0x03FC
+        words[0x80015988] = 0x00422021  # addu $v0,$v0,$v1
+        words[0x8001598C] = 0x8C430000  # lw $v1,0($v0)
+        words[0x80015994] = 0x8C620004  # lw $v0,4($v1)
+        words[0x8001599C] = (OP_BEQ << 26) | (2 << 21) | (against << 16) | (0x00015A18 >> 2 & 0xFFFF)
+        words[0x800159A4] = 0x24630008
+        words[0x800159A8] = 0x8C620004
+        words[0x800159B0] = (OP_BNE << 26) | (2 << 21) | (against << 16)
+        synthetic = Image(
+            words=tuple(words.get(0x80015978 + 4 * i, 0) for i in range((0x800159C4 - 0x80015978) // 4)),
+            load=0x80015978,
+            text_end=0x800159C4,
+            data=bytes((0x800159C4 - 0x80015978)),
+            path=pathlib.Path("<selftest:pool-lookup>"),
+        )
+        field_reg, seen = decode_class_comparison(synthetic, 0x8001599C, 0x80015994)
+        if field_reg != REG_V0:
+            missing.append(f"MISSING: the synthetic {name} fixture decoded a class field of ${field_reg}")
+        elif (seen == REG_A0) != (against == REG_A0):
+            missing.append(
+                f"MISSING: the synthetic {name} fixture decoded the comparison register as ${seen}"
+            )
+        else:
+            fired.append(
+                f"the class-comparison decoder accepts the {name} fixture and reads the comparison "
+                f"register as ${REG_NAMES[seen]}"
+            )
+    expect_refusal(
+        "refuses a word it calls a class comparison but which is not a branch",
+        lambda: decode_class_comparison(
+            Image(words=(0, 0, 0x8C620004, 0x24630008), load=0, text_end=16,
+                  data=bytes(16), path=pathlib.Path("<selftest>")),
+            0x8001599C,
+            0x80015994,
+        ),
+    )
 
     return missing + fired
 

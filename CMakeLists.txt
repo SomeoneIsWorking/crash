@@ -137,6 +137,7 @@ add_library(
   "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/core/crash1_frame_driver.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/core/crash1_gpu_watchdog.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/core/crash1_horizontal_bound.cpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/core/crash1_pool_node.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/core/crash1_widescreen.cpp"
 )
 target_include_directories(crash1_runtime PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/core")
@@ -263,6 +264,14 @@ if(BUILD_TESTING)
   target_compile_features(crash1_block_pool_test PRIVATE cxx_std_20)
   target_link_libraries(crash1_block_pool_test PRIVATE crash1_runtime)
   add_test(NAME crash1_block_pool COMMAND crash1_block_pool_test)
+  # The pool's own ALLOCATE PATH, recovered from 0x80012F10. Split from the lookup's test for the same
+  # reason the probes are split: they are two independent readings of two different functions, and a
+  # shared test file would let one of them be wrong in a place that does not own it.
+  add_executable(crash1_pool_node_test
+                 "${CMAKE_CURRENT_SOURCE_DIR}/tests/crash1_pool_node.cpp")
+  target_compile_features(crash1_pool_node_test PRIVATE cxx_std_20)
+  target_link_libraries(crash1_pool_node_test PRIVATE crash1_runtime)
+  add_test(NAME crash1_pool_node COMMAND crash1_pool_node_test)
 
   add_executable(crash1_boot_frontier_test
                  "${CMAKE_CURRENT_SOURCE_DIR}/tests/crash1_boot_frontier.cpp")
@@ -442,6 +451,44 @@ if(BUILD_TESTING)
       "${CMAKE_CURRENT_SOURCE_DIR}/tools/probe_crash1_block_pool.py" --selftest-only
   )
   set_tests_properties(crash1_block_pool_selftest
+                       PROPERTIES ENVIRONMENT "PYTHONDONTWRITEBYTECODE=1")
+  # The allocate path's census, the same split again. It re-derives the function's extent and body
+  # digest, its six `lui`+access global pairs, both strides (by SIMULATING the multiply-out rather
+  # than by asserting 44 and 28), the five-way dispatch, the three published state words, the class
+  # rule, and the call-then-store pair at 0x8001313C/0x80013140 — and diffs
+  # titles/crash1/core/crash1_pool_node.h against titles/crash1/executable.json.
+  add_custom_target(
+    crash1_pool_node_census
+    COMMAND
+      "${Python3_EXECUTABLE}" -B
+      "${CMAKE_CURRENT_SOURCE_DIR}/tools/probe_crash1_pool_node.py" --title crash1
+      --executable "${crash1_exe}"
+    COMMENT
+      "Re-derive Crash 1's pool allocate path 0x80012F10 from the authenticated executable and diff the recovered owner's constants against the manifest"
+    USES_TERMINAL
+    VERBATIM
+  )
+  add_test(
+    NAME crash1_pool_node_selftest
+    COMMAND
+      "${Python3_EXECUTABLE}" -B
+      "${CMAKE_CURRENT_SOURCE_DIR}/tools/probe_crash1_pool_node.py" --selftest-only
+  )
+  set_tests_properties(crash1_pool_node_selftest
+                       PROPERTIES ENVIRONMENT "PYTHONDONTWRITEBYTECODE=1")
+  # What the guest ACTUALLY submits and whether a frame is ACTUALLY presented, in one process. This
+  # exists because `[producers] run-end: OtAttr spans recorded 0` was read as "the guest submits
+  # nothing" and as "zero frames are presented", and BOTH readings are false: the span counter's window
+  # is the legacy GameConfig packet pool, which a typed GameRuntime never fills, so it reads 0 by
+  # construction. The selftest half needs no disc, no GPU and no product, so it is a ctest; the leg
+  # needs the operator's disc on the command line, so it is a maintainer run that REFUSES without one.
+  add_test(
+    NAME crash1_primitives_selftest
+    COMMAND
+      "${Python3_EXECUTABLE}" -B
+      "${CMAKE_CURRENT_SOURCE_DIR}/tools/probe_crash1_primitives.py" --selftest-only
+  )
+  set_tests_properties(crash1_primitives_selftest
                        PROPERTIES ENVIRONMENT "PYTHONDONTWRITEBYTECODE=1")
   # The 4:3-vs-16:9 receipt logic, and specifically its REFUSAL matcher. The selftest half is a ctest
   # test because it needs no disc, no GPU and no product; the pair itself is a maintainer run.

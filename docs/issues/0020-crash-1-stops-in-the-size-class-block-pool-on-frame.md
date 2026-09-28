@@ -1,6 +1,6 @@
 ---
 id: 20
-title: Crash 1's stop was a FAULT in the size-class block pool; the title now runs to its display wait and presents 0 frames
+title: Crash 1's stop was a FAULT in the size-class block pool; the title now runs to its display wait and submits primitives (the "0 primitives" reading is superseded by issue 0022)
 status: investigating
 symptom: the product left guest execution at 0x800159A8 on frame 0 after 8,177,050 guest cycles, and every widescreen leg on record had also run with the CD model reporting no media
 state_items: S006,S011
@@ -138,13 +138,22 @@ blocks, 26,457,241 executed instructions, **0 fallback blocks**, and the CD read
 
 ## Why there is still no frame, plainly
 
-**Zero frames are presented, and no drawn aspect is claimed.** The end-of-run line says it directly:
+**SUPERSEDED 2026-09-28 by issue 0022. Both halves of this section were read off one dead counter,
+and the guest is not silent.** The original text here read:
 
-    [producers] run-end: OtAttr spans recorded 0 (overflow 0) — the guest leg's feed
+> **Zero frames are presented, and no drawn aspect is claimed.** The end-of-run line says it
+> directly: `[producers] run-end: OtAttr spans recorded 0 (overflow 0)`. The guest reaches its measured
+> display wait and then submits **no primitives at all**, so there is nothing to draw. Every `[wide]`
+> line reads `render_width == native_width`. The title runs; it does not show a picture.
 
-The guest reaches its measured display wait and then submits **no primitives at all**, so there is
-nothing to draw. Every `[wide]` line reads `render_width == native_width`. The title runs; it does not
-show a picture.
+`OtAttr` counts a guest store only inside the legacy `GameConfig` packet-pool window, which a typed
+`GameRuntime` never fills, so for Crash 1 it reads 0 **by construction**. Measured in the same process
+that printed it (`tools/probe_crash1_primitives.py --disc "$DISC" --frames 400`): **239,549 guest GP0
+primitives over 400 frames**, 1..925 per frame, and **6 of 6 captured presented frames carry a
+picture** — 35.7% non-black at 512x240, the UIS copyright screen at fence 205 and a lit 3D scene at
+fence 400. What survives from this section is only the second half: **every `[wide]` line still reads
+`render_width == native_width`, so no drawn ASPECT is claimed.** What does not survive is "no
+primitives" and "no picture".
 
 ## A second instrument defect, found on the way, and fixed rather than published
 
@@ -169,19 +178,20 @@ that was broken.
 
 ## Not established, stated so it is not read as a result
 
-- **Any frame count or drawn aspect for Crash 1.** Zero frames are presented and `OtAttr spans recorded
-  0` is the reason. No widening claim of any kind is made from these runs.
-- **Why the guest submits no primitives.** The run reaches GpuUpdate's display wait and stops
-  submitting. The owner reports five unservable classes on the disc-backed leg and two on the
-  media-less leg, all from `FUN_80015118`, so the engine is asking for cells the pool does not hold.
-  Whether that is the whole cause or a symptom of an earlier uninitialised structure is NOT
-  established: nothing here measured the pool's initialiser (`0x80012F10` reads the same `0x8005C530`
-  at `0x80012FC4`) or what should have filled it.
-- **The unit of the request word.** The lookup compares each cell's second word against
-  `request >> 13`, and the callers do not pass a uniform byte count — `0x80015118` passes a tagged
-  handle read out of a struct at `lw a0,0(s0)`. The measured requests are `0x0057CCFB`, `0x15814CE7`,
-  `0x5452D94D`, `0x4E938CCD`; none is a plausible byte count, which is consistent with a handle and
-  does not establish it.
+- **Any drawn aspect for Crash 1.** The product DOES present a picture (issue 0022) and every `[wide]`
+  line still reads `render_width == native_width`, so no widening claim of any kind is made from these
+  runs. A 4:3 picture is not a widescreen leg, and 35.7% non-black pixels is a picture, not a parity
+  result.
+- **Why the pool owner reported unservable classes.** The run reaches GpuUpdate's display wait. The
+  owner reported five unservable classes on the disc-backed leg and two on the media-less leg, all from
+  `FUN_80015118`, and that turned out to be a defect in the OWNER's class rule rather than in the
+  engine (issue 0021: it compared each cell against `request >> 13` where the image compares the whole
+  request word). Nothing in this issue is a measurement of the pool's allocate path at `0x80012F10`.
+- **The unit of the request word.** The lookup compares each cell's second word against the request
+  word WHOLE (issue 0021 corrected `request >> 13` here), and the callers do not pass a uniform byte
+  count — `0x80015118` passes a tagged handle read out of a struct at `lw a0,0(s0)`. The measured
+  requests are `0x0057CCFB`, `0x15814CE7`, `0x5452D94D`, `0x4E938CCD`; none is a plausible byte count,
+  which is consistent with a handle and does not establish it.
 - **That a `jal` census is the whole call graph.** One class per bucket is this implementation's
   reading of a linear 8-byte-stride walk. A switch-table or function-pointer route would not appear in
   a `jal` census, and none was looked for.
@@ -189,12 +199,17 @@ that was broken.
 ## Proper next step
 
 1. **Own the pool's initialiser.** `0x80012F10` reads the same bucket table at `0x80012FC4` and is the
-   allocate path. On the disc-backed leg the table IS built (576 live cells, correctly based), so the
-   question is why the cells' class fields do not cover the classes asked for. Read the cell write at
-   `0x80013020` (`sw a1,0(s3)`) against the class the lookup compares and name the mismatch.
-2. **Recover the primitive submission path** and report how many prims reach the ordering table, with
-   the denominator the producers line already carries. `0` of `N` is the number to beat, and `N` has
-   to be stated.
-3. Nothing in the framework needs changing for the pool or the boundary. If a *framework* segment
-   boundary turns out to be wrong, name the file and the seam then; do not raise a cycle budget to
-   make a run pass.
+   allocate path. It is now a readable, tested MODEL — `titles/crash1/core/crash1_pool_node.{h,cpp}`,
+   gated by `tools/probe_crash1_pool_node.py` — and is deliberately **not** installed as a native
+   override, because nothing yet establishes that the guest REACHES it. The next step is therefore a
+   reachability measurement, not a transcription: does any `jal 0x80012F10` fire in a disc-backed run?
+2. **DONE, and recorded in issue 0022 rather than here.** The primitive submission path is measured:
+   **239,549 guest GP0 primitives over 400 frames**, 1..925 per frame, and 6 of 6 captured presented
+   frames carry a picture. `tools/probe_crash1_primitives.py` prints the `OtAttr` line and labels it
+   NOT USED, because that counter's window is the legacy `GameConfig` packet pool and a typed
+   `GameRuntime` never fills it.
+3. Nothing in the pool or the frame boundary needs changing. One thing in the FRAMEWORK does, and it
+   is named there rather than worked around: `OtAttr::poolRangeMiss` runs only under
+   `c->cfg != mPoolCfg` with `mPoolCfg` initialised to `nullptr`, so a null-config title never
+   resolves its window and never reaches the framework's own "not measured" warning. Do not raise a
+   cycle budget to make a run pass.

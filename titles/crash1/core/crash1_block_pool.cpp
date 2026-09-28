@@ -27,11 +27,15 @@ void findCellOverride(Core *core) {
 
 } // namespace
 
-CellSearch searchCells(const void *context,
-                       const CellClassReader &read,
-                       std::uint32_t firstCell,
-                       std::uint32_t classKey) noexcept {
+CellSearch
+searchCells(const void *context, const CellClassReader &read, std::uint32_t firstCell, std::uint32_t request) noexcept {
   CellSearch search{firstCell, 0u, false};
+  // THE CLASS IS `request`, THE WHOLE WORD. `beq $2,$4` at 0x8001599C and `bne $2,$4` at 0x800159B0
+  // both compare the cell's class field against register `$a0`, and nothing between the entry and
+  // those branches redefines `$a0`. The `srl` at 0x80015978 exists only to index the bucket table and
+  // its result is dead after 0x80015988. An owner that searched for the SHIFTED key here can never
+  // match a cell the engine wrote, which is exactly what happened: every lookup ran off the end of
+  // main RAM and handed the caller a cell at 0x80200000.
   // The FIRST cell is tested at 0x80015994 with no check at all, and that unchecked read is exactly
   // the fault this run took: the guest published 0x00800000, the read at 0x80015994 plus 4 is
   // `0x00800004`, and the framework's memory model does not map it. So the first cell needs the same
@@ -42,7 +46,7 @@ CellSearch searchCells(const void *context,
     search.leftMainRam = true;
     return search;
   }
-  if (read(context, firstCell) == classKey) {
+  if (read(context, firstCell) == request) {
     return search;
   }
   for (std::uint32_t cell = firstCell + kCellStride;; cell += kCellStride) {
@@ -56,7 +60,7 @@ CellSearch searchCells(const void *context,
       search.leftMainRam = true;
       return search;
     }
-    if (read(context, cell) == classKey) {
+    if (read(context, cell) == request) {
       search.foundCell = cell;
       return search;
     }
@@ -68,9 +72,12 @@ std::uint32_t Crash1BlockPool::findCell(Core &core, std::uint32_t request) {
     firstCaller_ = core.r[31];
   }
 
-  // 0x80015978..0x80015988: the class key, and the bucket this class lives in. The index is a BYTE
-  // offset into the table rather than an element index, which is why the mask is 0x3FC and not 0xFF.
-  const std::uint32_t classKey = request >> kClassShift;
+  // 0x80015978..0x80015988: the BUCKET this request's class lives in, and nothing else. The shift's
+  // result is consumed by the `andi`/`addu` and is dead by 0x8001598C; the class the walk compares is
+  // `request` itself, so `classKey` here names the bucket selector and NOT the class. The index is a
+  // BYTE offset into the table rather than an element index, which is why the mask is 0x3FC and not
+  // 0xFF.
+  const std::uint32_t classKey = (request >> kClassShift) & kBucketIndexMask;
   const std::uint32_t bucketTable = core.mem_r32(kBucketTablePointer);
   ++lookups_;
   lastRequest_ = request;
@@ -80,11 +87,11 @@ std::uint32_t Crash1BlockPool::findCell(Core &core, std::uint32_t request) {
   lastLiveCellCount_ = core.mem_r32(core.mem_r32(kCellCountBlockPointer) + kCellCountOffset);
 
   // 0x8001598C: the bucket's first cell.
-  const std::uint32_t firstCell = core.mem_r32(bucketTable + (classKey & kBucketIndexMask));
+  const std::uint32_t firstCell = core.mem_r32(bucketTable + classKey);
   lastFirstCell_ = firstCell;
   lastCellsWalked_ = 0u;
 
-  const CellSearch search = searchCells(&core, readGuestCellClass, firstCell, classKey);
+  const CellSearch search = searchCells(&core, readGuestCellClass, firstCell, request);
   lastCellsWalked_ = search.cellsWalked;
   if (search.cellsWalked > maxCellsWalked_) {
     maxCellsWalked_ = search.cellsWalked;
@@ -95,19 +102,17 @@ std::uint32_t Crash1BlockPool::findCell(Core &core, std::uint32_t request) {
 
   if (search.leftMainRam) {
     ++leftMainRam_;
-    // Reported on the transition rather than on every call: this is a state change, and the
-    // denominator is right here in the line so the count is never a bare number.
     lucent::error("crash1-pool",
-                  "SCUS-949.00 block pool: the walk for class {} left main RAM at 0x{:08X} after {} "
-                  "cell(s) from first cell 0x{:08X}; the guest asked 0x{:08X}, the bucket table is "
-                  "0x{:08X}, the engine's own base 0x{:08X} is {} cell(s) away and it publishes {} "
-                  "live cell(s) — across {} lookups served, {} found a cell, {} left main RAM, first "
-                  "caller 0x{:08X}",
+                  "SCUS-949.00 block pool: the walk for the class of request 0x{:08X} (bucket byte "
+                  "offset {}) left main RAM at 0x{:08X} after {} cell(s) from first cell 0x{:08X}; the "
+                  "bucket table is 0x{:08X}, the engine's own base 0x{:08X} is {} cell(s) away and it "
+                  "publishes {} live cell(s) — across {} lookups served, {} found a cell, {} left main "
+                  "RAM, first caller 0x{:08X}",
+                  request,
                   classKey,
                   search.foundCell,
                   search.cellsWalked,
                   firstCell,
-                  request,
                   bucketTable,
                   lastPoolBase_,
                   lastPoolBaseDistance_,
@@ -118,7 +123,44 @@ std::uint32_t Crash1BlockPool::findCell(Core &core, std::uint32_t request) {
                   firstCaller_);
     return search.foundCell;
   }
+  if (!reportedFirstLookup_) {
+    reportedFirstLookup_ = true;
+    // The first lookup of the run, whatever its outcome, so a log that goes on to print no pool error
+    // at all can still be told apart from a run in which the owner was never reached.
+    lucent::info("crash1-pool",
+                 "SCUS-949.00 block pool: the first lookup of this run — request 0x{:08X} (bucket "
+                 "byte offset {}), bucket table 0x{:08X}, first cell 0x{:08X}, engine base 0x{:08X} "
+                 "publishing {} live cell(s); 1 of 1 lookups served so far, caller 0x{:08X}",
+                 request,
+                 classKey,
+                 bucketTable,
+                 firstCell,
+                 lastPoolBase_,
+                 lastLiveCellCount_,
+                 firstCaller_);
+  }
   ++found_;
+  if (!reportedFirstFound_) {
+    reportedFirstFound_ = true;
+    // The FIRST cell the walk actually served, with the run's live denominators beside it. Without
+    // this line a healthy run is silent, and "no pool error appeared" is indistinguishable from
+    // "the owner never ran" — which is the same dead-instrument failure the `OtAttr` span count is.
+    lucent::info("crash1-pool",
+                 "SCUS-949.00 block pool: the first lookup that found a cell — request 0x{:08X} "
+                 "(bucket byte offset {}), cell 0x{:08X} after {} cell(s) walked, first cell of the "
+                 "bucket 0x{:08X}; {}-of-{} lookups served have found a cell, {}-of-{} left main RAM, "
+                 "caller 0x{:08X}",
+                 request,
+                 classKey,
+                 search.foundCell,
+                 search.cellsWalked,
+                 firstCell,
+                 found_,
+                 lookups_,
+                 leftMainRam_,
+                 lookups_,
+                 firstCaller_);
+  }
   return search.foundCell;
 }
 
