@@ -119,6 +119,47 @@ and the indirect `jalr` set, which this census explicitly did not scan — and w
 produced a false zero once in a sibling image in this workspace, where a `jal`-only scan reported 0
 for every library routine in an image that dispatches through function pointers.
 
+## The two questions, asked and answered 2026-09-29
+
+Both are answerable with tools already in the tree, and the answers are the handoff.
+
+**1. Who ELSE writes `CR[24]`? Nobody.** `tools/probe_crash1_projection.py` over the authenticated
+image, with its selftest firing:
+
+    CR[24] OFX: 2 control writer(s) [0x80042B88 0x80042F94], 0 control reader(s)
+    CR[25] OFY: 2 control writer(s) [0x80042B8C 0x80042F98], 0 control reader(s)
+    CR[26] H:   2 control writer(s) [0x80042B68 0x80042FAC], 0 control reader(s)
+
+**The guest has exactly two places that write the horizontal offset and the owner already overrides
+the entry of both** — `0x80042B88` is inside `gte_init` and `0x80042F94` is inside `SetGeomOffset`. So
+the sibling-publisher theory is dead: there is no third writer to move to. That also means widening is
+not being *reverted* by some later write either, because there is no later write.
+
+The zero control READERS are the other half of why this is safe to widen: nothing branches on the
+published offset, so a changed `CR[24]` cannot change a gameplay decision the way Vagrant Story's
+`H` does (that one has branches at `<272` and `>272` against a resting 256).
+
+**2. Is the indirect set closed? No, and now it has a number.** The same tool reports, for this image:
+
+    direct call sites of set_geom_offset 0x80042F8C: 2 measured, 2 declared,
+    122 jalr site(s) in the image
+    GPU driver pointer table at 0x80054A24: 18 guest-code entries
+    (an address scan cannot reach these; the owner is entry index [7] for FUN_80041C38)
+
+**So "exactly two callers" was never a closed argument — it was a statement about a scan that does not
+reach `jalr` or a table, and this image has 122 of the first and at least one table of the second.**
+This is the same shape as the Spider-Man false zero already recorded in the workspace map, where a
+`jal`-only census reported 0 for every library routine in an image that dispatches through function
+pointers. Closing it means enumerating the 122 `jalr` sites and the 18 table entries and asking which
+of them can land on `0x80042F8C`.
+
+**What the live run adds, and it is the reason this is still open rather than closed:** the leaf's
+owner is verified alive and correct by its positive control, the guest writes the offset in only the
+two places the owner owns, and yet a live unpaused 16:9 level publishes no centre. Those three facts
+together mean the level's camera is NOT publishing a centre through either GTE route — so the next
+question is not "which writer" but "why is this camera not publishing one at all", which is a
+question about the camera's control flow rather than about the projection.
+
 ## Falsifiers
 
 * If a caller of `0x80042F8C` exists outside the two found (an indirect jump through a table, a
