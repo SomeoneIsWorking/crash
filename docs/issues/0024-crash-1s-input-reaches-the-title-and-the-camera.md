@@ -122,8 +122,19 @@ exactly that shape: the owner prints it when it runs, so an absent line is consi
 that never ran AND with an owner that ran and did not print. Only the owner's own invocation count
 distinguishes them, and the owner does not keep one.
 
-## 5. Two defects the tool had, both found by making its own verdict disagree with its own flags
+## 5. Three defects the tool had, all found by making its own verdict disagree with its own flags
 
-PLACEHOLDER_MOVE
+Recorded because a tool that prints a verdict next to a contradicting flag is not a tool, and all
+three are the same shape of mistake this workspace keeps making.
+
+* It read the pad word with `w32`, which is a **WRITE**. The reply echoed the address, so the tool
+  read `0xFFFFFFFF` back every sample and would have reported "the host's button never reached the
+  word" for a run in which it moved on all twelve. The read verb is `rw <addr> [n]`.
+* It compared captured frames by **file size**. A fixed-size PPM has a constant length, so a frame
+  whose every pixel changed compared equal, and the tool reported "the frame did not change" while
+  the non-black fraction moved by 0.83. It compares a content digest now.
+* Its `frame` parse looked for a field the reply does not contain, so `advanced` was always False
+  while the PASS branch printed "with the frame counter advancing". The verdict now requires every
+  flag it names, and a run that cannot establish one exits 2 as UNUSABLE rather than passing.
 
 ## 6. The instrument this needs, and does not have
