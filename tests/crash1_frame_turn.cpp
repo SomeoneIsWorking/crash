@@ -23,7 +23,53 @@ bool expect(bool condition, const char *message) {
 
 } // namespace
 
+// The measured display-wait predicate, pinned as a pure decision before anything is wired to it.
+//
+// It exists because the previous check accepted only the CoreLoop transition override's provenance
+// and reported the GUEST's own VSync call as "an unexpected boundary" - measured on a real
+// disc-backed run as `guestPc = 0x800170FC` with `r[31] = 0x800170FC`, which is the instruction after
+// the `jal` at 0x800170F4 and therefore the correct continuation. All four cells are exercised, and
+// the two refusals are the point: a predicate that cannot say no is not a guard.
+namespace {
+
+constexpr std::uint32_t kVsyncLeaf = 0x8003E4F0u;   // the libetc VSync body, from executable.json
+constexpr std::uint32_t kAfterFirst = 0x800170FCu;  // the instruction after `jal` at 0x800170F4
+constexpr std::uint32_t kAfterSecond = 0x8001712Cu; // the instruction after `jal` at 0x80017124
+constexpr std::uint32_t kTransition = 0x80012510u;  // the CoreLoop transition override entry
+
+bool boundaryPredicateHolds() {
+  bool ok = true;
+  ok = expect(crash1::Crash1FrameDriver::isMeasuredFrameBoundary(
+                  kAfterFirst, kAfterFirst, kVsyncLeaf, kAfterFirst, kAfterSecond, kTransition),
+              "the guest's own first VSync call, measured as guestPc == ra == 0x800170FC, is a "
+              "measured boundary");
+  ok = expect(crash1::Crash1FrameDriver::isMeasuredFrameBoundary(
+                  kAfterSecond, kAfterSecond, kVsyncLeaf, kAfterFirst, kAfterSecond, kTransition),
+              "the guest's own second VSync call is a measured boundary");
+  ok = expect(crash1::Crash1FrameDriver::isMeasuredFrameBoundary(
+                  kVsyncLeaf, kTransition, kVsyncLeaf, kAfterFirst, kAfterSecond, kTransition),
+              "the transition override's stamped provenance is still a measured boundary");
+  ok = expect(!crash1::Crash1FrameDriver::isMeasuredFrameBoundary(
+                  kAfterFirst, kTransition, kVsyncLeaf, kAfterFirst, kAfterSecond, kTransition),
+              "a continuation PC with the override's return address is REFUSED: the two provenances "
+              "do not mix");
+  ok = expect(!crash1::Crash1FrameDriver::isMeasuredFrameBoundary(
+                  kVsyncLeaf, kVsyncLeaf, kVsyncLeaf, kAfterFirst, kAfterSecond, kTransition),
+              "the VSync leaf's own entry with r[31] still inside the leaf is REFUSED: an entry is "
+              "never a resume point");
+  ok = expect(!crash1::Crash1FrameDriver::isMeasuredFrameBoundary(
+                  0x800170B0u, 0x800170B0u, kVsyncLeaf, kAfterFirst, kAfterSecond, kTransition),
+              "an arbitrary address inside GpuUpdate is REFUSED: only the two measured waits count");
+  return ok;
+}
+
+} // namespace
+
 int main() {
+  if (!boundaryPredicateHolds()) {
+    std::fprintf(stderr, "the measured display-wait predicate refused or mis-accepted a boundary\n");
+    return 1;
+  }
   crash1::Crash1Runtime runtime;
   psxport_install_game(runtime);
   auto game = std::make_unique<Game>();

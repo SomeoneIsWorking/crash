@@ -1,5 +1,6 @@
 #pragma once
 
+#include "crash1_block_pool.h"
 #include "crash1_horizontal_bound.h"
 #include "crash1_widescreen.h"
 #include "game_runtime.h"
@@ -49,11 +50,22 @@ public:
     return horizontalBound_;
   }
 
+  // The size-class block-pool owner, the module the product's stop address lives in. Same exposure
+  // rule and same reason as `widescreen()`: the shipping path reaches it through the registered
+  // override, and the tests reach it here.
+  Crash1BlockPool &blockPool() {
+    return blockPool_;
+  }
+  const Crash1BlockPool &blockPool() const {
+    return blockPool_;
+  }
+
 private:
   static const GuestProgramImage programImage_;
   static const PlatformHlePlan platformPlan_;
   Crash1Widescreen widescreen_{&gpu_vk_latch_guest_projection};
   Crash1HorizontalBound horizontalBound_{};
+  Crash1BlockPool blockPool_{};
 };
 
 } // namespace crash1

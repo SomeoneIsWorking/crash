@@ -99,9 +99,25 @@ own registers. `crash1_widescreen.*` widens `OFX` by the plan's horizontal margi
 per-frame publication site, leaves `OFY` and `H` untouched, and is 4:3-identical by construction
 (`tests/crash1_widescreen.cpp`, 12 cases including an install proof with no HLE plan in existence).
 
-Gap, stated rather than papered over: the product faults on frame 0 at `unimplemented BIOS A0:0x27`
-because **no disc media is provisioned** on this machine, so the per-frame `SetGeomOffset` is never
-reached in a live run and the widened centre has no live leg. Two framework-side facts also mean
+Gap, stated rather than papered over: the product leaves guest execution on frame 0, so the per-frame
+`SetGeomOffset` is never reached in a live run and the widened centre has no live leg. **The cause
+recorded here before was wrong on both halves and is corrected below**, because a wrong gap text is
+what makes a reader stop looking:
+
+- it said the stop was `unimplemented BIOS A0:0x27`. That call is implemented; the run now advances
+  8,177,050 guest cycles before stopping.
+- it said no disc media is provisioned on this machine. The disc **is** on this machine (its path is the operator's, so it is not recorded here). What was missing was that
+  `tools/probe_crash1_widescreen_legs.py` set no disc path at all, so **every leg on record ran with
+  the CD model reporting no media** — `The CD model will run with NO MEDIA` and
+  `CdRead: LBA 16 unreadable ... 0 sector(s) delivered` are in both logs verbatim. "No frame at all"
+  was a measurement of the tool. The probe now takes `--disc` and REFUSES to report a picture verdict
+  for a media-less leg; asked about the existing legs it answers `(False, 'The CD model will run with
+  NO MEDIA')` for both.
+
+The stop itself is now attributed with evidence, not inferred: it is a **fault**, in
+`crash1_block_pool.*` at guest `0x80015978`, and issue 0020 carries the instruction words, the six
+measured call sites and the pointer the guest published. Whether an uninitialised pool is *why* it is
+uninitialised is not established and needs one run with media. Two framework-side facts also mean
 `render_width > native_width` cannot be shown for this title as the tree stands, and both are
 reported rather than worked around:
 
@@ -211,8 +227,52 @@ that services native calls before its typed frame exit. It requires nonzero tran
 blocks and instructions, with zero fallback. The same gate covers the retained native contracts,
 BIOS pad publication, launcher/dependency refusals, full C++ policy, and linked product inspection.
 
-Gap: resolve issue 0012's downstream pad consumption, then prove representative gameplay,
-deterministic oracle/device comparison, invalidation controls, and released-host qualification.
+**Where the run stops, measured 2026-09-28 (issue 0020).** Guest execution leaves frame 0 at
+`0x800159A8` with reason `Fault` and the detail `Lightrec execution fault` after 8,177,050 cycles —
+not a budget exit, and not a translation refusal (`fallback_blocks=0` in the same log). That address
+is the word `0x8C620004`, `lw $v0,0x4($v1)`, the second class read of the engine's size-class block
+cell lookup at `0x80015978`; the guest printed `invalid load/store at address PC 0x00800004`, so the
+pointer it followed was `0x00800000`, which is unmapped. `crash1_block_pool.*` is the recovered
+function, registered as a native override, and it is the engine's BOUNDED form: the walk is bounded by
+`((cell - poolBase) >> 3) >= liveCellCount` with `poolBase` from `0x8005C534` and the count from
+`*(0x8005C540)+0x404`, which is the rule the image's own unused `0x800159C4` states, and an
+unsatisfiable class returns the engine's own `0xFFFFFFF6` instead of reading past the cell array. A
+bucket that is not a pointer into main RAM is refused outright, with the value named. The owner
+records the request, class, bucket, pool base, live count, cells walked, the first caller's `ra` and
+the `lookups/found/exhausted/unreadableBucket` denominators, so a run can name the wrong value.
+
+**Which call site actually ran, measured at run time rather than by census:** every lookup in every
+run came from `ra = 0x80015164`, the return address of the `jal` at `0x8001515C` inside
+`FUN_80015118`. A call-graph census could not have chosen it — 818 distinct `jal` targets exist in the
+same 72,192 words, so the graph saturates.
+
+**The engine's own bound at `0x800159C4` was applied, measured to break a path retail completes, and
+removed.** With it enforced, a disc-backed run reported "no cell serving class 702 within 576 live
+cells past pool base 0x80061FA0" and faulted after 320,508 cycles; with it removed the same run reached
+the title's first measured display wait. The owner therefore walks as retail does and stops only at the
+edge of main RAM, and reports the engine's base, live count and signed distance as a measurement. A
+controlled pair — the same binary and disc with the override OFF — reaches the same boundary as the
+override ON, so the owner is transparent for every case retail can execute.
+
+**The next stop after the pool was the frame driver's own guard, and it was wrong.** The measured
+boundary was `guestPc == r[31] == 0x800170FC`, which is the continuation of the guest's own `jal` to
+the libetc VSync leaf at `0x800170F4` — the common case, which the driver did not accept.
+`Crash1FrameDriver::isMeasuredFrameBoundary` now accepts both provenances and refuses a mixture, the
+leaf's own entry, and any other address. **After that correction the run completes: exit 0**, 1,549
+translated blocks, 1,689,262 executed blocks, 26,457,241 executed instructions, **0 fallback blocks**,
+and the CD read the disc (104 hunk lookups, 85 hits).
+
+**STILL NO FRAME, and this is the honest bottom line.** The end-of-run line is
+`[producers] run-end: OtAttr spans recorded 0 (overflow 0)`: the guest reaches its display wait and
+submits **no primitives at all**, so there is nothing to draw. **Zero frames are presented and no drawn
+aspect is claimed**; every `[wide]` line reads `render_width == native_width`. Why it submits nothing
+is NOT established — the pool owner reports five unservable classes on the disc-backed leg, all from
+`FUN_80015118`, but the pool's initialiser at `0x80012F10` has not been recovered and the request
+word's unit is unknown.
+
+Gap: measure one run WITH the user's disc, then resolve issue 0012's downstream pad consumption, then
+prove representative gameplay, deterministic oracle/device comparison, invalidation controls, and
+released-host qualification.
 
 ### S012 — Linux x86-64 host qualification
 

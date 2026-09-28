@@ -256,13 +256,23 @@ void Crash1FrameDriver::stepFrame(Core &core, std::uint32_t frame) {
     result = runGuestToBoundary(core, kProgram.iteration.begin, crash::dynarec::executeTurn);
   }
   while (!frameCompleted_ && result.reason == psx::cpu::ExecutionExitReason::FrameBoundary) {
-    if (result.guestPc != kContract.guestVSync.begin ||
-        (core.r[31] != kProgram.afterFirstVSync && core.r[31] != kProgram.afterVSync)) {
+    if (!Crash1FrameDriver::isMeasuredFrameBoundary(result.guestPc,
+                                                    core.r[31],
+                                                    kContract.guestVSync.begin,
+                                                    kProgram.afterFirstVSync,
+                                                    kProgram.afterVSync,
+                                                    kProgram.transition.begin)) {
       lucent::error("crash1-frame",
-                    "frame {} reached an unexpected boundary at 0x{:08X} with ra=0x{:08X}",
+                    "frame {} reached an unexpected boundary at 0x{:08X} with ra=0x{:08X}; the measured "
+                    "display waits are the guest's own VSync calls returning to 0x{:08X}/0x{:08X}, or "
+                    "the transition override at 0x{:08X} stamping 0x{:08X}",
                     frame,
                     result.guestPc,
-                    core.r[31]);
+                    core.r[31],
+                    kProgram.afterFirstVSync,
+                    kProgram.afterVSync,
+                    kProgram.transition.begin,
+                    kContract.guestVSync.begin);
       std::abort();
     }
     const std::uint32_t continuation = core.r[31];

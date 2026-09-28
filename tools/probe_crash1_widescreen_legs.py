@@ -13,12 +13,21 @@ only on CHANGE and a mid-run sample is not the steady state.
 It never runs a product the caller did not start: this launches the product itself, refuses to start
 while another instance holds the machine's single slot, and kills only the PIDs it captured.
 
-    tools/probe_crash1_widescreen_legs.py --frames 400
-    tools/probe_crash1_widescreen_legs.py --frames 400 --bin build/agent-clang/crash1_port
+THE DISC IS NOT OPTIONAL, AND A LEG WITHOUT ONE IS NOT A PICTURE MEASUREMENT. The previous revision
+of this tool set no disc path at all, so every leg it produced ran with the framework's own "no disc
+image ... The CD model will run with NO MEDIA" warning and `CdRead: LBA 16 unreadable ... 0
+sector(s) delivered` in the log. That is Crash 1 without its own data, and the "no frame at all"
+number those legs produced was a measurement of THIS TOOL, not of the title. This revision takes
+`--disc`, passes it as `PSXPORT_CRASH1_DISC` (the per-title key the framework's DiscConfig reads),
+and REFUSES to print a picture verdict for a leg whose log shows media was absent, so the same
+mistake cannot be published a second time as a title result.
 
-Exit 0 means both legs ran and the guest-state evidence is present on both. 1 means a leg did not
-reach its publication site — which is a finding to report, not something to paper over. 2 means no
-leg could be started at all.
+    tools/probe_crash1_widescreen_legs.py --disc "$DISC" --frames 400
+    tools/probe_crash1_widescreen_legs.py --disc "$DISC" --frames 400 --bin build/agent-clang/crash1_port
+
+Exit 0 means both legs ran WITH media and the guest-state evidence is present on both. 1 means a leg
+did not reach its publication site, which is a finding to report rather than something to paper over.
+2 means no leg could be started at all.
 """
 
 from __future__ import annotations
@@ -69,7 +78,32 @@ def write_settings(path: pathlib.Path, aspect: int) -> None:
     path.write_text(f"aspect={aspect}\n", encoding="utf-8")
 
 
-def run_leg(binary: pathlib.Path, workdir: pathlib.Path, aspect: int, frames: int) -> tuple[int, pathlib.Path]:
+# The framework's own wording when it found no media, and the CD symptom that follows it. A leg whose
+# log contains either of these ran Crash 1 without its data, so nothing it says about a picture is a
+# statement about the title. These are the strings the refusal matches, quoted from a real
+# media-less run (scratch/wide/leg_4x3.log) rather than guessed.
+NO_MEDIA_MARKERS = (
+    "The CD model will run with NO MEDIA",
+    "CdRead: LBA 16 unreadable",
+)
+
+
+def media_present(log: pathlib.Path) -> tuple[bool, str]:
+    """Whether the leg had media, and the marker that says it did not.
+
+    A refusal here rather than a warning, because the previous revision of this tool reported a
+    picture verdict for legs whose own log said the CD model had no media.
+    """
+    text = log.read_text(encoding="utf-8", errors="replace") if log.is_file() else ""
+    for marker in NO_MEDIA_MARKERS:
+        if marker in text:
+            return False, marker
+    return True, ""
+
+
+def run_leg(
+    binary: pathlib.Path, workdir: pathlib.Path, aspect: int, frames: int, disc: str | None
+) -> tuple[int, pathlib.Path]:
     tag = "4x3" if aspect == ASPECT_4X3 else "16x9"
     settings = workdir / f"settings_{tag}.ini"
     write_settings(settings, aspect)
@@ -84,6 +118,11 @@ def run_leg(binary: pathlib.Path, workdir: pathlib.Path, aspect: int, frames: in
         SDL_VIDEODRIVER="offscreen",
         SDL_AUDIODRIVER="dummy",
     )
+    # The per-title key wins over PSXPORT_DISC in `DiscConfig::resolve_disc_path`, and it is the one
+    # `GameConfig::discEnvVar` names for this title, so a workspace that provisions one disc per
+    # title cannot have another title's media leak into this leg.
+    if disc:
+        environment["PSXPORT_CRASH1_DISC"] = disc
     # The `bios` debug channel is the only place the framework records WHICH call a guest made, from
     # where, and with which arguments -- the info-level "unimplemented BIOS A0:0x27" names the vector
     # and the function but not the call site, and the call site is what identifies what the guest
@@ -101,6 +140,8 @@ def report(log: pathlib.Path) -> dict[str, str]:
     text = log.read_text(encoding="utf-8", errors="replace") if log.is_file() else ""
     found: dict[str, str] = {}
     for line in text.splitlines():
+        if "[crash1-frame:error]" in line or "lightrec execution fault" in line.lower():
+            found["stop"] = line.split("]", 1)[-1].strip() if "]" in line else line.strip()
         if "[crash1-wide] guest projection init published" in line:
             found["init"] = line.split("[crash1-wide]", 1)[1].strip()
         elif "[crash1-wide] guest centre" in line:
@@ -114,6 +155,12 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--bin", type=pathlib.Path, default=ROOT / "build/agent-clang/crash1_port")
     parser.add_argument("--frames", type=int, default=400)
+    parser.add_argument(
+        "--disc",
+        help="the user's Crash Bandicoot USA CHD. A leg without one is Crash 1 with no data, and "
+        "this tool refuses to report a picture verdict for it rather than publishing a number "
+        "measured against an empty CD",
+    )
     parser.add_argument("--out", type=pathlib.Path, default=ROOT / "scratch/wide")
     args = parser.parse_args()
 
@@ -133,11 +180,13 @@ def main() -> int:
     codes: dict[str, int] = {}
     for aspect in (ASPECT_4X3, ASPECT_16X9):
         tag = "4x3" if aspect == ASPECT_4X3 else "16x9"
-        code, log = run_leg(binary, args.out, aspect, args.frames)
+        code, log = run_leg(binary, args.out, aspect, args.frames, args.disc)
         codes[tag] = code
         results[tag] = report(log)
+        had_media, marker = media_present(log)
         print(f"== {tag}: sink {sink_width(aspect)}x{SINK_HEIGHT}, exit {code}, log {log}")
-        for key in ("init", "centre", "wide"):
+        print(f"   media: {'present' if had_media else f'ABSENT ({marker})'}")
+        for key in ("stop", "init", "centre", "wide"):
             if key in results[tag]:
                 print(f"   {key}: {results[tag][key]}")
         # The log TAIL, because `picture_announce` prints only on change and a mid-run sample is not
@@ -149,6 +198,20 @@ def main() -> int:
 
     ok = True
     for tag in ("4x3", "16x9"):
+        had_media, marker = media_present(args.out / f"leg_{tag}.log")
+        if not had_media:
+            print(
+                f"FAIL: the {tag} leg ran with NO MEDIA (the log says {marker!r}), so nothing it "
+                "reports about a picture is a statement about Crash 1. Pass --disc <the user's CHD>.",
+                file=sys.stderr,
+            )
+            ok = False
+        if "stop" in results[tag]:
+            print(
+                f"FAIL: the {tag} leg left guest execution early: {results[tag]['stop']}",
+                file=sys.stderr,
+            )
+            ok = False
         if "init" not in results[tag]:
             print(f"FAIL: the {tag} leg never reached the guest's own projection publication "
                   f"(exit {codes[tag]})", file=sys.stderr)

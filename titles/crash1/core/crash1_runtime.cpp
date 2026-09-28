@@ -59,6 +59,7 @@ void Crash1Runtime::registerOverrides(Game &game) {
   gpu_watchdog::registerOverrides(game.core);
   installCrash1Widescreen(game.core);
   installCrash1HorizontalBound(game.core);
+  installCrash1BlockPool(game.core);
   Crash1FrameDriver::installOverrides(game);
 }
 

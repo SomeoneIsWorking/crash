@@ -148,6 +148,37 @@ Statuses: ✅ `re-verified` · 🟡 `re-partial` · 🔬 `in-progress` · ⬜ `t
 - gap: The native-owned frame-step objective is verified for 120 consecutive intro frames. Gameplay progression remains unverified, and native graphics producers, widescreen, and interpolation remain separate ungrounded frontiers.
 - notes: The host shell invokes only this driver. The boot owners are not fake VSync answers: the libcd owner keeps the host controller and reproduces measured library state, the callback owner preserves 21 non-delay calls and removes four hardware-settle delays owned by the host, and the GPU watchdog reads `Timing::vblank` without dispatching the guest leaf. The stable-source page candidate is not in the product; CdControlF fixes the upstream seek instead.
 
+### CRASH1-POOL — recover the size-class block pool that the product faults in
+- status: in-progress
+- deps: CRASH1-04
+- evidence: The product's stop address is a FAULT, not a budget exit: the product's own log says
+  `frame 0 left guest execution at 0x800159A8 with fault after 8177050 cycles (Lightrec execution
+  fault)`, and `runtime/cpu/lightrec_executor.cpp:624` is the only site that returns that detail.
+  `0x800159A8` is the word `0x8C620004` = `lw $v0,0x4($v1)`, the second class-field read of the
+  size-class cell lookup whose entry is `0x80015978`; the guest printed `invalid load/store at address
+  PC 0x00800004` immediately before, so `$v1` was `0x00800000`, which is unmapped. Recovered in full
+  by `tools/probe_crash1_block_pool.py`, which re-derives the class shift (13, from the `sa` field of
+  `0x00041342`), the bucket mask (`0x3FC`, from `0x304203FC`), the cell stride (8, from `0x24630008`
+  twice) and the class field (+4, from `0x8C620004`) out of the instructions, re-counts the `jal`
+  targets (6 of 72,192 words, in `0x80012F10`/`0x80015034`/`0x80015118`/`0x80015458`/`0x8001579C`/
+  `0x8001767C`, each at CoreLoop distance 2 or 3), confirms the bounded sibling `0x800159C4` has
+  **0** call sites, and diffs the header's literals against the manifest. `crash1_block_pool.*` owns
+  the lookup natively and applies the engine's own bound.
+- where: `titles/crash1/core/crash1_block_pool.*`, `tools/probe_crash1_block_pool.py`,
+  `titles/crash1/executable.json` -> `runtime.block_pool`, `tests/crash1_block_pool.cpp`, issue 0020
+- gap: the title now RUNS TO ITS FIRST MEASURED DISPLAY WAIT and presents **0 frames** —
+  `OtAttr spans recorded 0` — so the guest submits no primitives and no drawn aspect exists. The
+  pool's INITIALISER is not recovered, so why the classes asked for are not the classes the cells hold
+  is open. The engine's own bound is recorded and evaluated but deliberately NOT used, below.
+- notes: the engine's bound at `0x800159C4` was applied and **measured to break a path retail
+  completes** (a disc-backed run faulted at 320,508 cycles with it, and reached the display wait
+  without it), so the owner stops at the edge of main RAM instead — a host-memory fact, true for every
+  cell retail can read. A controlled pair with the override OFF reaches the same boundary, so the
+  owner is transparent. `0x8005C534` is the pool's LOW end, not its high end, and getting that
+  backwards rejects the walk on its first step; the test pins cells walked as well as the answer
+  because a comment could not have caught it. At run time every lookup came from `ra = 0x80015164`
+  (`FUN_80015118`), which no `jal` census could have ranked out of 818 saturated targets.
+
 ### CRASH2-FRAME — recover one complete native-owned frame step
 - status: todo
 - deps: CRASH2-04, CRASH2-VSYNC

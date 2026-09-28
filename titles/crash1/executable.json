@@ -225,6 +225,62 @@
         "set_geom_screen": "0x80017830 0x80026770"
       }
     },
+    "block_pool": {
+      "_measured_by": "tools/probe_crash1_block_pool.py",
+      "_note": "Crash 1's size-class block pool. The product's guest PC when it stops is 0x800159A8, and that word is `lw $v0,0x4($v1)` - the second class-field read of the cell lookup at 0x80015978. The pool is a table of 8-byte cells: `+0x00` is the payload the allocate path stores (0x80013020 `sw a1,0(s3)`) and `+0x04` is the class the cell serves, which is the only field this module's callers compare. There are exactly six `jal 0x80015978` sites in the image and 818 distinct `jal` targets in 72,192 words, so a function-entry census saturates and cannot rank the six by likelihood; which of them ran is a RUNTIME question, answered by crash1_block_pool.cpp.",
+      "_what_is_not_claimed": "The unit of the caller's request word is NOT established. The lookup compares each cell's +0x04 against `request >> 13`, and the six callers do not pass a uniform byte count - 0x80015034 passes a tagged handle read out of a struct at `lw a0,0(s0)`. So the recovered code names the field for what it is compared against and no more.",
+      "find_cell": {
+        "entry": "0x80015978",
+        "end": "0x800159C4",
+        "body_sha256": "a516c7a6824db3ab530fab73848261d8d68340bca14d2156f77227c07a63eece",
+        "class_shift": "0x0D",
+        "bucket_index_mask": "0x03FC",
+        "cell_stride": "0x8",
+        "class_field_offset": "0x4",
+        "payload_field_offset": "0x0",
+        "bucket_table_pointer": "0x8005C530",
+        "class_shift_site": { "address": "0x80015978", "word": "0x00041342", "meaning": "srl v0,a0,13" },
+        "bucket_mask_site": { "address": "0x80015984", "word": "0x304203FC", "meaning": "andi v0,v0,0x03FC" },
+        "bucket_load_site": { "address": "0x80015980", "word": "0x8C63C530", "meaning": "lw v1,-0x3AD0(v1) with v1=lui 0x8006" },
+        "stride_site": { "address": "0x800159A4", "word": "0x24630008", "meaning": "addiu v1,v1,8" },
+        "note": "The index is a BYTE offset into a 256-entry pointer table, so the mask 0x3FC is 4-byte stride x 255. The loop is `if (cell[1]==key) return cell; for (cell+=2; cell[1]!=key; cell+=2) {} return cell;` - the two `addiu v1,v1,8` at 0x800159A4 and 0x800159B4 with the `addiu v1,v1,-8` at 0x800159B8 are the compiler's way of keeping the returned cell on the match, and the bne at 0x800159B0 targets 0x800159A8, the loop head, NOT the first read."
+      },
+      "find_cell_bounded": {
+        "entry": "0x800159C4",
+        "end": "0x80015A3C",
+        "body_sha256": "ca2db9017ebb225a211210799e791bf5c5e56e98c3fa5bef759d8d3dfe626921",
+        "pool_base_pointer": "0x8005C534",
+        "cell_count_block_pointer": "0x8005C540",
+        "cell_count_offset": "0x404",
+        "exhausted_value": "0xFFFFFFF6",
+        "exhausted_value_signed": -10,
+        "call_site_count": 0,
+        "note": "The same lookup with an explicit end: it reads the pool's LOW end from 0x8005C534 and the live cell count from `*(0x8005C540)+0x404`, and after each stride step rejects when `((cell-poolBase)>>3) >= count` at 0x80015A14, returning -10 (`addiu v0,zero,-10` at 0x80015A18) instead of walking off. The check is applied to the cell AFTER the step at 0x80015A04, and the pre-loop read of the bucket's first cell at 0x800159E0 is itself unbounded - which is the same first cell the live 0x80015978 reads at 0x80015994. 0x8005C534 is the pool's LOW end, not its high one: the guest SUBTRACTS it from the cell, so a value greater than the cell is a negative distance and the signed `sra`/`slt` pair is what lets an in-array cell through. Calling it the pool's end is the mistake this manifest's own numbers exposed. It has ZERO `jal` call sites in the image, so it does not run; it is the engine's own statement of what the walk's bound is, and the native owner uses that bound rather than inventing one."
+      },
+      "fault_site": {
+        "address": "0x800159A8",
+        "word": "0x8C620004",
+        "meaning": "lw v0,0x4($v1) - the class read on the SECOND cell, so the first cell's class did not match the request",
+        "reached_from": "0x800159A4, the stride step; the loop head is 0x800159A8 itself (bne at 0x800159B0, word 0x1444FFFD, displacement -3)"
+      },
+      "call_sites": [
+        { "address": "0x8001313C", "word": "0x0C00565E", "caller": "0x80012F10", "distance_from_core_loop": 3 },
+        { "address": "0x80015058", "word": "0x0C00565E", "caller": "0x80015034", "distance_from_core_loop": 3 },
+        { "address": "0x8001515C", "word": "0x0C00565E", "caller": "0x80015118", "distance_from_core_loop": 2 },
+        { "address": "0x80015484", "word": "0x0C00565E", "caller": "0x80015458", "distance_from_core_loop": 2 },
+        { "address": "0x80015800", "word": "0x0C00565E", "caller": "0x8001579C", "distance_from_core_loop": 3 },
+        { "address": "0x800176F8", "word": "0x0C00565E", "caller": "0x8001767C", "distance_from_core_loop": 3 }
+      ],
+      "call_site_count": 6,
+      "pool_globals": {
+        "_note": "Every one of these is read with a `lui $reg,0x8006` + `lw` pair, so a literal-immediate scan cannot see them, and none of them has a `sw` with that displacement anywhere in the image - the pool is filled through a computed pointer, not by a direct store to the global.",
+        "bucket_table": { "address": "0x8005C530", "load_sites": 8 },
+        "pool_base": { "address": "0x8005C534", "load_sites": 3 },
+        "cell_count_block": { "address": "0x8005C540", "load_sites": 11 },
+        "heap_top": { "address": "0x8005C550", "load_sites": 5 },
+        "side_index_table": { "address": "0x8005CFBC", "load_sites": 28 }
+      }
+    },
     "native_frame": {
       "core_loop": {
         "entry": "0x80011FC4",

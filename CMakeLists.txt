@@ -129,6 +129,7 @@ add_library(
   crash1_runtime STATIC
   "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/core/crash1_runtime.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/core/crash1_bios_pad_input.cpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/core/crash1_block_pool.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/core/crash1_callback_boot.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/core/crash1_cd_boot.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/core/crash1_disc_index_io.cpp"
@@ -253,6 +254,15 @@ if(BUILD_TESTING)
   target_compile_features(crash1_horizontal_bound_test PRIVATE cxx_std_20)
   target_link_libraries(crash1_horizontal_bound_test PRIVATE crash1_runtime)
   add_test(NAME crash1_horizontal_bound COMMAND crash1_horizontal_bound_test)
+
+  # The block-pool owner. The recovered walk is driven against a fixture with no Core in existence,
+  # and the install and the owner lookup are driven through the real runtime, because the contract
+  # being pinned is what the owner does around a guest read.
+  add_executable(crash1_block_pool_test
+                 "${CMAKE_CURRENT_SOURCE_DIR}/tests/crash1_block_pool.cpp")
+  target_compile_features(crash1_block_pool_test PRIVATE cxx_std_20)
+  target_link_libraries(crash1_block_pool_test PRIVATE crash1_runtime)
+  add_test(NAME crash1_block_pool COMMAND crash1_block_pool_test)
 
   add_executable(crash1_boot_frontier_test
                  "${CMAKE_CURRENT_SOURCE_DIR}/tests/crash1_boot_frontier.cpp")
@@ -407,6 +417,31 @@ if(BUILD_TESTING)
       "${CMAKE_CURRENT_SOURCE_DIR}/tools/probe_crash1_horizontal_bound.py" --selftest-only
   )
   set_tests_properties(crash1_horizontal_bound_selftest
+                       PROPERTIES ENVIRONMENT "PYTHONDONTWRITEBYTECODE=1")
+  # The block-pool recovery, the same split for the same reason: the census half needs the user's
+  # authenticated executable, so it is a maintainer target, and the selftest half needs no disc, so it
+  # is a ctest test. The census is what re-derives the class shift, the bucket mask, the cell stride,
+  # the class field, the six call sites and the stop site's own word from the image, AND diffs
+  # titles/crash1/core/crash1_block_pool.h against titles/crash1/executable.json — so a constant the
+  # bytes do not produce cannot ship.
+  add_custom_target(
+    crash1_block_pool_census
+    COMMAND
+      "${Python3_EXECUTABLE}" -B
+      "${CMAKE_CURRENT_SOURCE_DIR}/tools/probe_crash1_block_pool.py" --title crash1
+      --executable "${crash1_exe}"
+    COMMENT
+      "Re-derive Crash 1's size-class block pool, its six call sites and its stop site's word from the authenticated executable, and diff the native owner's constants against the manifest"
+    USES_TERMINAL
+    VERBATIM
+  )
+  add_test(
+    NAME crash1_block_pool_selftest
+    COMMAND
+      "${Python3_EXECUTABLE}" -B
+      "${CMAKE_CURRENT_SOURCE_DIR}/tools/probe_crash1_block_pool.py" --selftest-only
+  )
+  set_tests_properties(crash1_block_pool_selftest
                        PROPERTIES ENVIRONMENT "PYTHONDONTWRITEBYTECODE=1")
   # The 4:3-vs-16:9 receipt logic, and specifically its REFUSAL matcher. The selftest half is a ctest
   # test because it needs no disc, no GPU and no product; the pair itself is a maintainer run.
