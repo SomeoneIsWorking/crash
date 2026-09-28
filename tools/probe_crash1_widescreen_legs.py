@@ -84,6 +84,12 @@ def run_leg(binary: pathlib.Path, workdir: pathlib.Path, aspect: int, frames: in
         SDL_VIDEODRIVER="offscreen",
         SDL_AUDIODRIVER="dummy",
     )
+    # The `bios` debug channel is the only place the framework records WHICH call a guest made, from
+    # where, and with which arguments -- the info-level "unimplemented BIOS A0:0x27" names the vector
+    # and the function but not the call site, and the call site is what identifies what the guest
+    # wanted. Kept opt-in via the caller's environment so the default run is not spammed.
+    if os.environ.get("CRASH1_BIOS_TRACE"):
+        environment["PSXPORT_DEBUG"] = "bios"
     log = workdir / f"leg_{tag}.log"
     with log.open("w", encoding="utf-8") as stream:
         completed = subprocess.run([str(binary)], cwd=ROOT, env=environment, stdout=stream,
