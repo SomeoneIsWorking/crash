@@ -27,6 +27,7 @@ native rendering, widescreen, interpolation, and player setup.
 | S013 | Windows x86-64 native/Lightrec product qualification | missing | S011 | G001 |
 | S014 | Apple Silicon macOS native/Lightrec product qualification | missing | S011 | G001 |
 | S015 | Android arm64-v8a native/Lightrec product qualification | missing | S011 | G001 |
+| S016 | Crash 1, 2, and 3: load operations complete without loading-only waits or presentation; logos cancel through the recovered route | missing | S008, S011 | G003 |
 
 ## Current focus
 
@@ -366,3 +367,10 @@ real Android product CI.
 Policy-only jobs on another operating system do not qualify a host. Add a Windows, macOS, or Android
 workflow only when it exercises that host's real product/runtime boundary; until then these capabilities stay
 explicitly missing.
+
+### S016 — Crash 1, 2, and 3 loading removal
+
+Missing. No load operation has been censused or classified for Crash 1, 2, and 3. Gap: enumerate its load
+issuers and the wait and presentation each drives, then complete each through the title's own load
+mechanics without its loading-only wait, with payload and terminal state compared against retail
+and the absence of loading presentation captured.
