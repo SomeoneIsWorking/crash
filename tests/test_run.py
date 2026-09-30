@@ -114,7 +114,7 @@ class LauncherTests(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertEqual(stderr, "")
         self.assertIn("launching Crash Bandicoot 1 through Lightrec", stdout)
-        self.assertIn([LOCKED_PYTHON, "tools/psxport_sync.py", "--auto"], commands)
+        self.assertIn([LOCKED_PYTHON, "tools/psxport_fetch.py", "--auto"], commands)
         provision = next(command for command in commands if "tools/provision_title.py" in command)
         self.assertEqual(provision[-1], "Crash Bandicoot.chd")
         self.assertIn(LOCKED_PYTHON, provision)

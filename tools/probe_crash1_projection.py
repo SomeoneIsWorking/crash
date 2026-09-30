@@ -45,7 +45,7 @@ try:
 except ImportError as exc:  # pragma: no cover - environment problem, not a verdict
     raise SystemExit(
         f"REFUSED: cannot import psxport's PS-X EXE loader from {PSXPORT}; "
-        "run tools/psxport_sync.py --auto"
+        "run tools/psxport_fetch.py --auto"
     ) from exc
 
 EXE_HEADER_BYTES = 0x800
