@@ -2,7 +2,7 @@
 
 `AGENTS.md` is the repository-local instruction authority. Read it completely before work. The
 product architecture and ordered migration are in `docs/migration.md`; factual coverage is in
-`docs/project-state.md`; binary evidence is in `docs/re-frontier.md`.
+`docs/project-state.md`; ownership is in `docs/codemap.md`.
 
 Each Crash product combines native title owners with psxport's pinned Lightrec executor over the
 user's verified executable. The gameplay executable has no generated guest corpus, full-game
@@ -10,11 +10,11 @@ interpreter, or player-selectable interpreter mode. Lightrec's bounded per-block
 only for explicit backend reasons and remains measured. Do not regenerate, build, or run the static
 execution machinery; that machinery has been deleted.
 
-Crash 1's already-measured boot, frame, CD, timing, presentation, camera, and submitter facts remain
-the migration frontier. Preserve the in-flight input owner: psxport polls the host pad and finalizes
-the active-low mask; `crash1_bios_pad_input.*` publishes Crash's authenticated BIOS `PadRead` word
-at `0x80057054` before retail `PadUpdate`. The first Lightrec discriminator is to reach the current
-menu frontier with that owner active. Representative interactive gameplay remains the fidelity gate.
+Crash 1's product runs the real disc: it boots, submits its own GP0 traffic, presents frames, and
+consumes host input through the authenticated BIOS `PadRead` word at `0x80057054`, which
+`crash1_bios_pad_input.*` publishes before retail `PadUpdate` (psxport polls the host pad and
+finalizes the active-low mask). The level's camera does not yet publish a centre, and representative
+interactive gameplay remains the fidelity gate.
 
 Crash 2 (`SCUS_941.54`) and Crash 3 (`SCUS_942.44`) retain their title-specific executable,
 crt0/syscall, game-main, and VSync facts. Crash 3 selection follows `SYSTEM.CNF`, never the unrelated

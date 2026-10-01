@@ -2,9 +2,9 @@
 
 This repository targets one native PC product per title, with title-owned native subsystems and
 psxport's pinned Lightrec integration executing every remaining retail instruction at runtime.
-Read `docs/migration.md`, `docs/project-state.md`, `docs/codemap.md`, and `docs/re-frontier.md` before
-implementation. The workspace rules in `../AGENTS.md` and framework-consumer rules in
-`external/psxport/AGENTS.md` also apply at the shared runtime boundary.
+Read `docs/migration.md`, `docs/project-state.md`, and `docs/codemap.md` before implementation. The
+workspace rules in `../AGENTS.md` and framework-consumer rules in `external/psxport/AGENTS.md` also
+apply at the shared runtime boundary.
 
 ## Execution contract
 
@@ -19,14 +19,16 @@ implementation. The workspace rules in `../AGENTS.md` and framework-consumer rul
 - Frame suspension, host work, interrupts, exceptions, and title exit use explicit bounded executor
   exits. C++ unwinding through JIT frames is forbidden.
 - The static translator, generated corpus, dispatch adapters, seed inputs, and static-only tests are
-  deleted. Do not reintroduce them; retained measurements in `docs/re-frontier.md` are evidence only.
+  deleted. Do not reintroduce them.
 
 ## Current title discipline
 
-Crash Bandicoot (`SCUS_949.00`) is the active title. Preserve its current menu frontier and the
-in-flight BIOS `PadRead` work in issue 0012. Framework `Pad` owns device polling and the finalized
-active-low PSX mask; `titles/crash1/core/crash1_bios_pad_input.*` owns only the authenticated
-combined word at `0x80057054` and Crash's byte order, published before retail `PadUpdate`.
+Crash Bandicoot (`SCUS_949.00`) is the active title. Its product runs a disc-backed level, presents
+frames, and takes input through the authenticated BIOS `PadRead` word at `0x80057054`; the level's
+camera does not yet publish a centre (issue 0023), and representative gameplay is the gate (issue
+0013). Framework `Pad` owns device polling and the finalized active-low PSX mask;
+`titles/crash1/core/crash1_bios_pad_input.*` owns only the authenticated combined word and Crash's
+byte order, published before retail `PadUpdate`.
 
 Do not begin Crash 2 or Crash 3 execution migration until Crash 1 reaches representative gameplay
 through Lightrec with its native owners active. Their verified identities, addresses, VSync bodies,
@@ -36,6 +38,14 @@ All picture work remains RE-driven. Native producers consume pre-GTE game state.
 owned camera/projection state deterministically; interpolation consumes authoritative
 previous/current simulation transforms at presentation time. GTE/OT/GP0 output and framebuffer
 pixels are diagnostics, never native producer input.
+
+## How the tree is verified
+
+`uv run --frozen python tools/verify.py` is the gate: it configures, builds, and runs CTest, the
+framework C++ policy check, and the live pin check. Unit tests live in `tests/`, and the launcher
+and provisioning owners have their own tests there. The `probe_crash1_*` tools in `tools/` drive the
+product through the framework's loopback control channel and are maintainer legs, not gates; they
+need the user's disc and are run by hand.
 
 Never commit game media, extracted executables, generated guest code, `.env`, traces, or
 machine-specific paths. Runtime diagnostics use `scratch/`; compiler output uses top-level `build/`.
