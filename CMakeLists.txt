@@ -15,7 +15,7 @@ if(NOT EXISTS "${PSXPORT_DIR}/cmake/psxport.cmake")
   message(FATAL_ERROR "PSXPORT_DIR=${PSXPORT_DIR} has no cmake/psxport.cmake — run "
                       "`python3 tools/psxport_fetch.py --auto`, or point PSXPORT_DIR at a psxport checkout.")
 endif()
-# RECORD WHAT THIS CONFIGURE RESOLVED, so `tools/psxport_sync.py --check` can compare the built
+# RECORD WHAT THIS CONFIGURE RESOLVED, so `external/psxport/tools/psxport_sync.py --check` can compare the built
 # framework against the one psxport.pin RECORDS.
 execute_process(COMMAND git -C "${PSXPORT_DIR}" rev-parse HEAD
                 OUTPUT_VARIABLE PSXPORT_RESOLVED_SHA OUTPUT_STRIP_TRAILING_WHITESPACE
@@ -387,10 +387,6 @@ if(BUILD_TESTING)
     COMMAND "${Python3_EXECUTABLE}" -B "${CMAKE_CURRENT_SOURCE_DIR}/tests/test_run.py"
   )
   set_tests_properties(crash_launcher_tests PROPERTIES ENVIRONMENT "PYTHONDONTWRITEBYTECODE=1")
-  add_test(
-    NAME crash_dependency_provenance
-    COMMAND "${Python3_EXECUTABLE}" -B "${CMAKE_CURRENT_SOURCE_DIR}/tests/test_psxport_sync.py"
-  )
 endif()
 set(crash1_exe "${CMAKE_CURRENT_SOURCE_DIR}/scratch/bin/crash1/SCUS_949.00")
 if(BUILD_TESTING)
@@ -607,6 +603,10 @@ endif()
 if(BUILD_TESTING)
   add_test(
     NAME crash_psxport_pin_live
-    COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tools/psxport_sync.py"
-            --check --build "${CMAKE_BINARY_DIR}")
+    COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/external/psxport/tools/psxport_sync.py"
+            --repo "${CMAKE_SOURCE_DIR}" --check --build "${CMAKE_BINARY_DIR}")
 endif()
+
+# The pin tool's own behaviour (staleness guard, a bump that records the commit the build RESOLVED) is
+# tested once, in the framework (tests/test_psxport_sync.py). The only pin tool this repository ships
+# is tools/psxport_fetch.py.
