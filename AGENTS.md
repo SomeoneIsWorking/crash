@@ -42,7 +42,7 @@ pixels are diagnostics, never native producer input.
 ## How the tree is verified
 
 `uv run --frozen python tools/verify.py` is the gate: it configures, builds, and runs CTest, the
-framework C++ policy check, and the live pin check. Unit tests live in `tests/`, and the launcher
+framework C++ policy check. Unit tests live in `tests/`, and the launcher
 and provisioning owners have their own tests there. The `probe_crash1_*` tools in `tools/` drive the
 product through the framework's loopback control channel and are maintainer legs, not gates; they
 need the user's disc and are run by hand.
