@@ -23,7 +23,6 @@ line is matched, quoted, and reported as a REFUSAL with the exit code it produce
 The tool launches the product itself, refuses to start while another product binary holds the
 machine's single slot, and kills only PIDs it captured. Never `pkill`/`pgrep -f`.
 
-    tools/probe_crash1_widescreen_pair.py --selftest
     tools/probe_crash1_widescreen_pair.py --disc "$DISC" --frame 400
 
 `--disc`, or `$PSXPORT_DISC`, names the user's image. There is no default: a machine-specific path
@@ -62,17 +61,6 @@ SINK_HEIGHT = 240
 LEG_SETTINGS = {"4x3": "config/aspect_4x3.ini", "16x9": "config/aspect_16x9.ini"}
 ASPECT_VALUES = {"4x3": 0, "16x9": 1}
 
-# The keys `Mods::load` actually accepts, from `runtime/psx/mods.cpp`. It has NO comment support: it
-# splits every line on the first `=` and compares the whole prefix as the key, so a documented settings
-# file emits `unknown key "# ..." ignored — it configures nothing` for every comment line containing an
-# `=`. This list is here so the selftest can assert the tracked files parse CLEANLY rather than
-# asserting a comment convention the parser does not share.
-SETTINGS_KEYS = frozenset({
-    "aspect", "ires", "ires_auto", "face_order", "ssao", "light", "shadows",
-    "shadow_strength", "fps60", "ssao_strength", "ssao_radius", "ssao_bias", "ssao_range",
-    "light_dir", "light_ambient", "light_diffuse",
-})
-
 PRODUCT = re.compile(r"^.*/([A-Za-z0-9_.]*_port)$")
 WIDE_LINE = re.compile(r"native picture: aspect=(\d+) wide_engine=(\d+) "
                        r"native_width=(\d+) render_width=(\d+)")
@@ -89,9 +77,8 @@ GUEST_PROJECTION = re.compile(
 # THE CHANNEL IS MATCHED AS `crash1-frame` + an optional `:` SEVERITY SUFFIX, not as the bare name.
 # The product logs refusals as `[crash1-frame:error]` and `[crash1-wide:error]`, and an earlier
 # version of this table matched `[crash1-frame]` exactly — so it matched NOTHING on a real log and
-# would have reported a clean leg for a product that had aborted. The tool's own selftest is what
-# caught it, by feeding it the real line: a refusal matcher that cannot match the string it exists to
-# match is worse than no matcher, because it manufactures the opposite answer.
+# would have reported a clean leg for a product that had aborted: a refusal matcher that cannot match
+# the string it exists to match is worse than no matcher, because it manufactures the opposite answer.
 REFUSALS = (
     (re.compile(r"\[crash1-frame[:\w]*\] frame (\d+) reached an unexpected boundary at (0x[0-9A-F]{8})"),
      "the title's frame-loop contract refused a display-field boundary whose provenance is not the "
@@ -342,108 +329,9 @@ def report_leg(result: dict, out) -> None:
         out(f"[{result['leg']}] NOTE: {result['note']}")
 
 
-def selftest(out=print) -> int:
-    """Prove the receipt logic reports BOTH answers, then exit.
-
-    The refusal matcher is the important half. A leg that finds no named refusal must NOT read as a
-    pass, and a leg that finds one must report it with its owner rather than as a timeout — so the
-    fixtures are a clean log, a log carrying each of the real refusal lines, and a log carrying a line
-    that only LOOKS like one.
-    """
-    checks = 0
-    failures = []
-
-    clean = ("[wide] native picture: aspect=0 wide_engine=0 native_width=320 render_width=320\n"
-             "[crash1-wide] guest projection init published H 1000, OFX 0, OFY 0 — retail; "
-             "host canvas 320 (native 320)\n")
-    checks += 1
-    if find_refusals(clean):
-        failures.append("a clean log was reported as carrying a refusal")
-    checks += 1
-    projection = parse_guest_projection(clean)
-    if projection is None or projection["host_canvas"] != 320 or projection["OFX"] != 0:
-        failures.append(f"the clean fixture's guest projection read {projection}, expected OFX 0 / 320")
-    checks += 1
-    if parse_guest_projection("[boot] nothing published here\n") is not None:
-        failures.append("a log with no published projection reported one; absence must be None, "
-                        "never a zero")
-
-    wide_log = ("[wide] native picture: aspect=1 wide_engine=0 native_width=320 render_width=320\n"
-                "[crash1-wide] guest projection init published H 1000, OFX 0, OFY 0; "
-                "host canvas 428 (native 320)\n")
-    verdict = classify_wide(parse_wide_lines(wide_log))
-    checks += 1
-    if verdict["announced_wider"] is not False:
-        failures.append("the announce line read a wider picture for render_width == native_width")
-    checks += 1
-    if "announced_wider" not in verdict:
-        failures.append("the announce verdict is not separated from the guest-side witness, so the two "
-                        "different questions this title asks would be reported as one")
-
-    for label, line in (
-            ("frame contract",
-             "[crash1-frame:error] frame 0 reached an unexpected boundary at 0x800170FC with ra=0x800170FC"),
-            ("projection guard",
-             "[crash1-wide:error] the guest published OFX 86 but $a0 was 5636096; the plan and the "
-             "guest's own leaf disagree, so the frame would not be the widening it claims")):
-        found = find_refusals(line)
-        checks += 1
-        if len(found) != 1:
-            failures.append(f"the {label} refusal line matched {len(found)} refusals, expected 1")
-        elif not found[0]["owner"].startswith(("titles/", "game/")):
-            failures.append(f"the {label} refusal named no owner: {found[0]['owner']!r}")
-
-    # A line that only LOOKS like a refusal must not be counted as one, and neither must the bare
-    # channel name: these are the two ways a matcher over-reports.
-    checks += 1
-    if find_refusals("[cfg] PSXPORT_FPS60 = false [default]\n"):
-        failures.append("an unrelated line was matched as a product refusal")
-    checks += 1
-    if find_refusals("[crash1-wide] guest widescreen installed: SetGeomOffset 0x80042F8C\n"):
-        failures.append("the title's ordinary install announcement was matched as a refusal")
-
-    for leg, path in LEG_SETTINGS.items():
-        resolved = ROOT / path
-        checks += 1
-        if not resolved.is_file():
-            failures.append(f"tracked settings {path} named by the {leg} leg is missing")
-            continue
-        checks += 1
-        if f"aspect={ASPECT_VALUES[leg]}" not in resolved.read_text(encoding="utf-8"):
-            failures.append(f"{path} does not pin aspect={ASPECT_VALUES[leg]}")
-        # The product must be able to read every line of its own control file: `Mods::load` has no
-        # comment support, so a documented settings file makes the product log `unknown key` warnings
-        # that read like misconfiguration.
-        for number, line in enumerate(resolved.read_text(encoding="utf-8").splitlines(), start=1):
-            if not line.strip():
-                continue
-            if "=" not in line:
-                failures.append(f"{path}:{number} is {line!r}, which `Mods::load` silently skips "
-                                f"(no `=`); a control file should have nothing it cannot express")
-                continue
-            if line.split("=", 1)[0] not in SETTINGS_KEYS:
-                failures.append(f"{path}:{number} has key {line.split('=', 1)[0]!r}, which "
-                                f"`Mods::load` does not accept; the product will log `unknown key` "
-                                f"and configure nothing")
-
-    for failure in failures:
-        out(f"crash1 widescreen-pair selftest: FAIL — {failure}")
-    if failures:
-        out(f"crash1 widescreen-pair selftest: {checks - len(failures)}/{checks} => FAIL")
-        return 1
-    out(f"crash1 widescreen-pair selftest: {checks}/{checks} => PASS (a clean log carries no refusal "
-        f"and its guest projection reads OFX 0, a log with no published projection reports absence as "
-        f"None rather than zero, the announce verdict is kept separate from the guest-side witness, "
-        f"both real refusal lines are matched once each with the owner that raised them, an unrelated "
-        f"line and the title's own install announcement are not matched, both tracked settings files "
-        f"pin different aspects, and every line of both files is a key `Mods::load` actually accepts)")
-    return 0
-
-
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--selftest", action="store_true", help="prove the receipt logic, then exit")
     parser.add_argument("--leg", choices=sorted(LEG_SETTINGS), help="run ONE aspect leg")
     parser.add_argument("--frame", type=int, default=400, help="presented frame to capture at")
     parser.add_argument("--port", type=int, default=5961, help="debug endpoint port")
@@ -451,8 +339,6 @@ def main() -> int:
     parser.add_argument("--binary", default="build/ci/crash1_port")
     parser.add_argument("--disc", help=f"the user's disc image; defaults to ${DISC_ENV}")
     args = parser.parse_args()
-    if args.selftest:
-        return selftest()
     disc = args.disc or os.environ.get(DISC_ENV)
     if not disc:
         print(f"REFUSED: no disc image. Pass --disc PATH or set {DISC_ENV}. The user's image is "

@@ -26,7 +26,7 @@
       "body_sha256": "25097695f5ebd26728662b7989487b139e140ccf2129a14df10b30a003865b4e"
     },
     "projection": {
-      "_note": "Every address, word and hash below was read out of the authenticated SCUS_941.54 by tools/probe_title_projection.py, which re-derives the whole block on demand and fails when the image disagrees. Nothing here is a tuned constant.",
+      "_note": "Every address, word and hash below was read out of the authenticated SCUS_941.54 Nothing here is a tuned constant.",
       "_control_registers": {
         "ofx": 24,
         "ofy": 25,

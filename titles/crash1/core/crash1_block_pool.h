@@ -43,9 +43,8 @@
 // at 0x80012FB4..0x80012FBC is the word whose SHIFT feeds the bucket index, while `lw $3,4($5)` at
 // 0x80012FFC is what a cell's class field is compared against. An owner that compared the shifted key
 // against the cell's class could therefore never match a real cell, its walk would never end, and it
-// would hand the caller a cell at the edge of main RAM. `tools/probe_crash1_block_pool.py`
-// re-derives the comparison register from those three branch words and fails if it is not `$a0`, so
-// this correction cannot be undone by editing a comment.
+// would hand the caller a cell at the edge of main RAM. The comparison register is `$a0` in all
+// three branch words, and `titles/crash1/executable.json` records it.
 //
 // and the ONLY difference between a lookup that returns and one that faults is whether the bucket
 // holds a real cell pointer. Nothing else in the function can fault.
@@ -94,10 +93,8 @@ class Core;
 
 namespace crash1 {
 
-// The two functions, by address. Same pattern as `crash1_horizontal_bound.h`: the literal lives here,
-// the authority is titles/crash1/executable.json, and tools/probe_crash1_block_pool.py re-derives
-// every one of them from the authenticated image AND diffs this file against the manifest, so a
-// constant here that the bytes do not produce fails a gate instead of shipping.
+// The two functions, by address. Same pattern as `crash1_horizontal_bound.h`: the literal lives here
+// and the authority is titles/crash1/executable.json.
 inline constexpr std::uint32_t kFindCell = 0x80015978u;
 inline constexpr std::uint32_t kFindCellEnd = 0x800159C4u;
 inline constexpr std::uint32_t kFindCellBounded = 0x800159C4u;

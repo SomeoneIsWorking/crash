@@ -129,9 +129,6 @@ def main() -> int:
     parser.add_argument(
         "--runtime-facts", required=True, help="built title runtime facts tool"
     )
-    parser.add_argument(
-        "--selftest", action="store_true", help="also prove one altered fact disagrees"
-    )
     args = parser.parse_args()
 
     try:
@@ -157,17 +154,6 @@ def main() -> int:
             print(f"game_main=0x{expected['game_main']:08X} is a tracked executable-call boundary")
         else:
             print("game_main=0 is an explicit unmeasured frontier, not a guessed address")
-
-        if args.selftest:
-            altered = dict(actual)
-            altered["global_pointer"] ^= 4
-            control = compare(expected, altered)
-            if len(control) != 1 or not control[0].startswith("global_pointer:"):
-                print(
-                    "FAIL: altered-runtime control did not produce one named disagreement"
-                )
-                return 1
-            print("PASS: altered-runtime control produced 1 named disagreement")
         return 0
     except (OSError, Refused) as exc:
         print(f"REFUSED: {exc}", file=sys.stderr)

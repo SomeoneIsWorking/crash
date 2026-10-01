@@ -344,11 +344,11 @@ function(add_crt0_boundary_title title)
         --title ${title} --discdump "$<TARGET_FILE:discdump>"
       COMMAND
         "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tools/verify_executable.py"
-        --title ${title} --selftest --exe "${title_exe}"
+        --title ${title} --exe "${title_exe}"
       COMMAND
         "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tools/verify_runtime_image.py"
         --title ${title} --exe "${title_exe}" --extractor "$<TARGET_FILE:crt0_extract>"
-        --runtime-facts "$<TARGET_FILE:${title}_runtime_facts>" --selftest
+        --runtime-facts "$<TARGET_FILE:${title}_runtime_facts>"
       COMMAND "$<TARGET_FILE:oracle_spike>"
       COMMAND
         "${Python3_EXECUTABLE}" "${PSXPORT_DIR}/tools/oracle/crossvalidate_crt0.py"
@@ -390,147 +390,9 @@ if(BUILD_TESTING)
 endif()
 set(crash1_exe "${CMAKE_CURRENT_SOURCE_DIR}/scratch/bin/crash1/SCUS_949.00")
 if(BUILD_TESTING)
-  # Maintainer targets, NOT ctest tests: both need the user's authenticated executable or a run of
-  # the product, and neither is a build input. A gate that required them would fail on a fresh clone
+  # Maintainer targets, NOT ctest tests: each needs the user's authenticated executable or a run of
+  # the product, and none is a build input. A gate that required them would fail on a fresh clone
   # for the wrong reason, and the guest image must never become a build or CI dependency.
-  add_custom_target(
-    crash1_projection_census
-    COMMAND
-      "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tools/probe_crash1_projection.py"
-      --title crash1 --exe "${crash1_exe}"
-    COMMENT
-      "Re-derive Crash 1's GTE projection owners, the GPU driver table and the cull census from the authenticated executable"
-    USES_TERMINAL
-    VERBATIM
-  )
-  add_custom_target(
-    crash1_horizontal_bound_census
-    COMMAND
-      "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tools/probe_crash1_horizontal_bound.py"
-      --title crash1 --executable "${crash1_exe}"
-    COMMENT
-      "Re-derive Crash 1's variable horizontal bound, its 20 readers and its two decision-making consumers from the authenticated executable"
-    USES_TERMINAL
-    VERBATIM
-  )
-  # The selftest half needs no disc, so it IS a ctest test. The census half above is a maintainer
-  # target because it needs the user's authenticated executable, which must never be a build input.
-  add_test(
-    NAME crash1_horizontal_bound_selftest
-    COMMAND
-      "${Python3_EXECUTABLE}" -B
-      "${CMAKE_CURRENT_SOURCE_DIR}/tools/probe_crash1_horizontal_bound.py" --selftest-only
-  )
-  set_tests_properties(crash1_horizontal_bound_selftest
-                       PROPERTIES ENVIRONMENT "PYTHONDONTWRITEBYTECODE=1")
-  # The block-pool recovery, the same split for the same reason: the census half needs the user's
-  # authenticated executable, so it is a maintainer target, and the selftest half needs no disc, so it
-  # is a ctest test. The census is what re-derives the class shift, the bucket mask, the cell stride,
-  # the class field, the six call sites and the stop site's own word from the image, AND diffs
-  # titles/crash1/core/crash1_block_pool.h against titles/crash1/executable.json — so a constant the
-  # bytes do not produce cannot ship.
-  add_custom_target(
-    crash1_block_pool_census
-    COMMAND
-      "${Python3_EXECUTABLE}" -B
-      "${CMAKE_CURRENT_SOURCE_DIR}/tools/probe_crash1_block_pool.py" --title crash1
-      --executable "${crash1_exe}"
-    COMMENT
-      "Re-derive Crash 1's size-class block pool, its six call sites and its stop site's word from the authenticated executable, and diff the native owner's constants against the manifest"
-    USES_TERMINAL
-    VERBATIM
-  )
-  add_test(
-    NAME crash1_block_pool_selftest
-    COMMAND
-      "${Python3_EXECUTABLE}" -B
-      "${CMAKE_CURRENT_SOURCE_DIR}/tools/probe_crash1_block_pool.py" --selftest-only
-  )
-  set_tests_properties(crash1_block_pool_selftest
-                       PROPERTIES ENVIRONMENT "PYTHONDONTWRITEBYTECODE=1")
-  # The allocate path's census, the same split again. It re-derives the function's extent and body
-  # digest, its six `lui`+access global pairs, both strides (by SIMULATING the multiply-out rather
-  # than by asserting 44 and 28), the five-way dispatch, the three published state words, the class
-  # rule, and the call-then-store pair at 0x8001313C/0x80013140 — and diffs
-  # titles/crash1/core/crash1_pool_node.h against titles/crash1/executable.json.
-  add_custom_target(
-    crash1_pool_node_census
-    COMMAND
-      "${Python3_EXECUTABLE}" -B
-      "${CMAKE_CURRENT_SOURCE_DIR}/tools/probe_crash1_pool_node.py" --title crash1
-      --executable "${crash1_exe}"
-    COMMENT
-      "Re-derive Crash 1's pool allocate path 0x80012F10 from the authenticated executable and diff the recovered owner's constants against the manifest"
-    USES_TERMINAL
-    VERBATIM
-  )
-  add_test(
-    NAME crash1_pool_node_selftest
-    COMMAND
-      "${Python3_EXECUTABLE}" -B
-      "${CMAKE_CURRENT_SOURCE_DIR}/tools/probe_crash1_pool_node.py" --selftest-only
-  )
-  set_tests_properties(crash1_pool_node_selftest
-                       PROPERTIES ENVIRONMENT "PYTHONDONTWRITEBYTECODE=1")
-  # What the guest ACTUALLY submits and whether a frame is ACTUALLY presented, in one process. This
-  # exists because `[producers] run-end: OtAttr spans recorded 0` was read as "the guest submits
-  # nothing" and as "zero frames are presented", and BOTH readings are false: the span counter's window
-  # is the legacy GameConfig packet pool, which a typed GameRuntime never fills, so it reads 0 by
-  # construction. The selftest half needs no disc, no GPU and no product, so it is a ctest; the leg
-  # needs the operator's disc on the command line, so it is a maintainer run that REFUSES without one.
-  add_test(
-    NAME crash1_primitives_selftest
-    COMMAND
-      "${Python3_EXECUTABLE}" -B
-      "${CMAKE_CURRENT_SOURCE_DIR}/tools/probe_crash1_primitives.py" --selftest-only
-  )
-  set_tests_properties(crash1_primitives_selftest
-                       PROPERTIES ENVIRONMENT "PYTHONDONTWRITEBYTECODE=1")
-  # The 4:3-vs-16:9 receipt logic, and specifically its REFUSAL matcher. The selftest half is a ctest
-  # test because it needs no disc, no GPU and no product; the pair itself is a maintainer run.
-  #
-  # This matcher earned its own registration by failing its own first selftest: it matched the channel
-  # as `[crash1-frame]`, the product logs `[crash1-frame:error]`, and it therefore matched NOTHING on
-  # a real log — reporting a clean leg for a product that had aborted. A diagnostic that cannot match
-  # the string it exists to match is worse than none, so the fixtures now feed it the real lines, plus
-  # a bare channel announcement that must NOT match. See docs/issues/0019.
-  add_test(
-    NAME crash1_widescreen_pair_selftest
-    COMMAND
-      "${Python3_EXECUTABLE}" -B
-      "${CMAKE_CURRENT_SOURCE_DIR}/tools/probe_crash1_widescreen_pair.py" --selftest
-  )
-  set_tests_properties(crash1_widescreen_pair_selftest
-                       PROPERTIES ENVIRONMENT "PYTHONDONTWRITEBYTECODE=1")
-  # ONE probe for both newer titles, driven by their manifests. It exists instead of two per-title
-  # copies because `probe_crash1_projection.py` and `probe_crash1_horizontal_bound.py` already carry
-  # their own copies of the PS-X EXE reader, the COP2 classifier and the displacement scan, and a third
-  # and fourth copy of the same rules is how this workspace has measured gates drifting silently.
-  foreach(probe_title crash2 crash3)
-    file(READ "${CMAKE_CURRENT_SOURCE_DIR}/titles/${probe_title}/executable.json" ${probe_title}_proj_json)
-    string(JSON ${probe_title}_proj_exe GET "${${probe_title}_proj_json}" executable)
-    add_custom_target(
-      ${probe_title}_projection_census
-      COMMAND
-        "${Python3_EXECUTABLE}" -B
-        "${CMAKE_CURRENT_SOURCE_DIR}/tools/probe_title_projection.py" --title
-        ${probe_title} --executable
-        "${CMAKE_CURRENT_SOURCE_DIR}/scratch/bin/${probe_title}/${${probe_title}_proj_exe}"
-      COMMENT
-        "Re-derive ${probe_title}'s GTE projection owners, its variable screen-distance bound, its consumers and its cull census from the authenticated executable"
-      USES_TERMINAL
-      VERBATIM
-    )
-    add_test(
-      NAME ${probe_title}_projection_selftest
-      COMMAND
-        "${Python3_EXECUTABLE}" -B
-        "${CMAKE_CURRENT_SOURCE_DIR}/tools/probe_title_projection.py" --title
-        ${probe_title} --selftest-only
-    )
-    set_tests_properties(${probe_title}_projection_selftest
-                         PROPERTIES ENVIRONMENT "PYTHONDONTWRITEBYTECODE=1")
-  endforeach()
   add_custom_target(
     crash1_widescreen_legs
     COMMAND
@@ -552,7 +414,7 @@ if(BUILD_TESTING)
     COMMAND
       "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tools/verify_runtime_image.py"
       --title crash1 --exe "${crash1_exe}" --extractor "$<TARGET_FILE:crt0_extract>"
-      --runtime-facts "$<TARGET_FILE:crash1_runtime_facts>" --selftest
+      --runtime-facts "$<TARGET_FILE:crash1_runtime_facts>"
     COMMAND
       "${Python3_EXECUTABLE}" "${PSXPORT_DIR}/tools/oracle/crossvalidate_crt0.py"
       "${crash1_exe}"

@@ -54,9 +54,8 @@ class Game;
 namespace crash {
 
 // The measured per-title projection facts. Every member was read out of that title's authenticated
-// executable by `tools/probe_title_projection.py` and is recorded in `titles/<title>/executable.json`
-// under `runtime.projection`; the probe diffs the constants this repository compiles against that
-// manifest, so the two cannot drift. Nothing here is a tuned value.
+// executable and is recorded in `titles/<title>/executable.json` under `runtime.projection`. Nothing
+// here is a tuned value.
 struct ProjectionTitleFacts {
   // For the log line and the refusal text. The serial, not a nickname.
   std::string_view serial;

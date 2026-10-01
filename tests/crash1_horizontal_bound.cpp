@@ -2,9 +2,7 @@
 //
 // Every case pins a PRODUCTION contract of `crash1::Crash1HorizontalBound`, and each is written so
 // the mutation it claims to catch makes it fail. The measured inputs are read out of the
-// authenticated executable by tools/probe_crash1_horizontal_bound.py and recorded in
-// titles/crash1/executable.json; that tool also diffs the constants this header ships against the
-// manifest, so a constant cannot drift here without a gate going red.
+// authenticated executable and recorded in titles/crash1/executable.json.
 //
 // WHAT IS AND IS NOT UNDER TEST. The two pure rules - the GTE near-plane band and the light-intensity
 // offset - are the title's own decisions, transcribed so a change to the transcription is visible.

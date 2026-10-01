@@ -9,22 +9,20 @@ Recorded independent execution reaches the first eight calls through the
 `0x8003E200`, and agrees 34/34 at B(56h) with `ra=0x800431B8`. Retail disassembly of
 `[0x8004319C,0x80043248)` grounds the following C0 slot-6 read, fourteen-word copy, and A(44h)
 tail-dispatch with `ra=0x800431E8`. The independent chain stops at local wrapper `0x8004323C` before
-that non-link tail dispatch; issue 0008 retains the exact gap.
+that non-link tail dispatch.
 
-The preserved compatibility route later reached 1,172/1,172 fields and the 3D title menu. Issue 0012
-grounds the BIOS auto-pad word at `0x80057054` and the in-flight publisher that must run before
-retail `PadUpdate`. Live evidence identifies `GfxUpdateMatrices 0x80017A14` and
-`GoolObjectTransform 0x8001DE78` as pre-GTE ownership candidates.
+The preserved compatibility route reached 1,172/1,172 fields and the 3D title menu. The BIOS auto-pad
+word is `0x80057054`, published before retail `PadUpdate`. Live evidence identifies
+`GfxUpdateMatrices 0x80017A14` and `GoolObjectTransform 0x8001DE78` as pre-GTE ownership candidates.
 
-These are frozen migration facts, not a static-product contract. New work maps the authenticated
-executable into psxport's Lightrec executor and preserves the same native owners and menu/PadRead
-frontier. Do not emit, build, or run generated guest code. See `../../docs/migration.md`.
+These are frozen facts, not a static-product contract: the product now maps the authenticated
+executable into psxport's Lightrec executor with the same native owners. Do not emit, build, or run
+generated guest code. See `../../docs/migration.md`.
 
 ## The widescreen projection owner
 
 `core/crash1_widescreen.*` is this title's `GuestWidescreenProjection`. Its facts are in
-`executable.json` under `runtime.projection` and are re-derived from the user-supplied bytes by
-`tools/probe_crash1_projection.py` (`cmake --build build/<dir> --target crash1_projection_census`).
+`executable.json` under `runtime.projection` and were read from the user-supplied bytes.
 
 Crash 1's horizontal projection is the **GTE screen offset `OFX` (cop2 control register 24)**, not
 `H` and not a viewport rectangle, and its retail 4:3 value is **zero** — the centring lives in the

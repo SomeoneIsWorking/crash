@@ -20,8 +20,8 @@
 // (`jal 0x80042FAC`, word 0x0C010BEB) in FUN_80026650, fed by `lw $a0,0x78D0($a0)` at 0x80026764 —
 // so FUN_80026650 is a CONSUMER that re-sends the global into CR[26] every frame, not a producer.
 //
-// TWENTY READERS, AND NONE OF THEM CARRIES AN IMMEDIATE. tools/probe_crash1_horizontal_bound.py
-// measures this three ways and names what each could not reach: 17 sites by a lui+displacement word
+// TWENTY READERS, AND NONE OF THEM CARRIES AN IMMEDIATE. The enumeration reached them three ways,
+// and names what each could not reach: 17 sites by a lui+displacement word
 // scan, 3 more by a `lw $rt,0($rN)` form whose register a nearby lui/addiu pair proves, and 1 more
 // (0x8001DFFC, 229 instructions past its `lui $s5,0x8005` at 0x8001DF64) only by naming that pair.
 // Every one of the twenty is `lui 0x8005` + a 16-bit displacement, which is exactly why the earlier
@@ -72,9 +72,7 @@ class Core;
 namespace crash1 {
 
 // The bound, its single writer, and its per-frame re-send. Same pattern as `crash1_widescreen.h`:
-// the literal lives here, the authority is titles/crash1/executable.json, and
-// tools/probe_crash1_horizontal_bound.py diffs THIS FILE against both the image and the manifest —
-// so a constant that drifts from the measurement fails a gate instead of shipping.
+// the literal lives here and the authority is titles/crash1/executable.json.
 inline constexpr std::uint32_t kHorizontalBound = 0x800578D0u;
 inline constexpr std::uint32_t kHorizontalBoundWriter = 0x80017820u;
 inline constexpr std::uint32_t kHorizontalBoundResend = 0x80026770u;

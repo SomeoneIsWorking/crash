@@ -5,8 +5,8 @@
 // the framework's own `gpu_vk_latch_guest_projection`, so a change to the framework's rule moves
 // these expectations with it instead of letting a title's copy of the arithmetic rot.
 //
-// The measured inputs are read out of the authenticated executable by
-// tools/probe_crash1_projection.py and recorded in titles/crash1/executable.json:
+// The measured inputs are read out of the authenticated executable and recorded in
+// titles/crash1/executable.json:
 //   0x80042F94  ctc2 $a0,0xC000   OFX = $a0 << 16   }  set_geom_offset 0x80042F8C
 //   0x80042F98  ctc2 $a1,0xC800   OFY = $a1 << 16   }
 //   0x80042FAC  ctc2 $a0,0xD000   H   = $a0          }  set_geom_screen

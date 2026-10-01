@@ -5,8 +5,8 @@
 // framework's rule moves these expectations with it instead of letting a title's copy of the
 // arithmetic rot.
 //
-// The measured inputs were read out of the authenticated executable by
-// tools/probe_title_projection.py and recorded in titles/crash3/executable.json:
+// The measured inputs were read out of the authenticated executable and recorded in
+// titles/crash3/executable.json:
 //   0x8004F70C  ctc2 $a0,0xC000   OFX = $a0 << 16   }  set_geom_offset 0x8004F704, whose body is
 //   0x8004F710  ctc2 $a1,0xC800   OFY = $a1 << 16   }  byte-identical to Crash 2's 0x8004EFE8
 //   0x8004F724  ctc2 $a0,0xD000   H   = $a0          }  set_geom_screen 0x8004F724

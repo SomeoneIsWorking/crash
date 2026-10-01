@@ -1,9 +1,7 @@
 // Crash Bandicoot 1 (SCUS-949.00) guest widescreen: this title's own projection owners.
 //
-// Every address and value below was read out of the authenticated executable by
-// tools/probe_crash1_projection.py, which re-derives the whole census on demand and refuses when the
-// image disagrees. The recorded ranges live in titles/crash1/executable.json under
-// runtime.projection; nothing here is a tuned constant.
+// Every address and value below was read out of the authenticated executable. The recorded ranges
+// live in titles/crash1/executable.json under runtime.projection; nothing here is a tuned constant.
 //
 // WHAT CRASH 1'S PROJECTION IS. Not H/OFX/OFY-as-a-triple, and not a viewport rectangle: the GTE
 // screen offset. Beetle's gte.c names CR[24]=OFX, CR[25]=OFY, CR[26]=H, and its RTPS computes
@@ -58,8 +56,8 @@ inline constexpr std::uint32_t kProjectionInit = 0x80042B1Cu; // writes OFX, OFY
 inline constexpr std::uint32_t kSetGeomOffset = 0x80042F8Cu;  // writes OFX and OFY; the latch site
 inline constexpr std::uint32_t kSetGeomScreen = 0x80042FACu;  // writes H; asserted, never changed
 
-// The measured call sites. tools/probe_crash1_projection.py re-measures these from the image and
-// fails when they move; a function-pointer reach is the null it cannot see, and it is stated.
+// The measured call sites. A direct-call census cannot see a function-pointer reach, and that null
+// is stated rather than papered over.
 inline constexpr std::uint32_t kProjectionInitCallSite = 0x80016558u;
 inline constexpr std::uint32_t kSetGeomOffsetCallSiteA = 0x8001783Cu; // in the camera setup, FUN_80017790
 inline constexpr std::uint32_t kSetGeomOffsetCallSiteB = 0x80017F00u; // per frame, in FUN_80017A14

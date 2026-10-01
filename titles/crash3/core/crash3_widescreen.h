@@ -1,10 +1,7 @@
 // Crash Bandicoot 3 (SCUS-942.44) guest widescreen: this title's own projection owners.
 //
-// Every address and value below was read out of the authenticated executable by
-// `tools/probe_title_projection.py`, which re-derives the whole census on demand and refuses when the
-// image disagrees. The recorded facts live in `titles/crash3/executable.json` under
-// `runtime.projection`, and the probe diffs the constants this file compiles against that manifest, so
-// the two copies cannot drift.
+// Every address and value below was read out of the authenticated executable. The recorded facts live
+// in `titles/crash3/executable.json` under `runtime.projection`; nothing here is a tuned constant.
 //
 // WHAT CRASH 3'S PROJECTION IS, AND IT IS THE SAME SHAPE AS CRASH 1 AND CRASH 2. Beetle's `gte.c`
 // names CR[24]=OFX, CR[25]=OFY, CR[26]=H, and its RTPS computes `h_div_sz = Divide(H, Z_FIFO(3))` then
@@ -60,8 +57,8 @@ class Core;
 
 namespace crash3 {
 
-// The three measured publication entries, each one guest code reaches by `jal` and each verified
-// against the image by tools/probe_title_projection.py. A resident-word scan of all 82,944 words
+// The three measured publication entries, each one guest code reaches by `jal`. A resident-word scan
+// of all 82,944 words
 // finds zero pointer-table entries equal to any of them, so no indirect reach exists.
 inline constexpr std::uint32_t kProjectionInit = 0x8004F37Cu; // publishes H, OFX and OFY once
 inline constexpr std::uint32_t kSetGeomOffset = 0x8004F704u;  // publishes OFX and OFY; the latch site

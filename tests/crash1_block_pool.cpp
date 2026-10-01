@@ -12,14 +12,12 @@
 //      guest read — which bucket it read, what it published, and what it returns when that bucket is
 //      not a pointer into main RAM.
 //
-// The measured inputs come from the authenticated executable through
-// tools/probe_crash1_block_pool.py, which records them in titles/crash1/executable.json and diffs
-// the header's own literals against that manifest. A constant cannot drift here without a gate going
-// red.
+// The measured inputs come from the authenticated executable and are recorded in
+// titles/crash1/executable.json.
 //
 // WHAT IS NOT UNDER TEST, stated so the coverage is not read as more than it is: no case here proves
 // the pool is the ROOT CAUSE of Crash 1 presenting no frame, and no case establishes which of the
-// six measured call sites ran. Both are runtime facts, and `docs/issues/0020` records them as such.
+// six measured call sites ran. Both are runtime facts.
 
 #include "crash1_block_pool.h"
 

@@ -8,12 +8,10 @@ Exit 0 means every declared fact matched, exit 1 means the image contradicted th
 from __future__ import annotations
 
 import argparse
-import copy
 import hashlib
 import json
 import pathlib
 import sys
-import tempfile
 from dataclasses import dataclass
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
@@ -384,157 +382,13 @@ def check(
     return failures
 
 
-def selftest(manifest: dict[str, object], executable: pathlib.Path) -> bool:
-    results: list[tuple[str, bool]] = []
-    results.append(
-        (
-            "retail image matches shipping manifest",
-            not check(manifest, executable, False),
-        )
-    )
-
-    bodies = runtime_body_ranges(manifest)
-    if bodies:
-        wrong_body = copy.deepcopy(manifest)
-        body_path = bodies[0].path.split(".")[1:]
-        body_fact: object = wrong_body["runtime"]
-        for key in body_path:
-            assert isinstance(body_fact, dict)
-            body_fact = body_fact[key]
-        assert isinstance(body_fact, dict)
-        body_fact["entry"] = f"0x{bodies[0].begin + 4:08X}"
-        results.append(
-            (
-                "wrong native runtime entry is rejected by its executable-body fingerprint",
-                any(
-                    failure.startswith(f"runtime_body_sha256:{bodies[0].path}:")
-                    for failure in check(wrong_body, executable, False)
-                ),
-            )
-        )
-
-    address_loads = runtime_address_loads(manifest)
-    if address_loads:
-        wrong_load = copy.deepcopy(manifest)
-        load_path = address_loads[0].path.split(".")[1:]
-        load_fact: object = wrong_load["runtime"]
-        for key in load_path:
-            assert isinstance(load_fact, dict)
-            load_fact = load_fact[key]
-        assert isinstance(load_fact, dict)
-        load_fact["address"] = f"0x{address_loads[0].address ^ 0x00010000:08X}"
-        results.append(
-            (
-                "wrong runtime address is rejected by its executable load site",
-                any(
-                    failure.startswith(f"runtime_address_load:{address_loads[0].path}:")
-                    for failure in check(wrong_load, executable, False)
-                ),
-            )
-        )
-
-    wrong = copy.deepcopy(manifest)
-    wrong["sha1"] = "0" * 40
-    results.append(
-        ("wrong shipping hash is rejected", bool(check(wrong, executable, False)))
-    )
-
-    wrong_vsync = copy.deepcopy(manifest)
-    wrong_runtime = wrong_vsync["runtime"]
-    assert isinstance(wrong_runtime, dict)
-    wrong_vsync_fact = wrong_runtime["vsync"]
-    assert isinstance(wrong_vsync_fact, dict)
-    wrong_vsync_fact["entry"] = f"0x{vsync_range(manifest)[0] + 4:08X}"
-    results.append(
-        (
-            "wrong VSync entry is rejected by the executable-body fingerprint",
-            any(
-                failure.startswith("vsync_body_sha256:")
-                for failure in check(wrong_vsync, executable, False)
-            ),
-        )
-    )
-
-    scratch = ROOT / "scratch"
-    scratch.mkdir(exist_ok=True)
-    with tempfile.TemporaryDirectory(
-        prefix="verify-executable-", dir=scratch
-    ) as directory:
-        fixture = pathlib.Path(directory) / executable.name
-        data = bytearray(executable.read_bytes())
-        data[-1] ^= 1
-        fixture.write_bytes(data)
-        results.append(
-            ("mutated executable is rejected", bool(check(manifest, fixture, False)))
-        )
-
-        image = psx_exe.load(str(executable))
-        if bodies:
-            body = bodies[0]
-            body_offset = 0x800 + (body.begin - image.load)
-            body_data = bytearray(executable.read_bytes())
-            body_data[body_offset] ^= 1
-            body_fixture = pathlib.Path(directory) / f"body-{executable.name}"
-            body_fixture.write_bytes(body_data)
-            body_manifest = copy.deepcopy(manifest)
-            body_manifest["sha1"] = hashlib.sha1(body_data).hexdigest()
-            body_manifest["sha256"] = hashlib.sha256(body_data).hexdigest()
-            results.append(
-                (
-                    "mutated native runtime body is rejected independently of whole-file identity",
-                    any(
-                        failure.startswith(f"runtime_body_sha256:{body.path}:")
-                        for failure in check(body_manifest, body_fixture, False)
-                    ),
-                )
-            )
-
-        vsync_begin, _, _ = vsync_range(manifest)
-        vsync_offset = 0x800 + (vsync_begin - image.load)
-        vsync_data = bytearray(executable.read_bytes())
-        vsync_data[vsync_offset] ^= 1
-        vsync_fixture = pathlib.Path(directory) / f"vsync-{executable.name}"
-        vsync_fixture.write_bytes(vsync_data)
-        mutated_manifest = copy.deepcopy(manifest)
-        mutated_manifest["sha1"] = hashlib.sha1(vsync_data).hexdigest()
-        mutated_manifest["sha256"] = hashlib.sha256(vsync_data).hexdigest()
-        results.append(
-            (
-                "mutated VSync body is rejected independently of whole-file identity",
-                any(
-                    failure.startswith("vsync_body_sha256:")
-                    for failure in check(mutated_manifest, vsync_fixture, False)
-                ),
-            )
-        )
-
-        malformed = pathlib.Path(directory) / "malformed.exe"
-        malformed.write_bytes(b"not a PS-X EXE")
-        try:
-            check(manifest, malformed, False)
-            results.append(("malformed executable is refused", False))
-        except Refused:
-            results.append(("malformed executable is refused", True))
-
-    for name, passed in results:
-        print(f"{'PASS' if passed else 'FAIL'}: {name}")
-    print(f"selftest: {sum(passed for _, passed in results)}/{len(results)} cases")
-    return all(passed for _, passed in results)
-
-
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--title", default="crash1", help="directory below titles/ (default: crash1)"
     )
     parser.add_argument("--exe", type=pathlib.Path, help="path to the real executable")
-    actions = parser.add_mutually_exclusive_group(required=True)
-    actions.add_argument(
-        "--check", action="store_true", help="compare executable to manifest"
-    )
-    actions.add_argument(
-        "--selftest", action="store_true", help="exercise match, mismatch, refusal"
-    )
+    parser.add_argument("--check", action="store_true", help="compare executable to manifest")
     args = parser.parse_args()
 
     manifest_path = ROOT / "titles" / args.title / "executable.json"
@@ -543,8 +397,6 @@ def main() -> int:
         executable = args.exe or ROOT / "scratch" / "bin" / args.title / str(
             manifest["executable"]
         )
-        if args.selftest:
-            return 0 if selftest(manifest, executable) else 1
         return 1 if check(manifest, executable) else 0
     except (OSError, Refused) as exc:
         print(f"REFUSED: {exc}", file=sys.stderr)

@@ -8,7 +8,7 @@
 // therefore never match anything this function wrote — which is exactly the defect measured and
 // corrected in `crash1_block_pool.h`.
 //
-// It has two `jal` call sites, both measured by `tools/probe_crash1_block_pool.py`:
+// It has two `jal` call sites:
 //   0x8001313C  inside 0x80012F10   <- this function, calling the lookup it is building a cell for
 //   0x8001515C  inside 0x80015118   <- the caller every live lookup in the disc-backed run came from
 // and the first of those is the loop that closes: 0x80013134 loads the class word, 0x80013138 loads
@@ -43,9 +43,8 @@
 
 namespace crash1::pool_node {
 
-// The function, by address. Same rule as every other owner in this title: the literal lives here, the
-// authority is titles/crash1/executable.json, and tools/probe_crash1_pool_node.py re-derives every
-// one of these from the authenticated image and diffs this header against the manifest.
+// The function, by address. Same rule as every other owner in this title: the literal lives here and
+// the authority is titles/crash1/executable.json.
 inline constexpr std::uint32_t kEntry = 0x80012F10u;
 inline constexpr std::uint32_t kEnd = 0x8001331Cu; // the `jr $ra` at 0x80013314, plus its delay slot
 

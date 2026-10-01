@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
 """Drive Crash 1 with a held pad button and report whether the TITLE responds, in one run.
 
-WHY THIS TOOL EXISTS. `docs/issues/0012` recorded that host input did not reach Crash's BIOS
-auto-pad word at `0x80057054`, and it was measured on a product that presented nothing. That is no
-longer the product: issue 0022 measured 239,549 GP0 primitives and 6 of 6 captured fences carrying a
-picture, and issue 0023 measured that BOTH callers of the widened leaf `0x80042F8C` — the camera
-distance and camera centre publishers — never run in 400 frames. So the same input that was
-unmeasurable on a dead run is now measurable on one that draws, and the question is worth asking
-again.
+WHY THIS TOOL EXISTS. It answers three questions in one run that are ambiguous apart: does the host's
+button reach Crash's BIOS auto-pad word at `0x80057054`, does the presented frame change as a result,
+and does the present-frame counter advance over the same hold. A word that moves while the frame does
+not is a title that READS input and IGNORES it, which is a different defect from a word that never
+moves at all. The widened leaf `0x80042F8C` — the camera distance and camera centre publishers — does
+not run in a live level, which is what this tool is used to re-check.
 
 WHAT IT MEASURES, AND WHY ALL THREE IN ONE RUN. A single number here is a fact about this tool:
 

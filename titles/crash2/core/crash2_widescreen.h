@@ -1,10 +1,7 @@
 // Crash Bandicoot 2 (SCUS-941.54) guest widescreen: this title's own projection owners.
 //
-// Every address and value below was read out of the authenticated executable by
-// `tools/probe_title_projection.py`, which re-derives the whole census on demand and refuses when the
-// image disagrees. The recorded facts live in `titles/crash2/executable.json` under
-// `runtime.projection`, and the probe diffs the constants this file compiles against that manifest, so
-// the two copies cannot drift.
+// Every address and value below was read out of the authenticated executable. The recorded facts live
+// in `titles/crash2/executable.json` under `runtime.projection`; nothing here is a tuned constant.
 //
 // WHAT CRASH 2'S PROJECTION IS. Not H/OFX/OFY as an authored triple, and not a viewport rectangle:
 // the GTE screen offset. Beetle's `gte.c` names CR[24]=OFX, CR[25]=OFY, CR[26]=H, and its RTPS
@@ -46,8 +43,8 @@ class Core;
 
 namespace crash2 {
 
-// The three measured publication entries, each one guest code reaches by `jal` and each verified
-// against the image by tools/probe_title_projection.py. A resident-word scan of all 81,408 words
+// The three measured publication entries, each one guest code reaches by `jal`. A resident-word scan
+// of all 81,408 words
 // finds zero pointer-table entries equal to any of them, so no indirect reach exists.
 inline constexpr std::uint32_t kProjectionInit = 0x8004EC30u; // publishes H, OFX and OFY once
 inline constexpr std::uint32_t kSetGeomOffset = 0x8004EFE8u;  // publishes OFX and OFY; the latch site
