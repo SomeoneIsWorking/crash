@@ -2,7 +2,8 @@
 
 This repository targets one native PC product per title, with title-owned native subsystems and
 psxport's pinned Lightrec integration executing every remaining retail instruction at runtime.
-Read `docs/migration.md`, `docs/project-state.md`, and `docs/codemap.md` before implementation. The
+Read `docs/migration.md`, `docs/project-state.md`, `docs/codemap.md`, and `docs/re-frontier.md`
+before implementation; the frontier records what has and has not been reverse-engineered. The
 workspace rules in `../AGENTS.md` and framework-consumer rules in `external/psxport/AGENTS.md` also
 apply at the shared runtime boundary.
 

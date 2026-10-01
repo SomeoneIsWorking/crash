@@ -1,7 +1,8 @@
 # Project state
 
 Factual capability coverage. Epic intent lives in `docs/project-goals.md`, ownership in
-`docs/codemap.md`, migration order in `docs/migration.md`, atomic work in `docs/issues/`.
+`docs/codemap.md`, migration order in `docs/migration.md`, the ordered RE evidence chain in
+`docs/re-frontier.md`, and atomic work in `docs/issues/`.
 
 | ID | Capability | State | Evidence or gap |
 |---|---|---|---|

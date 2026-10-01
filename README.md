@@ -14,7 +14,8 @@ not begin execution migration until Crash 1 passes representative gameplay.
   executable and disc-selection facts. Crash 3 explicitly rejects its disc's unrelated
   `DRAGON/SPYRO.EXE` as the boot target.
 - Independent CPU evidence reaches the recorded resident boundaries in all three titles; the exact
-  addresses, hashes, syscall state, and VSync bodies live in `titles/<title>/executable.json`.
+  addresses, hashes, syscall state, and VSync bodies live in `titles/<title>/executable.json`, and
+  `docs/re-frontier.md` records what has and has not been reverse-engineered.
 - The Crash 1 product runs the real disc: it boots, submits its own GP0 traffic, presents frames, and
   takes input, reaching a real level ("N. Sanity Beach") through Start and the menu. Live traces
   ground `GfxUpdateMatrices` at `0x80017A14` and `GoolObjectTransform` at `0x8001DE78` as pre-GTE
@@ -51,7 +52,7 @@ the final image. Interpolation retains authoritative previous/current simulation
 decorates presentation only. These enhancements remain off during faithful oracle comparison.
 
 See `docs/project-state.md` for factual coverage, `docs/project-goals.md` for completion conditions,
-and `docs/codemap.md` for ownership.
+`docs/codemap.md` for ownership, and `docs/re-frontier.md` for the ordered RE dependencies.
 
 ## Verification
 

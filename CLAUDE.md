@@ -2,7 +2,8 @@
 
 `AGENTS.md` is the repository-local instruction authority. Read it completely before work. The
 product architecture and ordered migration are in `docs/migration.md`; factual coverage is in
-`docs/project-state.md`; ownership is in `docs/codemap.md`.
+`docs/project-state.md`; ownership is in `docs/codemap.md`; the ordered reverse-engineering
+dependencies are in `docs/re-frontier.md`.
 
 Each Crash product combines native title owners with psxport's pinned Lightrec executor over the
 user's verified executable. The gameplay executable has no generated guest corpus, full-game

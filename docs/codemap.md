@@ -1,8 +1,9 @@
 # Codemap
 
 Ownership and placement map for the Crash trilogy port. Capability state belongs in
-`docs/project-state.md`, migration order in `docs/migration.md`, and atomic work in `docs/issues/`.
-A title's measured binary facts live in `titles/<title>/executable.json` and the owning header.
+`docs/project-state.md`, migration order in `docs/migration.md`, the ordered binary evidence chain in
+`docs/re-frontier.md`, and atomic work in `docs/issues/`. A title's measured binary facts live in
+`titles/<title>/executable.json` and the owning header.
 
 The product path is `run.sh` → title composition → native owners plus psxport's per-`Core` Lightrec
 executor → title frame/presentation owner. The separately built interpreter/oracle path never links
