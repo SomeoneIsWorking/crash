@@ -1,44 +1,23 @@
-# 0023 — Crash 1's widened leaf is never called, and the owner's own log line is why nobody noticed
+# 0023 — Crash 1's widened leaf is never called, and the reason is not the projection
 
-## What was believed
+## The situation
 
-`docs/issues/0015` and S006 recorded the 16:9 leg as "the guest published the retail centre but never
-the widened one, so the product stopped before its per-frame `SetGeomOffset`". The reason recorded was
-a *run* boundary: the product left guest execution on frame 0, so the per-frame publication was never
-reached.
+The 400-frame disc-backed leg exits 0, executes 3,461,249 blocks and 46,438,388 instructions from
+3,011 translated blocks with **0 fallback**, presents 239,549 GP0 primitives, and every captured fence
+carries a picture. So neither the run boundary nor the owner explains the missing widened centre:
+`crash1_widescreen` installs on the leaf `0x80042F8C`, and the framework's own announcement in the
+same run reads `native_width=512 render_width=684` against `512/512` in the 4:3 leg.
 
-## What is measured now
+**The leaf is never entered.** With input driving the title into a live unpaused level in a 16:9 leg:
 
-The run boundary is gone. The 400-frame disc-backed leg exits 0, executes 3,461,249 blocks and
-46,438,388 instructions from 3,011 translated blocks with **0 fallback**, presents 239,549 GP0
-primitives, and every captured fence carries a picture (`docs/issues/0022`). So the run is not the
-reason, and the owner is not the reason either: `crash1_widescreen.cpp` installs on the leaf
-`kSetGeomOffset = 0x80042F8C`, and the framework's own announcement in the same run reads
-`native_width=512 render_width=684` against `512/512` in the 4:3 leg.
+    present frame 3903, paused 0, N. SANITY BEACH, 1,384 polygons,
+    the widened leaf published a centre 0 time(s)
 
-**The leaf is simply never entered.** `tools/probe_crash1_widescreen_legs.py` parses the owner's own
-`[crash1-wide] guest centre` line, and the 16:9 leg log contains **zero** of them.
-
-## The census that closes it
-
-A whole-image scan of all 72,192 instruction words of `SCUS_949.00`, for every way a `jal`/`j` can
-reach the leaf and for every `lui`+`addiu` materialisation of its address:
-
-| reach | count | sites |
-|---|---|---|
-| direct `jal`/`j` | **2** | `0x8001783C`, `0x80017F00` (both `jal 0x80042F8C`, word `0x0C010BE3`) |
-| `lui`+`addiu` materialisation | **0** | — |
-| stored pointer / indirect dispatch | none reachable | the leaf is not in a table; `installCrash1Widescreen` binds a `NativeKey` on the address |
-
-So there are exactly two callers, and **neither runs in 400 frames**. That is a closed argument, not
-a scan that failed to find a third reader — a leaf with two direct callers and no indirect path is
-either called by one of those two or not called.
-
-## What the two callers are, from the decoded words
+## What the two callers are
 
     0x80017824  lui  $s0,0x8005
     0x80017828  addiu $s0,$s0,0x78D0        ; $s0 = 0x800578D0
-    0x8001782C  lw   $a0,0($s0)             ; $a0 = the global the workspace map calls the NEAR PLANE
+    0x8001782C  lw   $a0,0($s0)             ; the screen-distance global
     0x80017830  jal  0x8001A7E0
     0x8001783C  jal  0x80042F8C             ; caller A: the camera-DISTANCE publication
 
@@ -49,123 +28,45 @@ either called by one of those two or not called.
     0x80017EF8  lw   $v0,0x1940($v0)
     0x80017EFC  sra  $a1,$a1,8
     0x80017F00  jal  0x80042F8C             ; caller B: the per-frame CENTRE publication
-    0x80017F04  addu $a1,$a1,$v0            ; delay slot: the horizontal centre is completed here
+    0x80017F04  addu $a1,$a1,$v0            ; delay slot: the centre is completed here
 
-Both are the **camera** publishers: caller A feeds the distance/clip and caller B re-authors the
-horizontal centre every frame from the camera-shake word. The owner's comment already said the leaf's
-argument "is a live global (0x80017F00 passes DAT_8006193C, the camera-shake word)"; the census says
-the whole enclosing path is camera code, and it is not entered.
+Both are the **camera** publishers, and neither is entered in a live level. The presented content is
+the UIS copyright screen and a lit 3D scene — drawn without the per-frame camera publication.
 
-## Why the run is not in a camera at frame 400
+## The owner is not the cause, and this is proved positively
 
-The presented frames are the UIS copyright screen and one lit 3D scene (hut, sky, cloud band, grass)
-— content that is drawn without the per-frame camera publication. So the run reaches a rendered
-frame and still never enters the code that publishes a camera. The remaining step between those two
-facts is **player input**: the attract/UI content advances only on input, and the menu does not move.
-
-## The next step, named
-
-Issue 0012's pad consumption at `0x80057054` is no longer a correctness question on a dead run — the
-product now presents a picture, so a held Start/Cross has something to respond to. Measure, in one
-run and together:
-
-1. whether the BIOS pad word at `0x80057054` moves while a button is held, and
-2. whether the presented frame changes as a result, and
-3. whether `0x8001783C` or `0x80017F00` is entered afterwards.
-
-All three in one run, because (1) without (2) is a title that reads input and ignores it, and (2)
-without (3) is a title that animates without ever reaching the camera. Any of the three alone is a
-fact about the tool.
-
-## CORRECTION 2026-09-29, and it is the third dead tap in this one file
-
-The reasoning above was sound and its conclusion was still wrong, for a reason that lives in the
-owner's own reporting.
-
-`publishCentre` prints its `guest centre` line under TWO conditions:
-
-    if (latched.widescreen() && retailX != 0) { ... print ... }
-
-So a **4:3** leg cannot report a centre at all, and neither can a call that passes `$a0 = 0`. Both
-are exactly the legs that were run here, and both are silent whether or not the owner executed. The
-absence of the line was therefore carrying no information about whether the leaf was entered, and two
-intermediate conclusions were drawn from it before that was noticed.
-
-The POSITIVE CONTROL, in a 16:9 leg with a non-zero centre, which is what the line's two conditions
-require:
+Calling the leaf with a non-zero centre in a wide leg prints:
 
     call 80042f8c(a0=00000005, a1=0, a2=0, a3=0)
       guest centre 5 -> 91 (retail 5 + margin 86, OFY 0, H 288), host canvas 684 (native 512)
 
-The key **intercepts**, the owner runs, and the widening arithmetic is right: retail 5 plus the
-measured margin 86 is 91, and the host canvas is 684 against a native 512. And the control for the
-control: a plain 400-frame 4:3 leg with no injected calls prints exactly ONE `projection init
-published` line, so the second one in the call run was the injected call and the control channel
-really does consult title overrides.
+The key intercepts, the owner runs, and retail 5 plus the measured margin 86 is 91. A plain 400-frame
+4:3 leg prints exactly one `projection init published` line, so the second one was the injected call:
+the control channel really does consult title overrides.
 
-**So the corrected conclusion is the one this issue originally reached, for a different reason.** The
-key is alive and the owner is correct; the guest really does not call `0x80042F8C` in this level. What
-was wrong was the stated REASON — not "the product stopped before the per-frame `SetGeomOffset`",
-which is dead — and the 400-frame limit, which was never a limit. With input driving the title, in a
-live UNPAUSED level, in a 16:9 leg:
+**One trap to keep in mind when reading that owner.** `publishCentre` prints its `guest centre` line
+only when the plan is wide AND the retail centre is non-zero, so a 4:3 leg — and any call passing
+`$a0 = 0` — is silent whether or not the owner ran. The owner's own invocation count is the reading
+to trust, not the log line's absence.
 
-    present frame 3903, paused 0, N. SANITY BEACH, 1,384 polygons,
-    the widened leaf published a centre 0 time(s)
+## Who else writes `CR[24]`? Nobody
 
-**What that leaves, and it is the thing the census did not close:** the two callers found are camera
-code for a camera mode this level is not in, and a direct-call census is not the question. The two
-questions still worth asking are the `CR[24]` writer census (who ELSE writes the horizontal offset)
-and the indirect `jalr` set, which this census explicitly did not scan — and which has already
-produced a false zero once in a sibling image in this workspace, where a `jal`-only scan reported 0
-for every library routine in an image that dispatches through function pointers.
+Over the whole image the guest has exactly two control-register writers per projection register, and
+the owner already overrides the entry of both: `0x80042B88` (inside `gte_init`) and `0x80042F94`
+(inside `SetGeomOffset`). There is no third writer to move to, and no later write that could revert a
+widening. The control **readers** are zero for `CR[24]`, `CR[25]` and `CR[26]`, so nothing branches on
+the published offset and a changed `CR[24]` cannot change a gameplay decision.
 
-## The two questions, asked and answered 2026-09-29
+## What is left open
 
-Both are answerable with tools already in the tree, and the answers are the handoff.
+1. **Why this camera publishes no centre at all.** The owner is alive and correct, the guest writes
+   the offset in only the two places the owner owns, and a live unpaused level still publishes none.
+   That is a question about the camera's control flow, not about the projection.
+2. **The indirect set is not closed.** A direct-call census does not reach `jalr` or a function table,
+   and this image has **122 `jalr` sites** and a GPU driver pointer table at `0x80054A24` with **18
+   guest-code entries**. "Exactly two callers" was a statement about a scan, not a closed argument.
+   Closing it means enumerating both sets and asking which of them can land on `0x80042F8C`.
 
-**1. Who ELSE writes `CR[24]`? Nobody.** `tools/probe_crash1_projection.py` over the authenticated
-image, with its selftest firing:
-
-    CR[24] OFX: 2 control writer(s) [0x80042B88 0x80042F94], 0 control reader(s)
-    CR[25] OFY: 2 control writer(s) [0x80042B8C 0x80042F98], 0 control reader(s)
-    CR[26] H:   2 control writer(s) [0x80042B68 0x80042FAC], 0 control reader(s)
-
-**The guest has exactly two places that write the horizontal offset and the owner already overrides
-the entry of both** — `0x80042B88` is inside `gte_init` and `0x80042F94` is inside `SetGeomOffset`. So
-the sibling-publisher theory is dead: there is no third writer to move to. That also means widening is
-not being *reverted* by some later write either, because there is no later write.
-
-The zero control READERS are the other half of why this is safe to widen: nothing branches on the
-published offset, so a changed `CR[24]` cannot change a gameplay decision the way Vagrant Story's
-`H` does (that one has branches at `<272` and `>272` against a resting 256).
-
-**2. Is the indirect set closed? No, and now it has a number.** The same tool reports, for this image:
-
-    direct call sites of set_geom_offset 0x80042F8C: 2 measured, 2 declared,
-    122 jalr site(s) in the image
-    GPU driver pointer table at 0x80054A24: 18 guest-code entries
-    (an address scan cannot reach these; the owner is entry index [7] for FUN_80041C38)
-
-**So "exactly two callers" was never a closed argument — it was a statement about a scan that does not
-reach `jalr` or a table, and this image has 122 of the first and at least one table of the second.**
-This is the same shape as the Spider-Man false zero already recorded in the workspace map, where a
-`jal`-only census reported 0 for every library routine in an image that dispatches through function
-pointers. Closing it means enumerating the 122 `jalr` sites and the 18 table entries and asking which
-of them can land on `0x80042F8C`.
-
-**What the live run adds, and it is the reason this is still open rather than closed:** the leaf's
-owner is verified alive and correct by its positive control, the guest writes the offset in only the
-two places the owner owns, and yet a live unpaused 16:9 level publishes no centre. Those three facts
-together mean the level's camera is NOT publishing a centre through either GTE route — so the next
-question is not "which writer" but "why is this camera not publishing one at all", which is a
-question about the camera's control flow rather than about the projection.
-
-## Falsifiers
-
-* If a caller of `0x80042F8C` exists outside the two found (an indirect jump through a table, a
-  `jr` to a computed address), the census above is wrong and the "never entered" reading falls.
-  `tools/probe_crash1_primitives.py` does not currently check that, and it should — the closed
-  argument only closes while the indirect set is empty.
-* If the leaf IS entered and the owner's line is simply not printed, this issue's premise is a third
-  dead tap. The discriminator is cheap: the owner counts its own invocations, and that count is the
-  thing to read before trusting the absence of a log line.
+**Falsifier for the first:** if a caller outside those two exists, the "never entered" reading falls.
+**Falsifier for the second:** if the leaf IS entered and only its log line is missing, the premise is
+a dead tap again — read the owner's own invocation count.

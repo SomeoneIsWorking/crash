@@ -2,7 +2,7 @@
 id: 18
 title: "Crash 3 reads its own published centre back out of CR[24], so a retail+margin widening is not idempotent there and the owner needs a per-call-site policy"
 status: open
-symptom: "S006 recorded 'Crash 3 owns no projection owner at all' because guestWidescreenProjection() returned nullptr. scratch/bin/crash3/SCUS_942.44 is provisioned and identity-verified (sha256 1b93cc56… matching the manifest), so the owner was measurable rather than un-attemptable."
+symptom: The owner and its per-call-site policy are built and gated, but Crash 3 refuses to boot, so the frame-ordering consequence of the read-back is unmeasured
 state_items: S006
 tags: crash3,projection,widescreen,re-census,near-plane,read-back,idempotence
 created: 2026-09-27
@@ -83,19 +83,11 @@ widened by falling through to the common case. That refusal is a log line, not a
 
 ## The hazard: H is the near plane, and H is also a HUD scalar
 
-H is kept in the main-RAM global **`0x80065D54`**. Census (`tools/probe_title_projection.py`):
-
-| instrument | reached | what it cannot reach |
-|---|---|---|
-| A — displacement scan, 8-instruction lookback | 2 loads (0x8001922C, 0x80019528) | a pointer-form access |
-| B — zero-displacement, `lui`+`addiu` proved | **0** | a pointer-form access |
-| C — the manifest's named sites, verified as instruction words | 4 (2 writers, 2 readers) | nothing it names |
-
-**Only 2 of the 4** are reached by A+B, and **both** writers are missed — because they are
-`sw $v, 0xC4($base)` through a struct pointer: `0x80017A94` (`AC6600C4`) and `0x80018924` (`AE2200C4`).
-A displacement census structurally cannot see that form, so the manifest names them and the probe
-verifies their words. An instrument that reported "this title has no writer" would be wrong, and the
-probe says 2 of 4 rather than nothing.
+H is kept in the main-RAM global **`0x80065D54`**, used by four sites (two writers, two readers)
+recorded in `titles/crash3/executable.json`. **Both writers are invisible to a displacement scan** —
+they are `sw $v, 0xC4($base)` through a struct pointer: `0x80017A94` (`AC6600C4`) and `0x80018924`
+(`AE2200C4`). The manifest names them; the two readers `0x8001922C` and `0x80019528` are
+displacement-form loads.
 
 Two of the four sites turn H into a **gameplay-visible** decision:
 
@@ -119,24 +111,13 @@ The draw area is the PSX default whole-display area — `lui $v1,0xE100` at 0x80
 guestWidescreenProjection()` now returns the owner instead of `nullptr`. The widening moves **OFX**,
 holds **OFY** and **H**, and passes through the one measured read-back site.
 
-## Verification
+`tests/crash3_widescreen.cpp` pins, at **all four** measured call sites: 4:3 identity exact on a
+non-zero retail centre including a negative vertical, the 16:9 margin, idempotence, unwidening, the
+pass-through, the H-holding check, the guest RAM bound, and an install proof with no HLE plan. The
+pass-through is pinned as a pair: an empty pass-through list widens `0x8001D09C` by the margin, and
+the measured list leaves a widened centre alone there.
 
-- Ghidra programs byte-compared to the authenticated images first: **82,944 of 82,944 words served and
-  compared, zero mismatches, zero not fetched**.
-- 29/29 `ctest` green, including the 25 that existed before this change.
-- `crash3_widescreen` pins, at **all four** measured call sites: 4:3 identity exact on a non-zero
-  retail centre including a negative vertical, the 16:9 margin, idempotence, unwidening, the
-  pass-through, the H-holding check, the guest RAM bound, and an install proof with no HLE plan.
-- **The mutant, as a pair of assertions rather than prose.** Case 1 shows an empty pass-through list
-  widens 0x8001D09C by the margin; case 5 shows the measured list leaves a widened centre alone at that
-  site. The gap between the two is the whole hazard, and it is closed by a manifest list the probe
-  re-derives — not by luck.
-- `crash3_projection_selftest` fires 10 cases including a positive for the pointer-form miss and one
-  for a pointer-table reach being invisible to a call scan.
-- `tools/probe_title_projection.py --title crash3 --executable scratch/bin/crash3/SCUS_942.44` diffs
-  the compiled constants against the manifest it just measured.
-
-## What this does not establish, and the one thing I could not determine
+## What this does not establish, and the one thing that needs a running title
 
 **No live leg, and that limits a specific claim.** The per-call-site policy is sound against
 *accumulation* — no site can carry the margin twice, and the owner's own counters report widenings and

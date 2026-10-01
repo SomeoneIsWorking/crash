@@ -1,7 +1,7 @@
 # Native/Lightrec migration
 
-This is the local execution migration plan for the Crash trilogy. Binary evidence remains in
-`docs/re-frontier.md`; psxport owns the shared runtime contract.
+This is the local execution migration plan for the Crash trilogy. Each title's measured binary facts
+live in `titles/<title>/executable.json`; psxport owns the shared runtime contract.
 
 ## Product boundary
 
@@ -34,9 +34,10 @@ representative gameplay parity and telemetry on web alongside desktop hosts.
    boot, CD, timing, frame, presentation, camera, and submitter contract.
 4. Preserve the PadRead/menu work. Framework `Pad` continues to own host polling and the final
    active-low mask; Crash's input adapter publishes the authenticated combined word at `0x80057054`
-   before retail `PadUpdate`. Reach the existing 3D menu with nonzero Lightrec blocks and demonstrate
-   Cross/Start through the same title owner.
-5. Continue Crash 1 to a representative interactive gameplay scenario. Compare timing, interrupts,
+   before retail `PadUpdate`. DONE: the product reaches the menu and a real level, and a held button
+   moves that word, the captured frame, and the present counter.
+5. Continue Crash 1 to a representative interactive gameplay scenario; the open step is the level
+   camera's centre publication (issue 0023). Compare timing, interrupts,
    CPU/memory and relevant device state against the independent oracle; exercise native overrides,
    original calls, and executable-memory invalidation with positive and controlled-negative cases;
    qualify the declared released hosts.

@@ -13,17 +13,18 @@ not begin execution migration until Crash 1 passes representative gameplay.
 - Crash 1 (`SCUS_949.00`), Crash 2 (`SCUS_941.54`), and Crash 3 (`SCUS_942.44`) have verified USA
   executable and disc-selection facts. Crash 3 explicitly rejects its disc's unrelated
   `DRAGON/SPYRO.EXE` as the boot target.
-- Independent CPU evidence reaches the recorded resident boundaries in all three titles. Exact
-  addresses, hashes, syscall state, VSync bodies, and controls remain in `docs/re-frontier.md`.
-- The existing Crash 1 compatibility path reached 1,172/1,172 host frame fences and the 3D title
-  menu. Live traces grounded `GfxUpdateMatrices` at `0x80017A14` and `GoolObjectTransform` at
-  `0x8001DE78` as pre-GTE ownership candidates.
-- Host input reached psxport but not Crash's BIOS auto-pad word. The in-flight owner publishes the
-  finalized mask to authenticated address `0x80057054`; issue 0012 records its exact state and
-  remaining real-game proof.
+- Independent CPU evidence reaches the recorded resident boundaries in all three titles; the exact
+  addresses, hashes, syscall state, and VSync bodies live in `titles/<title>/executable.json`.
+- The Crash 1 product runs the real disc: it boots, submits its own GP0 traffic, presents frames, and
+  takes input, reaching a real level ("N. Sanity Beach") through Start and the menu. Live traces
+  ground `GfxUpdateMatrices` at `0x80017A14` and `GoolObjectTransform` at `0x8001DE78` as pre-GTE
+  ownership candidates.
+- Host input reaches Crash's BIOS auto-pad word at `0x80057054`, published by
+  `crash1_bios_pad_input.*` before retail `PadUpdate`. The level's camera still publishes no centre
+  (issue 0023).
 
-These facts define the preserved frontier. They do not make the old generated-source executable the
-product and do not prove gameplay, a native renderer, widescreen, or interpolation.
+Reaching a rendered level is not representative gameplay, and none of this proves a native renderer,
+a widened picture, or interpolation.
 
 ## Product and migration contract
 
@@ -50,7 +51,7 @@ the final image. Interpolation retains authoritative previous/current simulation
 decorates presentation only. These enhancements remain off during faithful oracle comparison.
 
 See `docs/project-state.md` for factual coverage, `docs/project-goals.md` for completion conditions,
-`docs/codemap.md` for ownership, and `docs/re-frontier.md` for the preserved evidence chain.
+and `docs/codemap.md` for ownership.
 
 ## Verification
 

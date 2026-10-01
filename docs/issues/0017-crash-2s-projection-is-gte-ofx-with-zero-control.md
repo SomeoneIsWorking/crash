@@ -2,20 +2,15 @@
 id: 17
 title: "Crash 2's projection is GTE OFX with zero control-register readers, so the widening is Crash 1's — but its H is the near plane AND a HUD rectangle scalar"
 status: open
-symptom: "S006 recorded 'Crash 2 and Crash 3 own no projection owner at all' because guestWidescreenProjection() returned nullptr, and the disc was believed missing. It is not: scratch/bin/crash2/SCUS_941.54 is provisioned and identity-verified."
+symptom: The widescreen owner exists and is gated, but Crash 2 still refuses to boot, so no wide frame is ever presented
 state_items: S006
 tags: crash2,projection,widescreen,re-census,near-plane
 created: 2026-09-27
 updated: 2026-09-27
 ---
 
-## The gap, and that it was a media problem wearing a capability problem's clothes
-
-`BoundaryRuntime` inherits `GameRuntime::guestWidescreenProjection()`, which returns `nullptr`. That
-was recorded as "no owner", which is an absence and not a measurement, and the recorded reason was
-missing media. `tools/provision_title.py` produced `scratch/bin/crash2/SCUS_941.54` (327,680 bytes,
-sha256 `6e5b2449…`, matching `titles/crash2/executable.json`), so every claim below is read from
-bytes.
+Every claim below is read from the authenticated `SCUS_941.54` (327,680 bytes, sha256 `6e5b2449…`,
+matching `titles/crash2/executable.json`).
 
 ## What Crash 2's projection is, with the instruction words
 
@@ -55,20 +50,10 @@ of guessing one.
 ## The hazard: H is the near plane, and H is also a HUD scalar
 
 H is kept in the main-RAM global **`0x80060884`**, loader-created and outside the executable's own text
-(`SCUS_941.54` is `0x800` header + `0x4F800` text and nothing else). Census, three instruments, each
-with its own denominator and its own null (`tools/probe_title_projection.py`):
-
-| instrument | reached | what it cannot reach |
-|---|---|---|
-| A — `lui 0x8006` + 16-bit displacement, 8-instruction lookback | 5 loads | a register proved further back, or a pointer |
-| B — zero-displacement access whose register a `lui`+`addiu` pair proves | 4 sites (2 load, 2 store) | a pointer-form access |
-| C — the manifest's named sites, verified as instruction words | 11 total (4 writers, 7 readers) | nothing it names |
-
-**9 of the 11** are reached by A+B. The 2 that are not, `0x800179C4` and `0x80020310`, are pointer-form
-writes. Instrument B's window was **wrong once**: at 6 instructions it missed `0x80016EC0`, because the
-`addiu` sits 4 instructions above and the proving `lui` 5 above — a distance of 7. A truncated window
-reported this title as having one writer instead of four. That is the class of wrong confident answer
-this issue exists to warn about, and the value is now derived from the measured sites.
+(`SCUS_941.54` is `0x800` header + `0x4F800` text and nothing else). Eleven sites use it — four
+writers, seven readers — recorded in `titles/crash2/executable.json`. Nine are `lui 0x8006` plus a
+16-bit displacement; the other two, `0x800179C4` and `0x80020310`, are pointer-form writes, which is
+why the list is the authority and a displacement scan alone is not.
 
 Two of the seven readers turn H into a **gameplay-visible** decision:
 
@@ -112,20 +97,9 @@ image**, and both call sites compute their centre from a guest global or a const
 arriving at the leaf can never already carry the margin, and `retail + margin` is idempotent by
 construction rather than by a guard.
 
-## Verification
-
-- The Ghidra programs were checked against the authenticated images before any decompilation was
-  relied on: **81,408 of 81,408 words served and compared, zero mismatches, zero not fetched** (the
-  9,790 words with no CodeUnit were read through `memory.getByte`, and the tool says so).
-- 29/29 `ctest` green, including the 25 that existed before this change.
-- `crash2_widescreen` pins 4:3 identity exactly at a non-zero retail centre, the 16:9 margin, the
-  ride on a live centre, unwidening, both measured call sites widening, H untouched, the guest RAM
-  bound, and an install proof with no HLE plan in existence.
-- `crash2_projection_selftest` fires 10 cases, including a positive one for the truncated-window bug
-  and a positive one for the pointer-form miss.
-- `tools/probe_title_projection.py --title crash2 --executable scratch/bin/crash2/SCUS_941.54` diffs
-  the constants this repository compiles against the manifest it just measured, so the two cannot
-  drift.
+`tests/crash2_widescreen.cpp` pins 4:3 identity exactly at a non-zero retail centre, the 16:9 margin,
+the ride on a live centre, unwidening, both measured call sites widening, H untouched, the guest RAM
+bound, and an install proof with no HLE plan in existence.
 
 ## What this does not establish
 
