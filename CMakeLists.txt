@@ -130,7 +130,8 @@ add_library(
   "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/core/crash1_pool_node.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/core/crash1_widescreen.cpp"
 )
-target_include_directories(crash1_runtime PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/core")
+target_include_directories(crash1_runtime PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/core"
+                                                  "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/boot")
 target_compile_features(crash1_runtime PUBLIC cxx_std_20)
 target_link_libraries(crash1_runtime PUBLIC crash_boundary_runtime crash_native_frame_contract)
 configure_title_vsync(crash1_runtime crash1)
@@ -417,14 +418,14 @@ endif()
 
 add_executable(
   crash1_port
-  "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/core/crash1_port.cpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/boot/crash1_boot.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/main.cpp"
 )
 target_include_directories(
   crash1_port
   PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/game/core"
-    "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/core"
+    "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/boot"
 )
 target_compile_features(crash1_port PRIVATE cxx_std_20)
 target_link_libraries(crash1_port PRIVATE crash1_runtime)

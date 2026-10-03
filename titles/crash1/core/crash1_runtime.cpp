@@ -67,8 +67,8 @@ void Crash1Runtime::bootInit(Core &core) {
   const std::uint32_t entries[]{CRASH1_STATIC_CONSTRUCTORS_ENTRY, CRASH1_INIT_ENTRY};
 
   // Retail C main 0x80011D88 performs these three operations before entering CoreLoop 0x80011FC4.
-  // Shared dc_boot_init already applied the measured crt0/libc group, so dispatching C main itself
-  // would re-enter the guest-owned infinite loop and then run shutdown behind the host's back.
+  // The shared crt0/libc group is already applied, so dispatching C main itself would re-enter the
+  // guest-owned loop and then run shutdown behind the host's back.
   crash::dynarec::requireGuestReturn(crash::dynarec::callGuest(core, entries[0]), "Crash 1 static constructors");
   core.mem_w32(CRASH1_USE_CD_ADDRESS, 1u);
   crash::dynarec::requireGuestReturn(crash::dynarec::callGuest(core, entries[1]), "Crash 1 Init");
@@ -84,9 +84,8 @@ const PlatformHlePlan *Crash1Runtime::platformHlePlan() const {
 
 const GuestWidescreenProjection *Crash1Runtime::guestWidescreenProjection() const {
   // The policy answers which aspect the player selected; the owner behind it is what publishes a
-  // guest projection (external/psxport/docs/presentation-contract.md, "Title-owned guest
-  // widescreen"). Returning the policy without the three measured overrides installed by
-  // registerOverrides() would be the half that advertises a capability the picture does not have.
+  // guest projection. Returning the policy without the three measured overrides installed by
+  // registerOverrides() would advertise a capability the picture does not have.
   return &widescreen_;
 }
 

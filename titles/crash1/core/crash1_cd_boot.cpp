@@ -53,10 +53,9 @@ void registerOverride(Core &core) {
 }
 
 void initializeDriver(Core &core) {
-  // Ghidra decompilation of verified SCUS_949.00 [0x80044E8C,0x8004519C) identifies this as the
-  // libcd software-state initializer. Its hardware leg resets the controller and repeatedly calls
-  // CdSync, whose timeout clock is libetc VSync(-1). Game already owns a fresh native CdcState, so
-  // preserve that controller and reproduce only the guest-visible library state initialization.
+  // The measured libcd software-state initializer, [0x80044E8C,0x8004519C). Its hardware leg resets the
+  // controller and repeatedly calls CdSync, whose timeout clock is libetc VSync(-1). `Game` already
+  // owns a fresh native CdcState, so this reproduces only the guest-visible library state.
   core.mem_w32(kLastSyncCallback, 0u);
   core.mem_w32(kLastReadyCallback, 0u);
   core.mem_w32(kLastStatus, 0u);

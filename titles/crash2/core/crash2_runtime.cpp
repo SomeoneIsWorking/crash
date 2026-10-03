@@ -39,12 +39,8 @@ const PlatformHlePlan *Crash2Runtime::platformHlePlan() const {
 }
 
 const GuestWidescreenProjection *Crash2Runtime::guestWidescreenProjection() const {
-  // The policy answers which aspect the player selected; the owner behind it is what publishes a
-  // guest projection (external/psxport/docs/presentation-contract.md, "Title-owned guest
-  // widescreen"). Returning the policy without the three measured overrides installed would be the
-  // half that advertises a capability the picture does not have - and the overrides cannot be
-  // installed yet, because `BoundaryRuntime::registerOverrides` is final and Crash 2 still refuses to
-  // boot. See docs/issues/0017 for the seam this leaves, which is a boot gap and not a projection gap.
+  // The overrides cannot be installed yet, because `BoundaryRuntime::registerOverrides` is final and
+  // Crash 2 still refuses to boot. That is a boot gap, not a projection gap: docs/issues/0017.
   return &widescreen_;
 }
 

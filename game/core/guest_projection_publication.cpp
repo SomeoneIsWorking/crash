@@ -39,10 +39,18 @@ GuestProjectionPublication::GuestProjectionPublication(const ProjectionTitleFact
                   "guest address");
     std::abort();
   }
-  if (facts_.centreCallSites == nullptr || facts_.centreCallSiteCount == 0) {
+  if (facts_.centreReach == CentreReach::ReturnAddressCallSites &&
+      (facts_.centreCallSites == nullptr || facts_.centreCallSiteCount == 0)) {
     lucent::error(facts_.serial,
-                  "guest widescreen has no measured centre call sites; an override reached through a "
-                  "reach this repository did not measure cannot be widened safely");
+                  "guest widescreen declares the $r31 call-site recovery but names no call site; an "
+                  "override reached from an unnamed site cannot be widened safely");
+    std::abort();
+  }
+  if (facts_.centreReach == CentreReach::IndirectCall && facts_.passThroughCallSiteCount != 0) {
+    lucent::error(facts_.serial,
+                  "guest widescreen reaches its centre leaf indirectly, so $r31 cannot select a "
+                  "pass-through site; a declared pass-through list here would be a list nothing can "
+                  "honour");
     std::abort();
   }
 }
@@ -187,8 +195,11 @@ void GuestProjectionPublication::publishCentre(Core &core, const RetailBody &ret
     lucent::error(facts_.serial, "the centre publication requires the retail guest body");
     std::abort();
   }
-  const std::uint32_t callSite = observedCallSite(core, "set_geom_offset");
-  const bool widen = !passesThrough(callSite);
+  // The call site is only recoverable for a `jal` reach. An indirect title widens every call, which
+  // is sound precisely because its image has no `cfc2` control read of the registers this owner
+  // moves: nothing can hand it back an argument that already carries the margin.
+  const bool widen =
+      facts_.centreReach == CentreReach::IndirectCall || !passesThrough(observedCallSite(core, "set_geom_offset"));
 
   // The title's own arguments, and the widening base. The leaf shifts each left by 16, so these are
   // whole pixels. The base is the value in the register RIGHT NOW and never a remembered one: this

@@ -63,7 +63,7 @@ public:
 private:
   static const GuestProgramImage programImage_;
   static const PlatformHlePlan platformPlan_;
-  Crash1Widescreen widescreen_{&gpu_vk_latch_guest_projection};
+  Crash1Widescreen widescreen_{Crash1Widescreen::facts(), &gpu_vk_latch_guest_projection};
   Crash1HorizontalBound horizontalBound_{};
   Crash1BlockPool blockPool_{};
 };

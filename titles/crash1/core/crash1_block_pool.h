@@ -1,13 +1,11 @@
-// Crash Bandicoot 1 (SCUS_949.00) — the title's own SIZE-CLASS BLOCK POOL owner.
+// Crash Bandicoot 1 (SCUS-949.00) - the title's own SIZE-CLASS BLOCK POOL owner.
 //
-// WHAT THIS IS. The guest PC the product stopped on was 0x800159A8, and that word is `lw $v0,0x4($v1)`
-// (0x8C620004) — the second class-field read of the engine's block-cell lookup at 0x80015978. This file
-// is that function, recovered, and `crash1_block_pool.cpp` registers it as a native override so the
-// JIT no longer guesses at it. The JIT still runs everything else.
+// The guest PC the product stopped on was 0x800159A8, `lw $v0,0x4($v1)` (0x8C620004), the second
+// class-field read of the engine's block-cell lookup at 0x80015978. This file is that function,
+// recovered, and `crash1_block_pool.cpp` registers it as a native override so the JIT no longer
+// guesses at it. The JIT still runs everything else.
 //
-// WHY THE FAULT IS HERE AND NOT ANYWHERE ELSE, stated so the next reader does not re-derive it.
-// The lookup is the only function on the path that dereferences a pointer it did not compute from a
-// live allocation:
+// The recovered body, instruction by instruction:
 //
 //   0x80015978  srl  v0,a0,13          ; the BUCKET INDEX source is the request shifted down 13
 //   0x8001597C  lui  v1,0x8006
@@ -25,7 +23,7 @@
 //   0x800159BC  jr   ra
 //   0x800159C0  addu v0,v1,zero
 //
-// so the recovered body is exactly:
+// so the body is exactly:
 //
 //   key   = request >> 13                        // the shift picks the BUCKET, and nothing else
 //   cell  = bucket[(key & 0x3FC) >> 2]
@@ -33,57 +31,42 @@
 //   for (cell += 1; cell->class != request; cell += 1) {}
 //   return cell;
 //
-// THE CLASS IS THE REQUEST WORD ITSELF, and the shift is only a bucket selector. That is not a
-// reading, it is three branch instructions in this image whose second operand is register `$a0`,
-// which nothing between the entry and each branch redefines:
-//   0x8001599C  beq  $2,$4   0x800159BC      ; the first-cell test in the lookup
-//   0x800159B0  bne  $2,$4   0x800159A8      ; the back edge in the lookup
-//   0x800159E8  beq  $2,$4   0x80015A34      ; the same test in the bounded sibling
-// and the pool's own allocate path compares the SAME unshifted word: `lw $2,0x10($4); lw $2,4($2)`
-// at 0x80012FB4..0x80012FBC is the word whose SHIFT feeds the bucket index, while `lw $3,4($5)` at
-// 0x80012FFC is what a cell's class field is compared against. An owner that compared the shifted key
-// against the cell's class could therefore never match a real cell, its walk would never end, and it
-// would hand the caller a cell at the edge of main RAM. The comparison register is `$a0` in all
-// three branch words, and `titles/crash1/executable.json` records it.
+// THE CLASS IS THE REQUEST WORD ITSELF, and the shift is only a bucket selector. That is three
+// branch instructions in this image whose second operand is register `$a0`, which nothing between the
+// entry and each branch redefines (0x8001599C, 0x800159B0, and 0x800159E8 in the bounded sibling),
+// and the pool's own allocate path compares the SAME unshifted word. An owner that compared the
+// shifted key against the cell's class could never match a real cell, its walk would never end, and
+// it would hand the caller a cell at the edge of main RAM. `titles/crash1/executable.json` records
+// the comparison register of all three class branches.
 //
-// and the ONLY difference between a lookup that returns and one that faults is whether the bucket
-// holds a real cell pointer. Nothing else in the function can fault.
+// The only difference between a lookup that returns and one that faults is whether the bucket holds a
+// real cell pointer; nothing else in the function can fault.
 //
-// THE OWNER IS FAITHFUL, AND THE FAITHFULNESS IS MEASURED RATHER THAN ASSERTED. The same image carries
-// this same computation WITH a bound, at 0x800159C4: it reads 0x8005C534 as a pool base, takes the
-// live cell count from `*(0x8005C540) + 0x404`, rejects when `((cell - poolBase) >> 3) >= count`, and
-// returns 0xFFFFFFF6. It has ZERO `jal` call sites, so it does not run.
-//
-// The obvious move is to apply that bound, and doing so was tried and MEASURED to be wrong. A
-// controlled run of the same product, same disc, 320,508 cycles in, with the bound applied, reported
-// "no cell serving class 702 within 576 live cell(s) past pool base 0x80061FA0" and then faulted; the
-// SAME run with the bound removed reached the game's first measured display wait. So the bound is not
-// a rule this lookup can use: the guest's 256 buckets are not one contiguous array, and a bucket
-// outside the array 0x8005C534 describes is rejected on its first step even though its class is
-// perfectly serviceable. The engine's bounded form is therefore recorded here as a MEASUREMENT of what
-// the engine wrote, and it is reported per lookup, but it does not decide.
+// THE ENGINE'S OWN BOUND IS A MEASUREMENT, NOT A RULE. The same image carries this same computation
+// WITH a bound at 0x800159C4: it reads 0x8005C534 as a pool base, takes the live cell count from
+// `*(0x8005C540) + 0x404`, rejects when `((cell - poolBase) >> 3) >= count`, and returns
+// 0xFFFFFFF6. It has ZERO `jal` call sites, so it does not run. Applying that bound was measured to
+// be wrong: a controlled run of the same product and disc with the bound applied reported "no cell
+// serving class 702 within 576 live cell(s)" and faulted, while the same run with the bound removed
+// reached the game's first measured display wait. The guest's 256 buckets are not one contiguous
+// array, so a bucket outside the array 0x8005C534 describes is rejected on its first step even
+// though its class is serviceable. The bound is therefore read, evaluated and REPORTED per lookup,
+// but it does not decide.
 //
 // What decides instead is a HOST-MEMORY fact: this owner's walk reads a cell only while the cell's
 // address is in the guest's own 2 MiB of main RAM, which is true for every cell retail can read and
 // false for every cell retail would fault on. That cannot change the answer for any case retail
 // executes, and it turns the one case retail cannot execute into a named refusal with the value the
-// guest published, instead of a read at `0x00800004`.
+// guest published, instead of a read at 0x00800004.
 //
-// WHAT IS NOT ESTABLISHED, because a recovery that overstates itself is worse than none:
-//   * The unit of `request` is NOT known. The lookup compares each cell's second word against
-//     `request >> 13`, and the six callers do not pass a uniform byte count — 0x80015034 and
-//     0x80015118 pass a tagged handle read out of a struct at `lw a0,0(s0)` — so the field is named
-//     for what it is compared against and no more.
-//   * The six callers can only be passing a request whose BITS 13 AND UP form a multiple of 4, because
-//     the bucket index is a BYTE offset into a word-strided table and an unaligned one would fault on
-//     the `lw` at 0x8001598C. That constrains what the request word may be, and it is asserted below.
-//     It says nothing about the low 13 bits, which are part of the class and are compared in full.
-//   * Which of the six `jal 0x80015978` call sites ran in a given run is a RUNTIME fact. There are
-//     818 distinct `jal` targets in 72,192 words, so every function is reachable from CoreLoop and a
-//     call-graph census cannot rank them. `Crash1BlockPool::firstCaller()` is the answer.
-//   * This is not a claim that the pool is the ROOT CAUSE of Crash 1 presenting no frame. It is a
-//     claim that this is the code that faulted, that the code is now readable and native, and that
-//     the faulting state is now reported with its value.
+// WHAT IS NOT ESTABLISHED, because a recovery that overstates itself is worse than none. The UNIT of
+// `request` is unknown: the four words measured from the live run are not byte counts, not sizes and
+// not handles this repository can name, so the field is named for what it is compared against and no
+// more. The six `jal 0x80015978` call sites are equally reachable from CoreLoop, so a call-graph
+// census cannot rank them; `Crash1BlockPool::firstCaller()` is the answer. And this is not a claim
+// that the pool is the ROOT CAUSE of Crash 1 presenting no frame: it is a claim that this is the code
+// that faulted, that it is now readable and native, and that the faulting state is reported with its
+// value.
 #pragma once
 
 #include <cstddef>

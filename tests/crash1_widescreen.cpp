@@ -1,9 +1,10 @@
 // Falsifiers for SCUS-949.00's guest-widescreen owner.
 //
 // Every case pins a PRODUCTION contract of `crash1::Crash1Widescreen`, and each is written so the
-// mutation it claims to catch makes it fail. Nothing here reimplements the widening: the latch is
-// the framework's own `gpu_vk_latch_guest_projection`, so a change to the framework's rule moves
-// these expectations with it instead of letting a title's copy of the arithmetic rot.
+// mutation it claims to catch makes it fail. Nothing here reimplements the widening: the rule is the
+// shared `crash::GuestProjectionPublication` and the latch is the framework's own
+// `gpu_vk_latch_guest_projection`, so a change to the framework's rule moves these expectations with
+// it instead of letting a title's copy of the arithmetic rot.
 //
 // The measured inputs are read out of the authenticated executable and recorded in
 // titles/crash1/executable.json:
@@ -224,6 +225,9 @@ int main() {
     return static_cast<std::int32_t>(gte_read_ctrl(kGteCrOfy) >> 16);
   };
   auto publish = [&core, &owner](std::int32_t x, std::int32_t y) {
+    // This title reaches the leaf INDIRECTLY (no `jal`, no pointer-table word, and a live run shows
+    // `$r31` is the enclosing chain's return address), so the owner widens every reach and never reads
+    // `$r31`. The stale value left here on purpose is what a real run carries.
     core.r[4] = static_cast<std::uint32_t>(x);
     core.r[5] = static_cast<std::uint32_t>(y);
     owner.publishCentre(core, retailCentre);
@@ -273,6 +277,14 @@ int main() {
   ok &= expect(publishedOfx() == 54, "a second publication compounded the margin instead of reusing it");
   publish(0, 0);
   ok &= expect(publishedOfx() == 54, "a third publication compounded the margin");
+  // 5b. THE REACH IS INDIRECT, AND EVERY REACH WIDENS. A widening that keyed off `$r31` would look at
+  //     whatever the enclosing chain left there and either refuse a live frame or, worse, pass one
+  //     through because the value happened to match a call site from another title.
+  ok &= expect(crash1::kCentreReach == crash::CentreReach::IndirectCall && !owner.declaresPassThrough(),
+               "Crash 1 no longer states that its centre leaf is reached indirectly with no pass-through");
+  core.r[31] = 0x80017844u; // what a live disc-backed run carries at the leaf
+  publish(0, 0);
+  ok &= expect(publishedOfx() == 54, "an indirect reach did not widen because $r31 named no call site");
 
   // 6. THE RUNTIME-VARYING BASELINE. 0x80017F00 publishes SetGeomOffset(DAT_8006193C, ...) and
   //    DAT_8006193C is a live camera-shake global, so the widening rides whatever the title
@@ -308,7 +320,7 @@ int main() {
 
   // 9. THE RETAIL BASELINE IS MEASURED, NOT ASSUMED. gte_init publishes H = 1000 and OFX = OFY = 0
   //    from `$zero`, so a fresh owner records what the guest actually published.
-  Crash1Widescreen fresh{gpu_vk_latch_guest_projection};
+  Crash1Widescreen fresh{Crash1Widescreen::facts(), gpu_vk_latch_guest_projection};
   retailInitProjection(core);
   fresh.publishInitProjection(core, retailInitProjection);
   ok &= expect(fresh.retailCentre().x == 0 && fresh.retailCentre().y == 0,

@@ -81,11 +81,10 @@ void initializeDriver(Core &core, MainDispatch dispatch) {
     std::abort();
   }
 
-  // The verified SCUS_949.00 body [0x8003CB9C,0x8003CD3C) creates eight BIOS events, initializes
-  // the native pad service, then closes those temporary handles. Its four VSync(5) calls are only
-  // hardware-settle delays between synchronous initialization steps. The host owns both that
-  // hardware and all display timing, so preserve every state-producing call and make no guest
-  // display-wait call at all.
+  // The measured body [0x8003CB9C,0x8003CD3C) creates eight BIOS events, initializes the native pad
+  // service, then closes those temporary handles. Its four VSync(5) calls are only hardware-settle
+  // delays between synchronous initialization steps; the host owns that hardware and all display
+  // timing, so every state-producing call runs and no guest display wait is made.
   const std::uint32_t incomingStack = core.r[29];
   const std::uint32_t incomingReturn = core.r[31];
   core.r[29] -= 24u;

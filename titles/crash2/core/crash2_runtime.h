@@ -19,11 +19,8 @@ public:
   const PlatformHlePlan *platformHlePlan() const override;
   bool guestVramIsPicture(const Game &game) const override;
   std::unique_ptr<FrameDriver> createFrameDriver(Game &game) override;
-  // The measured projection owner. This is the override `GameRuntime` left returning nullptr, which
-  // is an absence rather than a capability: Crash 2 publishes its projection through three measured
-  // guest leaves, and this runtime now hands the framework the owner behind them. The policy answers
-  // which aspect the player selected; the owner publishes a matching guest projection
-  // (external/psxport/docs/presentation-contract.md, "Title-owned guest widescreen").
+  // The measured projection owner: the framework asks the policy which aspect the player selected,
+  // and the owner behind it publishes the matching guest projection.
   const GuestWidescreenProjection *guestWidescreenProjection() const override;
 
   const crash::NativeFrameLoopContract &nativeFrameLoopContract() const;

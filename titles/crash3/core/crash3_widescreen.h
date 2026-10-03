@@ -1,52 +1,38 @@
-// Crash Bandicoot 3 (SCUS-942.44) guest widescreen: this title's own projection owners.
+// Crash Bandicoot 3 (SCUS-942.44) guest widescreen: this title's measured projection facts.
 //
-// Every address and value below was read out of the authenticated executable. The recorded facts live
-// in `titles/crash3/executable.json` under `runtime.projection`; nothing here is a tuned constant.
+// The widening RULE is the shared `crash::GuestProjectionPublication` in `game/core/`; this file
+// carries only what is Crash 3's: the addresses, the measured call sites, the pass-through site, the
+// retail baseline and the install. `titles/crash3/executable.json` under `runtime.projection` is the
+// authority.
 //
-// WHAT CRASH 3'S PROJECTION IS, AND IT IS THE SAME SHAPE AS CRASH 1 AND CRASH 2. Beetle's `gte.c`
-// names CR[24]=OFX, CR[25]=OFY, CR[26]=H, and its RTPS computes `h_div_sz = Divide(H, Z_FIFO(3))` then
-// `TransformXY`, so a projected point lands at `SX = OFX + (H * IR1) / SZ`. A whole-image census of
-// all 82,944 instruction words finds exactly TWO control-register writers for each of OFX, OFY and H:
+// The projection is the GTE screen offset, the same shape as Crash 1 and Crash 2, and a whole-image
+// census of all 82,944 instruction words finds exactly TWO control-register writers for each of OFX,
+// OFY and H: the projection init 0x8004F37C (H 0x3E8, OFX 0, OFY 0) and the leaves set_geom_offset
+// 0x8004F704 and set_geom_screen 0x8004F724, whose bodies are byte-identical to Crash 2's.
 //
-//   0x8004F3C8  ctc2 $t0, 0xD000   H  = 0x3E8 (1000)  }  the projection init 0x8004F37C, called
-//   0x8004F3E8  ctc2 $zero, 0xC000  OFX = 0           }  once from 0x800154D8, which also
-//   0x8004F3EC  ctc2 $zero, 0xC800  OFY = 0           }  publishes ZSF3, ZSF4, DQA and DQB
-//
-//   0x8004F70C  ctc2 $a0, 0xC000   OFX = a0 << 16    }  set_geom_offset 0x8004F704, whose body is
-//   0x8004F710  ctc2 $a1, 0xC800   OFY = a1 << 16    }  BYTE-IDENTICAL to Crash 2's 0x8004EFE8
-//   0x8004F724  ctc2 $a0, 0xD000   H   = a0          }  set_geom_screen 0x8004F724 - same sha256
-//
-// WHY H IS HELD HERE, MEASURED RATHER THAN ASSUMED. Crash 3 keeps the projection-plane distance in a
-// main-RAM global, `0x80065D54`, and TWO consumers turn it into a gameplay-visible decision:
+// H is held on measured grounds: Crash 3 keeps the projection-plane distance in a main-RAM global,
+// 0x80065D54, and TWO consumers turn it into a gameplay-visible decision.
 //
 //   FUN_8003c3d0 [0x8003C3D0,0x8003C994) rejects a vertex when NOT (H < Z < 12000), with the bound
-//   passed in from FUN_8001c824 at 0x8001C880. H is the GTE NEAR PLANE, as in Crash 1 and Crash 2.
+//   passed in from FUN_8001c824 at 0x8001C880. H is the GTE near plane, as in the other two titles.
 //   FUN_80016634 [0x80016634,0x80016CE8) sizes and positions a 2D overlay rectangle from
-//   `(H * fog * 0xAA >> 20) - 0x6C` and clamps it to 0..216, so H is a HUD scalar here too.
+//   `(H * fog * 0xAA >> 20) - 0x6C` clamped to 0..216, so H is a HUD scalar here too.
 //
 // Raising H would cull near geometry AND resize a 2D overlay, so this owner never touches it.
 //
-// AND WHY THIS TITLE NEEDS A CALL-SITE POLICY, WHICH CRASH 1 AND CRASH 2 DO NOT. The widening's base
-// is the title's own `$a0` as it stands right now, so it is idempotent ONLY while the value arriving at
-// the leaf does not already carry the margin. Crash 3 is the one title of the three that reads the
-// published centre back out of the coprocessor:
-//
-//   0x8004F6E4  cfc2 $t0, $24   CR[24] OFX      }  FUN_8004f6e4 [0x8004F6E4,0x8004F704), called
-//   0x8004F6E8  cfc2 $t1, $25   CR[25] OFY      }  ONCE, from 0x8001CF8C
-//   0x8004F6EC  sra  $t0, $t0, 16               }
-//   0x8004F6F0  sra  $t1, $t1, 16               }
-//   0x8004F6F4  sw   $t0, 0($a0)                }
-//   0x8004F6F8  sw   $t1, 0($a1)                }
-//
-// and `FUN_8001cd80` hands the result straight back to `set_geom_offset` at 0x8001D09C. Widening THAT
-// call site would add the margin again on every pass of that path, so it is a measured pass-through:
-// the argument arrives from the register this owner moves, so the owner must republish it unchanged.
+// WHY THIS TITLE NEEDS A CALL-SITE POLICY, WHICH THE OTHER TWO DO NOT. The widening's base is the
+// title's own `$a0` as it stands right now, so it is idempotent only while the value arriving at the
+// leaf does not already carry the margin. Crash 3 is the one title of the three that reads the
+// published centre back out of the coprocessor: FUN_8004f6e4 [0x8004F6E4,0x8004F704) `cfc2`s CR[24]
+// and CR[25], and FUN_8001cd80 hands the result straight back to `set_geom_offset` at 0x8001D09C.
+// Widening THAT call site would add the margin again on every pass, so it is a measured pass-through:
+// the argument arrives from the register this owner moves, so the owner republishes it unchanged.
 //
 // The other three call sites widen, and each one's argument provably does not come from the
 // coprocessor: 0x8001892C passes the constant 0 (the camera setup), 0x80018C04 passes a guest global
-// (the per-frame publication, every frame), and 0x8001CFC4 passes a sign-corrected halving of a table
-// word. The owner refuses any call site that is not in its measured list, so a reach this repository
-// never measured cannot be widened by default.
+// (the per-frame publication), and 0x8001CFC4 passes a sign-corrected halving of a table word. The
+// owner refuses any call site that is not in its measured list, so an unmeasured reach cannot be
+// widened by default.
 #pragma once
 
 #include "guest_projection_publication.h"

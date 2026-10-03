@@ -1,42 +1,29 @@
-// Crash Bandicoot 1 (SCUS-949.00) — the pool's OWN ALLOCATE PATH, recovered from 0x80012F10.
+// Crash Bandicoot 1 (SCUS-949.00) - the pool's OWN ALLOCATE PATH, recovered from 0x80012F10.
 //
-// WHY THIS FILE EXISTS, and the address it recovers. The size-class lookup at 0x80015978
-// (`crash1_block_pool.h`) only READS the pool. This is the function that FILLS it, and the reason it
-// matters is that it is where the class word is DEFINED: 0x80012FBC loads the word, 0x80012FC8
-// shifts it down 13 to pick a bucket, and 0x80012FFC loads the SAME unshifted word back out to
-// compare against a cell's class field. A lookup owner that had searched for the shifted key could
-// therefore never match anything this function wrote — which is exactly the defect measured and
-// corrected in `crash1_block_pool.h`.
+// The lookup at 0x80015978 (`crash1_block_pool.h`) only READS the pool. This is the function that
+// FILLS it, and it matters because it is where the class word is DEFINED: 0x80012FBC loads the word,
+// 0x80012FC8 shifts it down 13 to pick a bucket, and 0x80012FFC loads the SAME unshifted word back
+// out to compare against a cell's class field. Its own call to the lookup at 0x8001313C is the loop
+// that closes: the delay slot at 0x80013140 STORES the class word into the cell it just asked for.
+// That is a fourth, independent reason the class is the whole request and not `request >> 13`.
 //
-// It has two `jal` call sites:
-//   0x8001313C  inside 0x80012F10   <- this function, calling the lookup it is building a cell for
-//   0x8001515C  inside 0x80015118   <- the caller every live lookup in the disc-backed run came from
-// and the first of those is the loop that closes: 0x80013134 loads the class word, 0x80013138 loads
-// the request, 0x8001313C calls the lookup, and 0x80013140 (the delay slot) STORES the class word
-// into the cell. **The engine stores the word it is about to ask for.** That is a fourth,
-// independent reason the class is the whole request and not `request >> 13`.
+// WHAT THIS OWNER IS, EXACTLY, because "recovered" has been abused in this repository. It is a
+// readable, tested MODEL of the function's arithmetic: the node-table cursor, the five-way kind
+// dispatch, the bucket selection, the class comparison, the cell link, the live counter and the
+// per-type callback dispatch. Every guest access goes through an injected seam, so the model is
+// driven by a fixture with no `Core` in existence.
 //
-// WHAT THIS OWNER IS, EXACTLY, because "recovered" is a word that has been abused in this
-// repository. It is a READABLE, TESTED MODEL of the function's arithmetic: the node-table cursor, the
-// five-way kind dispatch, the bucket selection, the class comparison, the cell link, the live counter,
-// and the per-type callback dispatch. Every guest access goes through an injected seam, so the model
-// is driven by a fixture with no `Core` in existence.
-//
-// WHAT THIS OWNER IS NOT, stated here so nobody reads it as a result. It is NOT installed as a native
-// override, and this file claims no runtime behaviour from it. Two reasons, and the first is the
-// honest one: the function is 259 instructions across five cases and makes THREE guest calls (the
-// lookup at 0x80015978, 0x8001439C, and 0x80040484) plus an indirect `jalr` through a table of
-// function pointers, so a faithful override is a real porting job rather than a transcription. The
-// second is a measurement: in the disc-backed run the pool owner served lookups and every one of them
-// came from `ra = 0x80015164` (FUN_80015118), so nothing yet establishes that the guest REACHES
+// WHAT THIS OWNER IS NOT: it is NOT installed as an override and claims no runtime behaviour. The
+// honest reason is that the function is 259 instructions across five cases and makes THREE guest
+// calls plus an indirect `jalr` through a function-pointer table, so a faithful override is a real
+// porting job rather than a transcription. The measurement is that in the disc-backed run every
+// served lookup came from ra = 0x80015164, so nothing yet establishes that the guest REACHES
 // 0x80012F10 at all. Owning a function the run does not execute would be a claim with no evidence
-// behind it, and the point of this file is to make the next step a measurement rather than a guess.
+// behind it.
 //
-// WHAT IS NOT ESTABLISHED. The UNIT of the class word is still unknown. It is a 32-bit word whose top
-// 19 bits select one of 256 buckets and whose low 13 bits are part of the identity; the four words
-// measured from the live run (0x0057CCFB, 0x15814CE7, 0x5452D94D, 0x4E938CCD) are not byte counts,
-// not sizes and not handles this repository can name. The model therefore calls the field for what it
-// is COMPARED against and for nothing more.
+// WHAT IS NOT ESTABLISHED: the UNIT of the class word. It is a 32-bit word whose top 19 bits select
+// one of 256 buckets and whose low 13 bits are part of the identity; the four words measured from
+// the live run are not byte counts, not sizes and not handles this repository can name.
 #pragma once
 
 #include <cstdint>
