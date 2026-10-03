@@ -7,12 +7,11 @@
 #include "crash1_frame_driver.h"
 #include "crash1_gpu_watchdog.h"
 #include "crash1_horizontal_bound.h"
-#include "dynarec_dispatch.h"
 #include "game.h"
 #include "gpu_vk.h"
+#include "native_dispatch.h"
 #include "platform_hle.h"
 
-#include <cstdlib>
 #include <lucent/log.h>
 #include <memory>
 
@@ -57,7 +56,7 @@ void Crash1Runtime::registerOverrides(Game &game) {
   disc_index_io::registerOverrides(game.core);
   callback_boot::registerOverride(game.core);
   gpu_watchdog::registerOverrides(game.core);
-  installCrash1Widescreen(game.core);
+  widescreen_.installSites(game.core);
   installCrash1HorizontalBound(game.core);
   installCrash1BlockPool(game.core);
   Crash1FrameDriver::installOverrides(game);
@@ -69,9 +68,10 @@ void Crash1Runtime::bootInit(Core &core) {
   // Retail C main 0x80011D88 performs these three operations before entering CoreLoop 0x80011FC4.
   // The shared crt0/libc group is already applied, so dispatching C main itself would re-enter the
   // guest-owned loop and then run shutdown behind the host's back.
-  crash::dynarec::requireGuestReturn(crash::dynarec::callGuest(core, entries[0]), "Crash 1 static constructors");
+  psx::cpu::dispatchGuestToReturn(
+      core, entries[0], psx::cpu::ExecutionBudget::currentTurn(core), "Crash 1 static constructors");
   core.mem_w32(CRASH1_USE_CD_ADDRESS, 1u);
-  crash::dynarec::requireGuestReturn(crash::dynarec::callGuest(core, entries[1]), "Crash 1 Init");
+  psx::cpu::dispatchGuestToReturn(core, entries[1], psx::cpu::ExecutionBudget::currentTurn(core), "Crash 1 Init");
 }
 
 const GuestProgramImage *Crash1Runtime::guestProgramImage() const {

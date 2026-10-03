@@ -1,9 +1,8 @@
 #include "crash1_cd_boot.h"
 
 #include "core.h"
-#include "dynarec_dispatch.h"
+#include "native_dispatch.h"
 
-#include <cstdlib>
 #include <lucent/log.h>
 
 #ifndef CRASH1_CD_INITIALIZE_ENTRY
@@ -46,10 +45,7 @@ const Program &program() {
 }
 
 void registerOverride(Core &core) {
-  if (!crash::dynarec::installOverride(
-          core, kProgram.initialize.begin, "Crash 1 libcd initialization", initializeOverride)) {
-    std::abort();
-  }
+  psx::cpu::installNativeOverride(core, kProgram.initialize.begin, "Crash 1 libcd initialization", initializeOverride);
 }
 
 void initializeDriver(Core &core) {

@@ -82,7 +82,7 @@ bool expect(bool condition, const char *message) {
 }
 
 // A synthetic PS-X EXE spanning the whole resident text, carrying the real instruction words at their
-// real offsets. The identity it establishes is what `installCrash2Widescreen` needs, and the words are
+// real offsets. The identity it establishes is what `installSites` needs, and the words are
 // what tie this fixture to titles/crash2/executable.json rather than to this file.
 std::vector<std::uint8_t> residentFixture() {
   constexpr std::uint32_t kTextAddress = 0x80010000u;
@@ -149,7 +149,7 @@ bool installWithNoHlePlan() {
                  "a measured projection leaf was already in the HLE table, so the no-HLE proof is vacuous");
   }
 
-  crash2::installCrash2Widescreen(core);
+  runtime.widescreen().installSites(core);
   for (const std::uint32_t address : sites) {
     const auto image = core.currentImageIdentity(address);
     ok &= expect(image.has_value(), "no image identity at an override address");

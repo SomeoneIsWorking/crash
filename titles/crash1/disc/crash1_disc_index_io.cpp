@@ -2,10 +2,9 @@
 
 #include "cd_control.h"
 #include "core.h"
-#include "dynarec_dispatch.h"
+#include "native_dispatch.h"
 
 #include <array>
-#include <cstdlib>
 #include <lucent/log.h>
 
 #ifndef CRASH1_DISC_INDEX_ENTRY
@@ -120,9 +119,7 @@ void applyReadSync(Core *core) {
 
 void registerOverrides(Core &core) {
   for (const Binding &binding : kBindings) {
-    if (!crash::dynarec::installOverride(core, binding.function.begin, binding.name, binding.owner)) {
-      std::abort();
-    }
+    psx::cpu::installNativeOverride(core, binding.function.begin, binding.name, binding.owner);
   }
 }
 

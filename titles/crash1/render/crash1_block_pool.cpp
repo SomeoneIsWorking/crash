@@ -2,8 +2,8 @@
 
 #include "core.h"
 #include "crash1_runtime.h"
-#include "dynarec_dispatch.h"
 #include "game.h"
+#include "native_dispatch.h"
 
 #include <cstdlib>
 #include <lucent/log.h>
@@ -181,9 +181,7 @@ Crash1BlockPool &Crash1BlockPool::from(Core &core) {
 }
 
 void installCrash1BlockPool(Core &core) {
-  if (!crash::dynarec::installOverride(core, kFindCell, "Crash block-pool cell lookup", findCellOverride)) {
-    std::abort();
-  }
+  psx::cpu::installNativeOverride(core, kFindCell, "Crash block-pool cell lookup", findCellOverride);
   lucent::info("crash1-pool",
                "block-pool owner installed: cell lookup 0x{:08X} (the stop site is 0x{:08X}); bucket "
                "table 0x{:08X}, pool base 0x{:08X}, live count at 0x{:08X}+0x{:X}; the walk is "

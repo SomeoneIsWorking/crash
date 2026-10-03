@@ -1,7 +1,7 @@
 #include "crash1_callback_boot.h"
 
 #include "core.h"
-#include "dynarec_dispatch.h"
+#include "native_dispatch.h"
 
 #include <array>
 #include <cstdlib>
@@ -52,8 +52,8 @@ static_assert(kProgram.initialize.valid());
 
 void initializeOverride(Core *core) {
   initializeDriver(*core, [](Core *target, std::uint32_t address) {
-    crash::dynarec::requireGuestReturn(crash::dynarec::callGuest(*target, address),
-                                       "Crash 1 callback initialization leaf");
+    psx::cpu::dispatchGuestToReturn(
+        *target, address, psx::cpu::ExecutionBudget::currentTurn(*target), "Crash 1 callback initialization leaf");
   });
 }
 
@@ -69,10 +69,8 @@ const Program &program() {
 }
 
 void registerOverride(Core &core) {
-  if (!crash::dynarec::installOverride(
-          core, kProgram.initialize.begin, "Crash 1 callback initialization", initializeOverride)) {
-    std::abort();
-  }
+  psx::cpu::installNativeOverride(
+      core, kProgram.initialize.begin, "Crash 1 callback initialization", initializeOverride);
 }
 
 void initializeDriver(Core &core, MainDispatch dispatch) {

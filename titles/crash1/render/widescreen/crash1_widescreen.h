@@ -46,23 +46,15 @@ inline constexpr std::int32_t kRetailCentreY = 0;           // CR[25]
 
 // This title's owner over the shared rule: the facts above, and nothing else. Crash 1 declares NO
 // pass-through call site, because its image has no `cfc2` control read of CR[24]/CR[25] at all and
-// therefore nothing that can hand the owner back a value already carrying the margin.
+// therefore nothing that can hand the owner back a value already carrying the margin. The lookup,
+// the install and the three leaves are `crash::GuestProjectionPublication`'s, one implementation for
+// all three titles.
 class Crash1Widescreen final : public crash::GuestProjectionPublication {
 public:
   using GuestProjectionPublication::GuestProjectionPublication;
 
   // This title's measured facts. The single place the two representations are joined.
   static const crash::ProjectionTitleFacts &facts();
-
-  // This title's owner, reached from a Core that is running it. The checked downcast lives here so
-  // no other file repeats the rule "the policy the runtime returns is the owner that published the
-  // picture", and a foreign result is a named refusal instead of a silent no-op. Same idiom as
-  // `Crash1FrameDriver::from`.
-  static Crash1Widescreen &from(Core &core);
 };
-
-// Install this title's three measured projection sites on one Core. Not reachable through
-// PlatformHle, which covers the stock library services; the title owns its own geometry leaves.
-void installCrash1Widescreen(Core &core);
 
 } // namespace crash1

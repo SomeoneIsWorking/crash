@@ -35,7 +35,7 @@ public:
   [[nodiscard]] int run(const std::filesystem::path &executable);
 
 private:
-  void startFrameworkServices();
+  void bindFrameworkDevices();
   void logExecutionCounters() const;
 
   Crash1Runtime &runtime_;

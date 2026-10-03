@@ -1,8 +1,8 @@
 #include "crash1_gpu_watchdog.h"
 
 #include "core.h"
-#include "dynarec_dispatch.h"
 #include "game.h"
+#include "native_dispatch.h"
 
 #include <cstdlib>
 #include <lucent/log.h>
@@ -55,7 +55,8 @@ void startOverride(Core *core) {
 
 void checkOverride(Core *core) {
   check(*core, [](Core *target, std::uint32_t address) {
-    crash::dynarec::requireGuestReturn(crash::dynarec::callGuest(*target, address), "Crash 1 GPU watchdog leaf");
+    psx::cpu::dispatchGuestToReturn(
+        *target, address, psx::cpu::ExecutionBudget::currentTurn(*target), "Crash 1 GPU watchdog leaf");
   });
 }
 
@@ -80,9 +81,7 @@ void registerOverrides(Core &core) {
       {kProgram.check.begin, checkOverride, "Crash 1 GPU watchdog check"},
   };
   for (const Binding &binding : bindings) {
-    if (!crash::dynarec::installOverride(core, binding.address, binding.name, binding.function)) {
-      std::abort();
-    }
+    psx::cpu::installNativeOverride(core, binding.address, binding.name, binding.function);
   }
 }
 

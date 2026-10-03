@@ -30,6 +30,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <string_view>
 
 class Core;
@@ -100,12 +101,26 @@ public:
   // The framework's own latch, injected so a hermetic test drives the production path.
   using Latch = GuestProjectionPlan (*)(Core *, GuestProjectionGeometry);
   // An authenticated original guest body, executed through Lightrec. Injected so a test can observe
-  // the transformation without a guest image.
-  using RetailBody = void (*)(Core &);
+  // the transformation without a guest image, and a std::function so the production trampoline can
+  // bind the owner's own measured facts to the original call it has to make.
+  using RetailBody = std::function<void(Core &)>;
 
   GuestProjectionPublication(const ProjectionTitleFacts &facts, Latch latch);
 
   PresentationAspect presentationAspect(const Core &core) const override;
+
+  // This title's owner, reached from a Core that is running it. The framework hands the policy back
+  // as a const base pointer, so the per-title state behind it comes back through this checked
+  // downcast; a null or foreign result is a wiring defect that stops the run rather than quietly
+  // presenting a 4:3 picture under a wide claim. The one resolver every title's overrides use.
+  static const GuestProjectionPublication &from(const Core &core, std::string_view site);
+  static GuestProjectionPublication &from(Core &core, std::string_view site);
+
+  // Install this title's three measured projection leaves on one Core, each with the retail original
+  // it runs. Not reachable through PlatformHle, which covers the stock library services: the titles
+  // own their own geometry leaves. One implementation for all three titles - the facts already name
+  // every address, so a per-title copy could only ever differ in the log line.
+  void installSites(Core &core);
 
   // --- the latch site: set_geom_offset, reached per frame by the title's own view publication ------
   // The widened centre is `retail + margin`, in the title's own units, where `retail` is the

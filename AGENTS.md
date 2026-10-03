@@ -28,7 +28,7 @@ Crash Bandicoot (`SCUS_949.00`) is the active title. Its product runs a disc-bac
 frames, and takes input through the authenticated BIOS `PadRead` word at `0x80057054`; the level's
 camera does not yet publish a centre (issue 0023), and representative gameplay is the gate (issue
 0013). Framework `Pad` owns device polling and the finalized active-low PSX mask;
-`titles/crash1/core/crash1_bios_pad_input.*` owns only the authenticated combined word and Crash's
+`titles/crash1/input/crash1_bios_pad_input.*` owns only the authenticated combined word and Crash's
 byte order, published before retail `PadUpdate`.
 
 Do not begin Crash 2 or Crash 3 execution migration until Crash 1 reaches representative gameplay

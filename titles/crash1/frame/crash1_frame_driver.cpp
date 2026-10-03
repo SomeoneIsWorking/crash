@@ -2,11 +2,11 @@
 
 #include "core.h"
 #include "crash1_bios_pad_input.h"
-#include "dynarec_dispatch.h"
 #include "emulated_time.h"
 #include "execution_control.h"
 #include "field_rate.h"
 #include "game.h"
+#include "native_dispatch.h"
 
 #include <cstdlib>
 #include <limits>
@@ -24,6 +24,13 @@
 
 namespace crash1 {
 namespace {
+
+// One host turn: the guest runs from `address` until a typed boundary (a display wait returning, the
+// CoreLoop transition, a budget end) or the current budget, whichever comes first. The seam exists so
+// a test can drive the frame's state machine without an image; the budget policy is not the test's.
+psx::cpu::ExecutionResult executeOneHostTurn(Core &core, std::uint32_t address) {
+  return psx::cpu::dispatchGuestUntilExit(core, address, psx::cpu::ExecutionBudget::currentTurn(core));
+}
 
 constexpr std::uint32_t kRootCounterSpec = 0xF2000002u;
 constexpr std::uint32_t kRootCounterTarget = 0x1000u;
@@ -98,14 +105,12 @@ void Crash1FrameDriver::installOverrides(Game &game) {
       {kProgram.stopRootCounter, stopRootCounterSuper, "StopRCnt"},
   };
   for (const Binding &binding : bindings) {
-    if (!crash::dynarec::installOverride(game.core, binding.address, binding.owner, binding.function)) {
-      std::abort();
-    }
+    psx::cpu::installNativeOverride(game.core, binding.address, binding.owner, binding.function);
   }
 }
 
 void Crash1FrameDriver::callOriginal(Core &core, std::uint32_t address) {
-  crash::dynarec::requireGuestReturn(crash::dynarec::callOriginal(core, address), "Crash 1 original call");
+  psx::cpu::callOriginalToReturn(core, address, psx::cpu::ExecutionBudget::currentTurn(core), "Crash 1 original call");
 }
 
 void Crash1FrameDriver::resetRootCounterClock(const Core &core) {
@@ -118,8 +123,10 @@ void Crash1FrameDriver::serviceRootCounter(Core &core, std::uint64_t throughCpuT
   }
   while (nextRootCounterTick_ <= throughCpuTick) {
     const R3000 interrupted = static_cast<const R3000 &>(core);
-    crash::dynarec::requireGuestReturn(crash::dynarec::callGuest(core, kProgram.rootCounterIncrement),
-                                       "Crash 1 root-counter callback");
+    psx::cpu::dispatchGuestToReturn(core,
+                                    kProgram.rootCounterIncrement,
+                                    psx::cpu::ExecutionBudget::currentTurn(core),
+                                    "Crash 1 root-counter callback");
     static_cast<R3000 &>(core) = interrupted;
     nextRootCounterTick_ += kRootCounterCpuTicks;
   }
@@ -245,10 +252,10 @@ void Crash1FrameDriver::stepFrame(Core &core, std::uint32_t frame) {
   psx::cpu::ExecutionResult result;
   if (!enteredCoreLoop_) {
     core.r[4] = 25u;
-    result = runGuestToBoundary(core, kProgram.coreLoop.begin, crash::dynarec::executeTurn);
+    result = runGuestToBoundary(core, kProgram.coreLoop.begin, executeOneHostTurn);
     enteredCoreLoop_ = true;
   } else {
-    result = runGuestToBoundary(core, kProgram.iteration.begin, crash::dynarec::executeTurn);
+    result = runGuestToBoundary(core, kProgram.iteration.begin, executeOneHostTurn);
   }
   while (!frameCompleted_ && result.reason == psx::cpu::ExecutionExitReason::FrameBoundary) {
     if (!Crash1FrameDriver::isMeasuredFrameBoundary(result.guestPc,
@@ -272,7 +279,7 @@ void Crash1FrameDriver::stepFrame(Core &core, std::uint32_t frame) {
     }
     const std::uint32_t continuation = core.r[31];
     deliverDisplayField(core);
-    result = runGuestToBoundary(core, continuation, crash::dynarec::executeTurn);
+    result = runGuestToBoundary(core, continuation, executeOneHostTurn);
   }
   if (!frameCompleted_ || result.reason != psx::cpu::ExecutionExitReason::FrameBoundary) {
     lucent::error("crash1-frame",

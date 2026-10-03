@@ -21,6 +21,36 @@ if(PSXPORT_BUILD_SMOKE)
   add_custom_target(crash_scaffold DEPENDS psxport_smoke)
 endif()
 
+# Every first-party directory, by concept. A target includes the concepts it links, never the whole
+# tree, so a header can only be reached through the concept that owns it.
+set(CRASH_GAME_DIRS
+    boot
+    frame
+    render/widescreen
+)
+set(CRASH_TITLE_DIRS
+    boot
+    debug
+    disc
+    entry
+    frame
+    input
+    render
+    render/widescreen
+)
+
+function(crash_game_include_dirs target)
+  foreach(dir IN LISTS CRASH_GAME_DIRS)
+    target_include_directories(${target} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/game/${dir}")
+  endforeach()
+endfunction()
+
+function(crash_title_include_dirs target title)
+  foreach(dir IN LISTS CRASH_TITLE_DIRS)
+    target_include_directories(${target} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/titles/${title}/${dir}")
+  endforeach()
+endfunction()
+
 function(configure_title_vsync target title)
   file(READ "${CMAKE_CURRENT_SOURCE_DIR}/titles/${title}/executable.json" title_vsync_manifest)
   string(JSON title_vsync_entry GET "${title_vsync_manifest}" runtime vsync entry)
@@ -99,39 +129,37 @@ endfunction()
 
 add_library(
   crash_boundary_runtime STATIC
-  "${CMAKE_CURRENT_SOURCE_DIR}/game/core/boundary_runtime.cpp"
-  "${CMAKE_CURRENT_SOURCE_DIR}/game/core/dynarec_dispatch.cpp"
-  "${CMAKE_CURRENT_SOURCE_DIR}/game/core/guest_projection_publication.cpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/game/boot/boundary_runtime.cpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/game/render/widescreen/guest_projection_publication.cpp"
 )
-target_include_directories(crash_boundary_runtime PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/game/core")
+crash_game_include_dirs(crash_boundary_runtime)
 target_compile_features(crash_boundary_runtime PUBLIC cxx_std_20)
 target_link_libraries(crash_boundary_runtime PUBLIC psxport)
 
 add_library(
   crash_native_frame_contract STATIC
-  "${CMAKE_CURRENT_SOURCE_DIR}/game/core/native_frame_loop_contract.cpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/game/frame/native_frame_loop_contract.cpp"
 )
-target_include_directories(crash_native_frame_contract PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/game/core")
+crash_game_include_dirs(crash_native_frame_contract)
 target_compile_features(crash_native_frame_contract PUBLIC cxx_std_20)
 target_link_libraries(crash_native_frame_contract PUBLIC psxport)
 
 add_library(
   crash1_runtime STATIC
-  "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/core/crash1_runtime.cpp"
-  "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/core/crash1_bios_pad_input.cpp"
-  "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/core/crash1_block_pool.cpp"
-  "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/core/crash1_callback_boot.cpp"
-  "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/core/crash1_cd_boot.cpp"
-  "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/core/crash1_disc_index_io.cpp"
-  "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/core/crash1_executable.cpp"
-  "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/core/crash1_frame_driver.cpp"
-  "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/core/crash1_gpu_watchdog.cpp"
-  "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/core/crash1_horizontal_bound.cpp"
-  "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/core/crash1_pool_node.cpp"
-  "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/core/crash1_widescreen.cpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/boot/crash1_callback_boot.cpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/boot/crash1_cd_boot.cpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/boot/crash1_executable.cpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/boot/crash1_gpu_watchdog.cpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/disc/crash1_disc_index_io.cpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/entry/crash1_runtime.cpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/frame/crash1_frame_driver.cpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/input/crash1_bios_pad_input.cpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/render/crash1_block_pool.cpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/render/crash1_pool_node.cpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/render/widescreen/crash1_horizontal_bound.cpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/render/widescreen/crash1_widescreen.cpp"
 )
-target_include_directories(crash1_runtime PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/core"
-                                                  "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/boot")
+crash_title_include_dirs(crash1_runtime crash1)
 target_compile_features(crash1_runtime PUBLIC cxx_std_20)
 target_link_libraries(crash1_runtime PUBLIC crash_boundary_runtime crash_native_frame_contract)
 configure_title_vsync(crash1_runtime crash1)
@@ -166,7 +194,7 @@ string(JSON crash1_c0_exception_handler_address
 
 add_library(
   crash1_boot_frontier STATIC
-  "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/core/crash1_boot_frontier.cpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/debug/crash1_boot_frontier.cpp"
 )
 target_compile_definitions(
   crash1_boot_frontier
@@ -183,10 +211,6 @@ target_compile_features(crash1_boot_frontier PUBLIC cxx_std_20)
 target_link_libraries(crash1_boot_frontier PUBLIC crash1_runtime)
 
 if(BUILD_TESTING)
-  add_executable(crash_dynarec_dispatch_test "${CMAKE_CURRENT_SOURCE_DIR}/tests/dynarec_dispatch.cpp")
-  target_link_libraries(crash_dynarec_dispatch_test PRIVATE crash1_runtime)
-  add_test(NAME crash_dynarec_dispatch COMMAND crash_dynarec_dispatch_test)
-
   add_executable(crash1_runtime_test "${CMAKE_CURRENT_SOURCE_DIR}/tests/crash1_runtime.cpp")
   target_include_directories(crash1_runtime_test PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/tests")
   target_compile_features(crash1_runtime_test PRIVATE cxx_std_20)
@@ -297,12 +321,11 @@ function(add_crt0_boundary_title title)
 
   add_library(
     ${title}_runtime STATIC
-    "${CMAKE_CURRENT_SOURCE_DIR}/titles/${title}/core/${title}_runtime.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/titles/${title}/core/${title}_frame_driver.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/titles/${title}/core/${title}_widescreen.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/titles/${title}/entry/${title}_runtime.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/titles/${title}/frame/${title}_frame_driver.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/titles/${title}/render/widescreen/${title}_widescreen.cpp"
   )
-  target_include_directories(${title}_runtime
-                             PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/titles/${title}/core")
+  crash_title_include_dirs(${title}_runtime ${title})
   target_compile_features(${title}_runtime PUBLIC cxx_std_20)
   target_link_libraries(${title}_runtime PUBLIC crash_boundary_runtime crash_native_frame_contract)
   configure_title_vsync(${title}_runtime ${title})
@@ -421,11 +444,12 @@ add_executable(
   "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/boot/crash1_boot.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/main.cpp"
 )
+crash_game_include_dirs(crash1_port)
 target_include_directories(
   crash1_port
   PRIVATE
-    "${CMAKE_CURRENT_SOURCE_DIR}/game/core"
     "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/boot"
+    "${CMAKE_CURRENT_SOURCE_DIR}/titles/crash1/entry"
 )
 target_compile_features(crash1_port PRIVATE cxx_std_20)
 target_link_libraries(crash1_port PRIVATE crash1_runtime)

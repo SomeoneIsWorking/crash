@@ -2,7 +2,11 @@
 
 #include "core.h"
 #include "game.h"
+#include "game_runtime.h"
 #include "mods.h"
+#include "native_dispatch.h"
+
+#include <string>
 
 #include <cstdlib>
 #include <lucent/log.h>
@@ -351,6 +355,94 @@ void GuestProjectionPublication::observeScreenDistance(Core &core, const RetailB
   // matters most.
   retail(core);
   publishedScreenDistance_ = static_cast<std::int32_t>(core.r[kScreenDistanceArgument] & 0xFFFF);
+}
+
+namespace {
+
+// Each override runs the retail body through the executor's original-call path, so a title's leaf is
+// still executed rather than replaced. The addresses come from the owner's own measured facts.
+void originalCentre(Core &core, const ProjectionTitleFacts &facts) {
+  psx::cpu::callOriginalToReturn(
+      core, facts.setGeomOffset, psx::cpu::ExecutionBudget::currentTurn(core), "guest widescreen::centre original");
+}
+
+void originalInitProjection(Core &core, const ProjectionTitleFacts &facts) {
+  psx::cpu::callOriginalToReturn(core,
+                                 facts.projectionInit,
+                                 psx::cpu::ExecutionBudget::currentTurn(core),
+                                 "guest widescreen::init projection original");
+}
+
+void originalScreenDistance(Core &core, const ProjectionTitleFacts &facts) {
+  psx::cpu::callOriginalToReturn(core,
+                                 facts.setGeomScreen,
+                                 psx::cpu::ExecutionBudget::currentTurn(core),
+                                 "guest widescreen::screen distance original");
+}
+
+void centreOverride(Core *core) {
+  GuestProjectionPublication &owner = GuestProjectionPublication::from(*core, "set_geom_offset");
+  owner.publishCentre(*core, [&owner](Core &target) {
+    originalCentre(target, owner.facts());
+  });
+}
+
+void initProjectionOverride(Core *core) {
+  GuestProjectionPublication &owner = GuestProjectionPublication::from(*core, "projection init");
+  owner.publishInitProjection(*core, [&owner](Core &target) {
+    originalInitProjection(target, owner.facts());
+  });
+}
+
+void screenDistanceOverride(Core *core) {
+  GuestProjectionPublication &owner = GuestProjectionPublication::from(*core, "set_geom_screen");
+  owner.observeScreenDistance(*core, [&owner](Core &target) {
+    originalScreenDistance(target, owner.facts());
+  });
+}
+
+} // namespace
+
+GuestProjectionPublication &GuestProjectionPublication::from(Core &core, std::string_view site) {
+  if (!core.runtime) {
+    lucent::error("crash-wide", "the {} override ran without a title runtime", site);
+    std::abort();
+  }
+  auto *const policy = dynamic_cast<GuestProjectionPublication *>(
+      const_cast<GuestWidescreenProjection *>(core.runtime->guestWidescreenProjection()));
+  if (!policy) {
+    lucent::error("crash-wide", "the {} override reached another title's projection policy", site);
+    std::abort();
+  }
+  return *policy;
+}
+
+const GuestProjectionPublication &GuestProjectionPublication::from(const Core &core, std::string_view site) {
+  return const_cast<GuestProjectionPublication &>(from(const_cast<Core &>(core), site));
+}
+
+void GuestProjectionPublication::installSites(Core &core) {
+  const struct Binding {
+    std::uint32_t address;
+    std::string name;
+    psx::cpu::NativeFunction function;
+  } bindings[]{
+      {facts_.setGeomOffset, std::string(facts_.serial) + " SetGeomOffset", centreOverride},
+      {facts_.projectionInit, std::string(facts_.serial) + " GTE projection init", initProjectionOverride},
+      {facts_.setGeomScreen, std::string(facts_.serial) + " SetGeomScreen", screenDistanceOverride},
+  };
+  for (const Binding &binding : bindings) {
+    psx::cpu::installNativeOverride(core, binding.address, binding.name, binding.function);
+  }
+  lucent::info(facts_.serial,
+               "guest widescreen installed: SetGeomOffset 0x{:08X}, projection init 0x{:08X}, "
+               "SetGeomScreen 0x{:08X}; retail centre {} {} and H {}",
+               facts_.setGeomOffset,
+               facts_.projectionInit,
+               facts_.setGeomScreen,
+               facts_.retailCentreX,
+               facts_.retailCentreY,
+               facts_.retailScreenDistance);
 }
 
 } // namespace crash

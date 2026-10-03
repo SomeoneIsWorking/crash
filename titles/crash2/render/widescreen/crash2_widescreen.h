@@ -64,24 +64,14 @@ inline constexpr std::int32_t kRetailCentreY = 0;           // CR[25]
 // reason H is held, so it is recorded here and diffed against the manifest by the probe.
 inline constexpr std::uint32_t kScreenDistanceCache = 0x80060884u;
 
-// This title's owner. The rule is shared; the facts above are its.
+// This title's owner. The rule is shared; the facts above are its. The lookup, the install and the
+// three leaves are `crash::GuestProjectionPublication`'s, one implementation for all three titles.
 class Crash2Widescreen final : public crash::GuestProjectionPublication {
 public:
   using GuestProjectionPublication::GuestProjectionPublication;
 
-  // This title's measured facts, from the constants above. The single place the two representations
-  // are joined, so nothing else in this repository restates them.
+  // This title's measured facts. The single place the two representations are joined.
   static const crash::ProjectionTitleFacts &facts();
-
-  // This title's owner, reached from a Core that is running it. The checked downcast lives here so
-  // no other file repeats the rule "the policy the runtime returns is the owner that published the
-  // picture", and so a Core running another title's policy is a named refusal instead of a silent
-  // no-op. Same idiom as Crash 1's owner.
-  static Crash2Widescreen &from(Core &core);
 };
-
-// Install this title's three measured projection sites on one Core. Not reachable through
-// PlatformHle, which covers the stock library services; the title owns its own geometry leaves.
-void installCrash2Widescreen(Core &core);
 
 } // namespace crash2

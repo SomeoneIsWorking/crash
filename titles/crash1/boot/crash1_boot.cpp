@@ -5,30 +5,25 @@
 #include "crash1_runtime.h"
 #include "game.h"
 #include "lightrec_executor.h"
+#include "machine.h"
 
 #include <lucent/log.h>
 
 #include <cstdlib>
 
 #include "c_subsys.h"
-#include "hw_bind.h"
-
-// psxport's standard spine. It has no public header yet, so this is the single declaration of it in
-// this repository; it belongs in psxport beside `c_subsys.h`, which likewise declares every C leaf
-// except `spu_init`. Both are framework entry points, so they keep global linkage at the boundary.
-void native_boot_run(Core *core);
-extern "C" void spu_init(void);
+#include "native_boot.h"
 
 namespace crash1::boot {
 namespace {
 
 constexpr const char *kLogDomain = "crash1-boot";
+const std::filesystem::path kDefaultExecutablePath{"scratch/bin/crash1/SCUS_949.00"};
 
 } // namespace
 
 const std::filesystem::path &defaultExecutablePath() {
-  static const std::filesystem::path path{"scratch/bin/crash1/SCUS_949.00"};
-  return path;
+  return kDefaultExecutablePath;
 }
 
 ProductBoot::ProductBoot(Crash1Runtime &runtime) : runtime_(runtime) {
@@ -43,13 +38,10 @@ ProductBoot::ProductBoot(Crash1Runtime &runtime) : runtime_(runtime) {
 // unit, rather than at every include of the header.
 ProductBoot::~ProductBoot() = default;
 
-void ProductBoot::startFrameworkServices() {
-  gte_init();
-  mdec_init();
-  spu_init();
-  game_->spu_audio.init();
-  game_->gpu.gpu_native_init();
-  game_->pad.overridesInit();
+void ProductBoot::bindFrameworkDevices() {
+  // The framework's measured bind order and its per-instance device binds, in one call, before any
+  // guest code can run. Construction binds nothing; this step is adopted deliberately.
+  psx::Machine(*game_).bindDevices();
 }
 
 void ProductBoot::logExecutionCounters() const {
@@ -86,7 +78,7 @@ int ProductBoot::run(const std::filesystem::path &executable) {
     return 2;
   }
 
-  startFrameworkServices();
+  bindFrameworkDevices();
   runtime_.registerOverrides(*game_);
   lucent::info(kLogDomain, "entering the host-owned Crash 1 boot and frame loop");
   native_boot_run(&game_->core);

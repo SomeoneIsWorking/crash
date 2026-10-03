@@ -2,8 +2,8 @@
 
 #include "core.h"
 #include "crash1_runtime.h"
-#include "dynarec_dispatch.h"
 #include "game.h"
+#include "native_dispatch.h"
 
 #include <cstdlib>
 #include <lucent/log.h>
@@ -21,8 +21,8 @@ namespace {
 }
 
 void originalSubmitter(Core &core) {
-  crash::dynarec::requireGuestReturn(crash::dynarec::callOriginal(core, kHorizontalSubmitter),
-                                     "crash1-bound::submitter original");
+  psx::cpu::callOriginalToReturn(
+      core, kHorizontalSubmitter, psx::cpu::ExecutionBudget::currentTurn(core), "crash1-bound::submitter original");
 }
 
 void submitterOverride(Core *core) {
@@ -90,10 +90,7 @@ Crash1HorizontalBound &Crash1HorizontalBound::from(Core &core) {
 }
 
 void installCrash1HorizontalBound(Core &core) {
-  if (!crash::dynarec::installOverride(
-          core, kHorizontalSubmitter, "Crash GoolObjectTransform bound", submitterOverride)) {
-    std::abort();
-  }
+  psx::cpu::installNativeOverride(core, kHorizontalSubmitter, "Crash GoolObjectTransform bound", submitterOverride);
   lucent::info("crash1-bound",
                "horizontal-bound owner installed: submitter 0x{:08X} over the bound at 0x{:08X} "
                "(written only at 0x{:08X}, re-sent to CR[26] at 0x{:08X}); near-plane consumer "

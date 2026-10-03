@@ -68,7 +68,7 @@ not in the immediate's low five bits.
 
 ## What was built
 
-`titles/crash1/core/crash1_widescreen.{h,cpp}`, wired from `Crash1Runtime::registerOverrides` and
+`titles/crash1/render/widescreen/crash1_widescreen.{h,cpp}`, wired from `Crash1Runtime::registerOverrides` and
 returned from `Crash1Runtime::guestWidescreenProjection()`. The widening is
 **`OFX' = retail_OFX + projectionHorizontalMargin`, `OFY' = retail_OFY`, `H' = retail_H`**. A
 428-wide canvas holding the same 4:3 frame at its original pixel scale is the same equation with

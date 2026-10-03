@@ -35,7 +35,7 @@ commands. Exactly **two** control writers each, and — unlike Crash 1 and Crash
 
 **The two leaves are byte-identical to Crash 2's.** `set_geom_offset`'s body sha256 is `9aa95b09…` in
 both images and `set_geom_screen`'s is `d8c79a8c…` in both. That is direct evidence about the binaries
-and is why the rule lives in `game/core/guest_projection_publication.*` rather than in either title.
+and is why the rule lives in `game/render/widescreen/guest_projection_publication.*` rather than in either title.
 
 A resident-word scan finds **zero** pointer-table entries equal to any of the three entries, so every
 call site is a `jal` and `$r31 - 4` identifies it.
@@ -107,7 +107,7 @@ The draw area is the PSX default whole-display area — `lui $v1,0xE100` at 0x80
 
 ## What was built
 
-`titles/crash3/core/crash3_widescreen.*` over the same shared rule. `Crash3Runtime::
+`titles/crash3/render/widescreen/crash3_widescreen.*` over the same shared rule. `Crash3Runtime::
 guestWidescreenProjection()` now returns the owner instead of `nullptr`. The widening moves **OFX**,
 holds **OFY** and **H**, and passes through the one measured read-back site.
 

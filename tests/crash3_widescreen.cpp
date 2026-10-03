@@ -143,7 +143,7 @@ bool installWithNoHlePlan() {
                  "a measured projection leaf was already in the HLE table, so the no-HLE proof is vacuous");
   }
 
-  crash3::installCrash3Widescreen(core);
+  runtime.widescreen().installSites(core);
   for (const std::uint32_t address : sites) {
     const auto image = core.currentImageIdentity(address);
     ok &= expect(image.has_value(), "no image identity at an override address");

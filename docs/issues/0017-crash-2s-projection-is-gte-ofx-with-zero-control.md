@@ -86,8 +86,8 @@ narrower clip rectangle for a widening to move.
 
 ## What was built
 
-`titles/crash2/core/crash2_widescreen.*` over the shared rule in
-`game/core/guest_projection_publication.*`. `Crash2Runtime::guestWidescreenProjection()` now returns the
+`titles/crash2/render/widescreen/crash2_widescreen.*` over the shared rule in
+`game/render/widescreen/guest_projection_publication.*`. `Crash2Runtime::guestWidescreenProjection()` now returns the
 owner instead of `nullptr`.
 
 The widening moves **OFX** and holds **OFY** and **H**. It is safe here for one measured reason and not
